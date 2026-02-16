@@ -1,0 +1,26 @@
+LICENSES
+
+NAME                    LICENSE FILE PATH                                            LICENSE TYPE                   COPYRIGHT                            COMMENTS
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PTX2xxR/W RUL SDK       https://opensource.org/licenses/BSD-3-Clause                 The BSD 3-Clause License       Renesas Electronics               contained in source code headers
+1.2.0       
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PTX2xxR/W               .\Renesas_Open_License_v1.txt                                Renesas Open License v 1.0     Renesas Electronics               
+Firmware/uCode                                                                                                                              
+Image RUL SDK
+1.2.0
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+zf_log 0.4.0            https://opensource.org/licenses/MIT                          The MIT License                Copyright 2017 wonder-mice 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+This software includes both proprietary and open source components. The proprietary components may only be used after execution of the
+relevant Renesas Electronics Licensing Agreement. If you have not executed such an agreement you are not authorised to use this software.
+All open source components constitute a separate delivery and are licensed according to the applicable terms of their respective open source
+licenses. All open source software is delivered "AS IS" with no warranties. While Renesas Electronics seeks to provide complete and
+accurate licensing information with regard to each open source package, Renesas Electronics does not warrant or represent that the
+licensing information is complete or error-free. Certain open source licenses,require that source code is made available under certain conditions. 
+Please contact marketing_nfc_reader@lm.renesas.com for any source code requests, as well as for any licensing inquiries with respect to the proprietary components.
+
+Release Version: v1.2.0

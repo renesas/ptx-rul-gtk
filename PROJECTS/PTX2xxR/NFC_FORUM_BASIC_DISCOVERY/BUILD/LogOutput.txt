@@ -1,0 +1,6 @@
+000000: I ptx_HAL_DRV_Interface_SPI_Open@ptx_HAL_DRV_Interface_SPI.c:231 SPI Open OK
+000001: I ptx_HAL_DRV_Interface_SPI_Tx@ptx_HAL_DRV_Interface_SPI.c:286 SPI Write: 0002100100
+000002: I ptx_HAL_DRV_Interface_SPI_Tx@ptx_HAL_DRV_Interface_SPI.c:286 SPI Write: 0002100100
+000003: I ptx_HAL_DRV_Interface_SPI_Tx@ptx_HAL_DRV_Interface_SPI.c:286 SPI Write: 0002100000
+000004: I ptx_HAL_DRV_Interface_SPI_Close@ptx_HAL_DRV_Interface_SPI.c:255 SPI Close OK
+000005: I ptx_HAL_DRV_Interface_SPI_Close@ptx_HAL_DRV_Interface_SPI.c:255 SPI Close OK
