@@ -69,5 +69,5 @@ _deps
 CMakeUserPresets.json
 
 # sdk
-*/BUILD/LogOutput.txt
-*/BUILD/NFC_FORUM_BASIC_DISCOVERY
+**/BUILD/LogOutput.txt
+**/BUILD/NFC_FORUM_BASIC_DISCOVERY
