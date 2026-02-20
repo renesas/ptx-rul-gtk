@@ -85,28 +85,14 @@ const char *PTX_DEMO_VERSION = "V1.0";
 /**
  * \brief Demo-Application States.
  */
-typedef enum ptx_DemoAppState
+typedef enum demoState
 {
-    DemoAppState_StartDiscovery,       /**< Start NFC Forum Discovery / Polling-Loop. */
-    DemoAppState_WaitForDiscovery,     /**< Wait until Polling-Loop discovered, resolved and potentially also activated available card(s). */
-    DemoAppState_SelectCard,           /**< Select specific card in case multiple cards were found or one card supporting multiple protocols. */
-    DemoAppState_DataExchange,         /**< Perform example data exchange for every activated card using standard RUL API Exchange-functions. */
-    DemoAppState_DeactivateReader,     /**< Deactivate Reader i.e. switch RF-Field off. */
-    DemoAppState_RestartDiscovery,     /**< Re-Start NFC Forum Discovery / Polling-Loop. */
-    DemoAppState_SystemError,          /**< Critical (System-)Error occurred. */
-    DemoAppState_Exit,                 /**< Stop Demo-Application (no specific reason)). */
-} ptx_DemoAppState_t;
-
-
-/*
- * ####################################################################################################################
- * API FUNCTIONS
- * ####################################################################################################################
- */
-
-#if defined(PTX_PLATFORM_MCU)
-int ptx_App_Entry(void);
-#endif
+   demoStateStartDiscovery,
+   demoStateWaitForDiscovery,
+   demoStateRestartDiscovery,
+   demoStateDeactivateReader,
+   demoStateExit
+} demoState_t;
 
 #if defined(__cplusplus)
 }

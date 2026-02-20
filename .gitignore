@@ -67,3 +67,7 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+
+# sdk
+*/BUILD/LogOutput.txt
+*/BUILD/NFC_FORUM_BASIC_DISCOVERY
