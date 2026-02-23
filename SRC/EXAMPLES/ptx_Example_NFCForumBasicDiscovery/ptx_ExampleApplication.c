@@ -38,7 +38,7 @@
     Module      : SDK Example (NFC Forum Basic Discovery)
     File        : EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.c
 
-    Description : GTK Discovery example gtkApp
+    Description : GTK Discovery example application
 */
 
 #include "ptx_ExampleApplication.h"
@@ -92,10 +92,11 @@ static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 #define PTX_DEMO_APP_EXAMPLE_WORK_BUFFER_SIZE       266u
 
 static ptx_RUL_t sRul = {0};
-static volatile bool sIsPolling = false;
-static volatile bool sDoRunDemo = false;
+static volatile bool sDoStopDiscovery = false;
+static volatile bool sDoRunDiscovery = false;
 static volatile ptx_RUL_CardParams_t sActiveCard = {0};
 static volatile ptx_RUL_CardProtocolType_t sActiveProtocol;
+static volatile ptx_Status_t sPtxStatus;
 static GObject *sText = NULL;
 static GObject *sStartStopButton = NULL;
 static GThread *sWorkerThread = NULL;
@@ -113,23 +114,22 @@ static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *de
 
 static gint updateCardInfo()
 {
-    if(!sDoRunDemo)
+    if(!sDoRunDiscovery)
         return 0;
 
     char content[256] = "";
-    size_t maxSize = sizeof(content);
+    const size_t maxSize = sizeof(content);
 
     snprintf(content, maxSize, "Card activated\n");
-    GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
     gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
     
     GtkTextIter iter;
 
-    switch (sActiveCard.TechType)
+    switch(sActiveCard.TechType)
     {
         case ptx_RUL_CardRfTechType_A:
         {
-            //if(memcmp(sActiveCard.TechParam.TypeA.NfcId1))
             snprintf(content, maxSize, "RF-technology: Type-A\n");
             gtk_text_buffer_get_end_iter(buffer, &iter);
             gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
@@ -233,7 +233,7 @@ static gint updateCardInfo()
         }
     }
 
-    switch (sActiveProtocol)
+    switch(sActiveProtocol)
     {
         case ptx_RUL_CardProtocolType_T2T:
         {
@@ -290,7 +290,7 @@ static gint updateCardInfo()
 static gpointer workerThread()
 {
     g_print("Worker thread started.\n");
-    runDemo();
+    sPtxStatus = runDemo();
 
     return NULL;
 }
@@ -299,20 +299,24 @@ static void startStop(GtkWidget *widget, gpointer data)
 {
     (void)widget;
     (void)data;
-    
-    if(!sIsPolling)
+
+    if(!sDoRunDiscovery)
     {
-        char * content = "";
+        const char * content = "";
         GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
         gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
-        sWorkerThread = g_thread_new("worker", workerThread, NULL);
-        sDoRunDemo = true;
         gtk_button_set_label(GTK_BUTTON(sStartStopButton), "STOP");
-        sIsPolling = true;
+        sDoRunDiscovery = true;
+
+        if(sWorkerThread == NULL)
+        {
+            sWorkerThread = g_thread_new("worker", workerThread, NULL);
+        }
     }
     else
     {
-
+        gtk_button_set_label(GTK_BUTTON(sStartStopButton), "START");
+        sDoStopDiscovery = true;
     }
 }
 
@@ -320,13 +324,8 @@ static void closeRequest(GtkApplication *gtkApp, gpointer userData)
 {
     (void)gtkApp;
 
-    sDoRunDemo = false;
+    sDoRunDiscovery = false;
     gExit = 1;
-    if(sWorkerThread != NULL)
-    {
-        g_thread_join(sWorkerThread);
-        g_print("Worker thread ended.\n");
-    }
     gtk_window_destroy(GTK_WINDOW(userData));
 }
 
@@ -434,7 +433,12 @@ int main(int argc, char **argv)
 
                 g_application_run (G_APPLICATION (gtkApp), argc, argv);
 
-                //ptx_Utils_Print("Demo Application completed with Status %04X!\n", status);
+                if(sWorkerThread != NULL)
+                {
+                    g_thread_join(sWorkerThread);
+                }
+
+                ptx_Utils_Print("Demo Application completed with Status %04X!\n", sPtxStatus);
             }
             else
             {
@@ -471,8 +475,13 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
 
-    g_thread_unref(sWorkerThread);
+    if(sWorkerThread != NULL)
+    {
+        g_thread_unref(sWorkerThread);
+    }
+    
     g_object_unref(gtkApp);
+
     return 0;
 }
 
@@ -491,8 +500,12 @@ static ptx_Status_t runDemo()
     {
         do
         {
-            if(sDoRunDemo)
-            {
+            if(sDoRunDiscovery)
+            {   
+                if(sDoStopDiscovery)
+                {
+                    demoState = demoStateDeactivateReader;
+                }
                 /* Check regularly for System-state/-health (e.g. temperature/over-current errors etc.) */
                 statusInfo.Type = ptx_RUL_StatusType_System;
 
@@ -625,8 +638,6 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
                      * An NFC-device has been activated i.e. selected and is ready for (user) data exchange.
                      * Activation / Selection takes directly place if single device / card supporting only one protocol was detected.
                      */
-                    //ptx_Utils_Print("Card / Device activated -> ready for NFC data exchange.\n");
-
                     sActiveCard = *cardRegistry->ActiveCard;
                     sActiveProtocol = cardRegistry->ActiveProtocol;
                     g_idle_add(updateCardInfo, NULL);
@@ -703,6 +714,9 @@ static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *de
         if (PTX_STATUS_SUCCESS == status)
         {
             ptx_Utils_Print("RF-Field switched off successfully.\n");
+            sDoStopDiscovery = false;
+            sDoRunDiscovery = false;
+            *demoState = demoStateStartDiscovery;
         }
         else
         {
