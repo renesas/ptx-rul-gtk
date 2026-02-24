@@ -353,6 +353,12 @@ static void activate(GtkApplication *gtkApp, gpointer userData)
     g_object_unref (builder);
 }
 
+static void startup(GtkApplication *gtkApp, gpointer userData)
+{
+    (void)gtkApp;
+    (void)userData;
+}
+
 /*
  * Add a platform dependent handler for a console event.
  * It is used to catch the user key press application-quit event Ctrl-C.
@@ -377,6 +383,7 @@ int main(int argc, char **argv)
     GtkApplication *gtkApp = gtk_application_new ("com.nfc.renesas",
                                             G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect (gtkApp, "activate", G_CALLBACK (activate), NULL);
+    g_signal_connect (gtkApp, "startup", G_CALLBACK (startup), NULL);
 
     ptx_Status_t status;
 

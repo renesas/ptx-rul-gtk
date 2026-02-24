@@ -4,10 +4,18 @@
     <property name="title">PTX205R</property>
     <property name="default-width">600</property>
     <property name="default-height">400</property>
-    <child>
-      <object id="contentBox" class="GtkBox">
-        <!-- <property name="spacing">8</property> -->
-        <property name="orientation">vertical</property>
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="header">
+        <child type="title">
+          <object class="GtkStackSwitcher" id="tabs">
+            <property name="stack">stack</property>
+          </object>
+        </child>
+        <child type="end">
+          <object class="GtkMenuButton" id="settings">
+            <property name="direction">none</property>
+          </object>
+        </child>
         <child>
           <object id="startstop" class="GtkButton">        
             <property name="label">START</property>
@@ -15,12 +23,13 @@
             <property name="margin-top">4</property>
             <property name="margin-bottom">4</property>
             <property name="halign">start</property>
-            <!-- <layout>
-              <property name="column">0</property>
-              <property name="row">0</property>
-            </layout> -->
           </object>
         </child>
+      </object>
+    </child>
+    <child>
+      <object id="contentBox" class="GtkBox">
+        <property name="orientation">vertical</property>
         <child>
           <object id="scrollableArea" class="GtkScrolledWindow">
             <property name="hexpand">True</property>
@@ -32,10 +41,7 @@
               <object id="text" class="GtkTextView">
                 <property name="editable">False</property>
                 <property name="wrap-mode">word</property>
-                <!-- <layout>
-                  <property name="column">0</property>
-                  <property name="row">1</property>
-                </layout> -->
+                <property name="cursor-visible">False</property>
               </object>
             </child>
           </object>
