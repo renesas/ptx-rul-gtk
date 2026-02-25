@@ -94,12 +94,14 @@ static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 static ptx_RUL_t sRul = {0};
 static volatile bool sDoStopDiscovery = false;
 static volatile bool sDoRunDiscovery = false;
+static volatile bool sDoReset = false;
 static volatile ptx_RUL_CardParams_t sActiveCard = {0};
 static volatile ptx_RUL_CardProtocolType_t sActiveProtocol;
 static volatile ptx_Status_t sPtxStatus;
 static GObject *sText = NULL;
 static GObject *sStartStopButton = NULL;
 static GThread *sWorkerThread = NULL;
+//static GSettings sSettings;
 
 /*
  * ####################################################################################################################
@@ -320,42 +322,111 @@ static void startStop(GtkWidget *widget, gpointer data)
     }
 }
 
-static void closeRequest(GtkApplication *gtkApp, gpointer userData)
+static void closeRequest(GtkApplication *app, gpointer userData)
 {
-    (void)gtkApp;
+    (void)app;
 
     sDoRunDiscovery = false;
     gExit = 1;
     gtk_window_destroy(GTK_WINDOW(userData));
 }
 
-static void activate(GtkApplication *gtkApp, gpointer userData)
+
+static void onReset (GSimpleAction *action, GVariant *parameter, gpointer userData)
+{
+    (void)action;
+    (void)parameter;
+    (void)userData;
+    const char * content = "";
+    GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+    if(sDoRunDiscovery)
+        sDoReset = true;
+
+}
+
+static void onPreferences (GSimpleAction *action, GVariant *parameter, gpointer userData)
+{
+    (void)action;
+    (void)parameter;
+
+    GtkWindow *parent = gtk_application_get_active_window (GTK_APPLICATION (userData));
+    GtkAlertDialog *dlg = gtk_alert_dialog_new ("Preferences selected");
+    gtk_alert_dialog_show (dlg, parent);
+    g_object_unref (dlg);
+}
+
+static void onQuit (GSimpleAction *action, GVariant *parameter, gpointer userData)
+{
+    (void)action;
+    (void)parameter;
+    (void)userData;
+
+    sDoRunDiscovery = false;
+    gExit = 1;
+    g_application_quit (G_APPLICATION (userData));
+}
+
+
+static void onActivate(GtkApplication *app, gpointer userData)
 {
     (void)userData;
+    // GtkSettings *settings = gtk_settings_get_default();
+    // g_object_set(settings, "gtk-application-prefer-dark-theme", TRUE, NULL);
     /* Construct a GtkBuilder instance and load our UI description */
-    GtkBuilder *builder = gtk_builder_new();
-    gtk_builder_add_from_file(builder, "builder.ui", NULL);
+    //GSettingsSchemaSource *schema = g_settings_schema_source_get_default();
+    // g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE);
+    // GSettings* settings = g_settings_new("app");
+    // g_print("dark mode: %d\n", g_settings_get_boolean(settings, "gtk-application-prefer-dark-theme"));
+
+    GtkBuilder *windowBuilder = gtk_builder_new();
+    gtk_builder_add_from_file(windowBuilder, "window.ui", NULL);
 
     /* Connect signal handlers to the constructed widgets. */
-    GObject *window = gtk_builder_get_object (builder, "window");
-    gtk_window_set_application (GTK_WINDOW (window), gtkApp);
+    GObject *window = gtk_builder_get_object (windowBuilder, "window");
+    gtk_window_set_application (GTK_WINDOW (window), app);
 
     g_signal_connect(window, "close_request", G_CALLBACK (closeRequest), window);
 
-    sStartStopButton = gtk_builder_get_object (builder, "startstop");
+    sStartStopButton = gtk_builder_get_object (windowBuilder, "startstop");
     g_signal_connect(sStartStopButton, "clicked", G_CALLBACK (startStop), NULL);
 
-    sText = gtk_builder_get_object (builder, "text");
+    sText = gtk_builder_get_object(windowBuilder, "text");
+
+    GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
+
+    GtkBuilder *menuBuilder = gtk_builder_new();
+    gtk_builder_add_from_file(menuBuilder, "menu.ui", NULL);
+    GMenuModel *menuModel = G_MENU_MODEL(gtk_builder_get_object (menuBuilder, "menu"));
+    gtk_menu_button_set_menu_model (GTK_MENU_BUTTON(menuButton), menuModel);
+
+    const GActionEntry actions[] = {
+        { .name = "reset", .activate = onReset },
+        { .name = "preferences", .activate = onPreferences },
+        { .name = "quit", .activate = onQuit },
+    };
+
+
+    g_action_map_add_action_entries (G_ACTION_MAP (app),
+                                     actions,
+                                     G_N_ELEMENTS(actions),
+                                     app);
+
+    /* Optional accelerator: Ctrl+Q */
+    gtk_application_set_accels_for_action (app, "app.quit",
+                                           (const char *[]) { "<Primary>q", NULL });
+
 
     gtk_widget_set_visible(GTK_WIDGET (window), TRUE);
 
-    /* We do not need the builder any more */
-    g_object_unref (builder);
+    g_object_unref(windowBuilder);
+    g_object_unref(menuBuilder);
+    g_object_unref(menuModel);
 }
 
-static void startup(GtkApplication *gtkApp, gpointer userData)
+static void onStartup(GtkApplication *app, gpointer userData)
 {
-    (void)gtkApp;
+    (void)app;
     (void)userData;
 }
 
@@ -380,10 +451,10 @@ int main(int argc, char **argv)
 {
     signal(SIGINT,  handler);
 
-    GtkApplication *gtkApp = gtk_application_new ("com.nfc.renesas",
+    GtkApplication *gtkApp = gtk_application_new("com.nfc.renesas",
                                             G_APPLICATION_DEFAULT_FLAGS);
-    g_signal_connect (gtkApp, "activate", G_CALLBACK (activate), NULL);
-    g_signal_connect (gtkApp, "startup", G_CALLBACK (startup), NULL);
+    g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
+    g_signal_connect(gtkApp, "startup", G_CALLBACK (onStartup), NULL);
 
     ptx_Status_t status;
 
@@ -509,6 +580,12 @@ static ptx_Status_t runDemo()
         {
             if(sDoRunDiscovery)
             {   
+                if(sDoReset)
+                {
+                    demoState = demoStateRestartDiscovery;
+                    sDoReset = false;
+                }
+
                 if(sDoStopDiscovery)
                 {
                     demoState = demoStateDeactivateReader;
