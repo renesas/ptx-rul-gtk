@@ -297,6 +297,27 @@ static gpointer workerThread()
     return NULL;
 }
 
+static void ptxInit(GTask        *task,
+                    gpointer      sourceObject,
+                    gpointer      taskData,
+                    GCancellable *cancellable)
+{
+    (void)sourceObject;
+    (void)taskData;
+    (void)cancellable;
+    (void)taskData;
+    (void)task;
+}
+
+static void onInitDone(GObject      *sourceObject,
+                  GAsyncResult *res,
+                  gpointer      userData)
+{
+    (void)sourceObject;
+    (void)res;
+    (void)userData;
+}
+
 static void startStop(GtkWidget *widget, gpointer data)
 {
     (void)widget;
@@ -389,9 +410,14 @@ static void onActivate(GtkApplication *app, gpointer userData)
     g_signal_connect(window, "close_request", G_CALLBACK (closeRequest), window);
 
     sStartStopButton = gtk_builder_get_object (windowBuilder, "startstop");
+    gtk_widget_set_sensitive(GTK_WIDGET(sStartStopButton), FALSE);
     g_signal_connect(sStartStopButton, "clicked", G_CALLBACK (startStop), NULL);
 
     sText = gtk_builder_get_object(windowBuilder, "text");
+
+    const char * content = "Initializing ...";
+    GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
 
     GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
 
@@ -407,7 +433,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     };
 
 
-    g_action_map_add_action_entries (G_ACTION_MAP (app),
+    g_action_map_add_action_entries (G_ACTION_MAP(app),
                                      actions,
                                      G_N_ELEMENTS(actions),
                                      app);
@@ -416,13 +442,37 @@ static void onActivate(GtkApplication *app, gpointer userData)
     gtk_application_set_accels_for_action (app, "app.quit",
                                            (const char *[]) { "<Primary>q", NULL });
 
+    GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
+    GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
+
+    g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), FALSE);
+    g_simple_action_set_enabled(G_SIMPLE_ACTION(prefsAction), FALSE);
+
+    GTask *task = g_task_new (NULL, NULL, onInitDone, NULL);
+    g_task_run_in_thread (task, ptxInit);
 
     gtk_widget_set_visible(GTK_WIDGET (window), TRUE);
 
+    g_object_unref(task);
     g_object_unref(windowBuilder);
     g_object_unref(menuBuilder);
     g_object_unref(menuModel);
 }
+
+// static void onPtxError(GtkApplication *app, gpointer userData)
+// {
+//     (void)userData;
+
+//     GtkWidget *window = gtk_application_window_new (app);
+//     gtk_window_set_title (GTK_WINDOW (window), "PTX205R");
+//     gtk_widget_set_visible(GTK_WIDGET (window), FALSE);
+//     //gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
+//     //gtk_window_present (GTK_WINDOW (window));
+
+//     GtkAlertDialog *dlg = gtk_alert_dialog_new ("ERROR initializing RUL SDK or PTX hardware.");
+//     gtk_alert_dialog_show (dlg, GTK_WINDOW (window));
+//     g_object_unref (dlg);
+// }
 
 static void onStartup(GtkApplication *app, gpointer userData)
 {
@@ -453,8 +503,9 @@ int main(int argc, char **argv)
 
     GtkApplication *gtkApp = gtk_application_new("com.nfc.renesas",
                                             G_APPLICATION_DEFAULT_FLAGS);
-    g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
     g_signal_connect(gtkApp, "startup", G_CALLBACK (onStartup), NULL);
+    g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
+    g_application_run (G_APPLICATION (gtkApp), argc, argv);
 
     ptx_Status_t status;
 
@@ -509,7 +560,8 @@ int main(int argc, char **argv)
             {
                 ptx_Utils_Print("RUL SW-Stack successfully initialized!\n");
 
-                g_application_run (G_APPLICATION (gtkApp), argc, argv);
+                // g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
+                // g_application_run (G_APPLICATION (gtkApp), argc, argv);
 
                 if(sWorkerThread != NULL)
                 {
@@ -526,6 +578,9 @@ int main(int argc, char **argv)
         else
         {
             ptx_Utils_Print("Hardware initialization failed with Error-Status %04X!\n", status);
+            sPtxStatus = status;
+            // g_signal_connect(gtkApp, "activate", G_CALLBACK (onPtxError), NULL);
+            // g_application_run (G_APPLICATION (gtkApp), argc, argv);
         }
     }
     else
