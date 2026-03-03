@@ -88,9 +88,6 @@ static const uint8_t EXAMPLE_INTERFACE_PORT_ID = 0;
 /* Requested number of hardware timer instances. */
 static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 
-/* Work-buffer max. sizes for current demo example. */
-#define PTX_DEMO_APP_EXAMPLE_WORK_BUFFER_SIZE       266u
-
 static ptx_RUL_t sRul = {0};
 static volatile bool sDoStopDiscovery = false;
 static volatile bool sDoRunDiscovery = false;
@@ -101,6 +98,7 @@ static volatile ptx_Status_t sPtxStatus;
 static GObject *sText = NULL;
 static GObject *sStartStopButton = NULL;
 static GThread *sWorkerThread = NULL;
+static GThread *sInitThread = NULL;
 //static GSettings sSettings;
 
 /*
@@ -289,33 +287,80 @@ static gint updateCardInfo()
     return 0;
 }
 
+static gint onInitDone()
+{
+    if(sPtxStatus == PTX_STATUS_SUCCESS)
+    {
+        const char * content = "System initialization SUCCESS\n";
+        GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+        gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+    }
+    else
+    {
+        char content[64] = "";
+        const size_t maxSize = sizeof(content);
+        snprintf(content, maxSize, "System initialization ERROR: 0x%04X\n", sPtxStatus);
+        GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+        gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+    }
+
+    return 0;
+}
+
 static gpointer workerThread()
 {
     g_print("Worker thread started.\n");
-    sPtxStatus = runDemo();
+    ptx_Status_t status = runDemo();
+    g_print("Demo loop exited with status %04X.\n", status);
 
     return NULL;
 }
 
-static void ptxInit(GTask        *task,
-                    gpointer      sourceObject,
-                    gpointer      taskData,
-                    GCancellable *cancellable)
+static gpointer initThread()
 {
-    (void)sourceObject;
-    (void)taskData;
-    (void)cancellable;
-    (void)taskData;
-    (void)task;
-}
+    g_print("Init thread started.\n");
+    ptx_Status_t status;
 
-static void onInitDone(GObject      *sourceObject,
-                  GAsyncResult *res,
-                  gpointer      userData)
-{
-    (void)sourceObject;
-    (void)res;
-    (void)userData;
+    /* Demo Application Parameters */
+    ptx_Utils_AppParams_t app_params;
+
+    /* Main API component */
+    ptx_RUL_InitParams_t rul_init_params = {0};
+
+    /* Initialize demo application parameters with default values. */
+    (void)memcpy(&app_params.DeviceName[0], EXAMPLE_DEVICE_NAME, EXAMPLE_DEVICE_NAME_LEN);
+    app_params.DeviceNameLen = EXAMPLE_DEVICE_NAME_LEN;
+
+    /* Initialize Main RUL API Component.
+     *
+     * Note: The used Host-Interface i.e. the HAL-component and the Logging-component (if used) get selected via the Build-process (see User Manual)
+     *       and get also initialized during the next call to "ptx_RUL_Init".
+     */
+    rul_init_params.InterfaceInitParams.InterfaceName = (uint8_t*)&app_params.DeviceName[0];
+    rul_init_params.InterfaceInitParams.InterfaceNameLen = app_params.DeviceNameLen;
+    rul_init_params.InterfaceInitParams.InterfaceType = EXAMPLE_INTERFACE_TYPE;
+    rul_init_params.InterfaceInitParams.InterfacePortType = EXAMPLE_INTERFACE_PORT_TYPE;
+    rul_init_params.InterfaceInitParams.InterfacePortID = EXAMPLE_INTERFACE_PORT_ID;
+    rul_init_params.InterfaceInitParams.NumberOfTimers = EXAMPLE_NUMBER_OF_TIMERS;
+
+    status = ptx_RUL_Init(&sRul, &rul_init_params);
+
+    if (PTX_STATUS_SUCCESS == status)
+    {
+        /* Initialize the Hardware by
+        *  - downloading the Firmware-image and starting execution,
+        *  - initializing the hardware / firmware,
+        *  - downloading the default RF-configuration,
+        *  - changing into READY-state.
+        */
+        status = ptx_RUL_InitHardware(&sRul);
+    }
+
+    sPtxStatus = status;
+    g_idle_add(onInitDone, NULL);
+    g_print("Init thread finished with status %04X\n", status);
+
+    return NULL;
 }
 
 static void startStop(GtkWidget *widget, gpointer data)
@@ -346,7 +391,6 @@ static void startStop(GtkWidget *widget, gpointer data)
 static void closeRequest(GtkApplication *app, gpointer userData)
 {
     (void)app;
-
     sDoRunDiscovery = false;
     gExit = 1;
     gtk_window_destroy(GTK_WINDOW(userData));
@@ -377,7 +421,7 @@ static void onPreferences (GSimpleAction *action, GVariant *parameter, gpointer 
     g_object_unref (dlg);
 }
 
-static void onQuit (GSimpleAction *action, GVariant *parameter, gpointer userData)
+static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
     (void)action;
     (void)parameter;
@@ -385,20 +429,19 @@ static void onQuit (GSimpleAction *action, GVariant *parameter, gpointer userDat
 
     sDoRunDiscovery = false;
     gExit = 1;
-    g_application_quit (G_APPLICATION (userData));
+    g_application_quit(G_APPLICATION(userData));
 }
 
 
 static void onActivate(GtkApplication *app, gpointer userData)
 {
     (void)userData;
-    // GtkSettings *settings = gtk_settings_get_default();
-    // g_object_set(settings, "gtk-application-prefer-dark-theme", TRUE, NULL);
-    /* Construct a GtkBuilder instance and load our UI description */
-    //GSettingsSchemaSource *schema = g_settings_schema_source_get_default();
-    // g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE);
-    // GSettings* settings = g_settings_new("app");
-    // g_print("dark mode: %d\n", g_settings_get_boolean(settings, "gtk-application-prefer-dark-theme"));
+
+    char cwdPath[4096];
+    snprintf(cwdPath, sizeof(cwdPath), "%s/", g_get_current_dir());
+    GSettings *settings = g_settings_new_with_path("app", cwdPath);
+    GtkSettings *defaulSettings = gtk_settings_get_default();
+    g_object_set(defaulSettings, "gtk-application-prefer-dark-theme", g_settings_get_boolean(settings, "use-dark-theme"), NULL);
 
     GtkBuilder *windowBuilder = gtk_builder_new();
     gtk_builder_add_from_file(windowBuilder, "window.ui", NULL);
@@ -415,6 +458,9 @@ static void onActivate(GtkApplication *app, gpointer userData)
 
     sText = gtk_builder_get_object(windowBuilder, "text");
 
+    if(sText == NULL || sStartStopButton == NULL)
+        return;
+
     const char * content = "Initializing ...";
     GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
     gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
@@ -424,6 +470,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     GtkBuilder *menuBuilder = gtk_builder_new();
     gtk_builder_add_from_file(menuBuilder, "menu.ui", NULL);
     GMenuModel *menuModel = G_MENU_MODEL(gtk_builder_get_object (menuBuilder, "menu"));
+
     gtk_menu_button_set_menu_model (GTK_MENU_BUTTON(menuButton), menuModel);
 
     const GActionEntry actions[] = {
@@ -432,47 +479,28 @@ static void onActivate(GtkApplication *app, gpointer userData)
         { .name = "quit", .activate = onQuit },
     };
 
-
     g_action_map_add_action_entries (G_ACTION_MAP(app),
                                      actions,
                                      G_N_ELEMENTS(actions),
                                      app);
-
+    
     /* Optional accelerator: Ctrl+Q */
     gtk_application_set_accels_for_action (app, "app.quit",
                                            (const char *[]) { "<Primary>q", NULL });
-
+    
     GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
     GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
 
     g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), FALSE);
     g_simple_action_set_enabled(G_SIMPLE_ACTION(prefsAction), FALSE);
 
-    GTask *task = g_task_new (NULL, NULL, onInitDone, NULL);
-    g_task_run_in_thread (task, ptxInit);
+    sInitThread = g_thread_new("init", initThread, NULL);
 
     gtk_widget_set_visible(GTK_WIDGET (window), TRUE);
 
-    g_object_unref(task);
     g_object_unref(windowBuilder);
     g_object_unref(menuBuilder);
-    g_object_unref(menuModel);
 }
-
-// static void onPtxError(GtkApplication *app, gpointer userData)
-// {
-//     (void)userData;
-
-//     GtkWidget *window = gtk_application_window_new (app);
-//     gtk_window_set_title (GTK_WINDOW (window), "PTX205R");
-//     gtk_widget_set_visible(GTK_WIDGET (window), FALSE);
-//     //gtk_window_set_default_size (GTK_WINDOW (window), 200, 200);
-//     //gtk_window_present (GTK_WINDOW (window));
-
-//     GtkAlertDialog *dlg = gtk_alert_dialog_new ("ERROR initializing RUL SDK or PTX hardware.");
-//     gtk_alert_dialog_show (dlg, GTK_WINDOW (window));
-//     g_object_unref (dlg);
-// }
 
 static void onStartup(GtkApplication *app, gpointer userData)
 {
@@ -507,86 +535,17 @@ int main(int argc, char **argv)
     g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
     g_application_run (G_APPLICATION (gtkApp), argc, argv);
 
-    ptx_Status_t status;
+    if(sInitThread != NULL)
+    {
+        g_thread_join(sInitThread);
+    }
 
-    /* Demo Application Parameters */
-    ptx_Utils_AppParams_t app_params;
+    if(sWorkerThread != NULL)
+    {
+        g_thread_join(sWorkerThread);
+    }
 
-    /* Main API component */
-    ptx_RUL_InitParams_t rul_init_params = {0};
-
-    /* Other components */
     ptx_RUL_DeactivateParams_t deactParams = {0};
-
-    /* Initialize demo application parameters with default values. */
-    (void)memcpy(&app_params.DeviceName[0], EXAMPLE_DEVICE_NAME, EXAMPLE_DEVICE_NAME_LEN);
-    app_params.DeviceNameLen = EXAMPLE_DEVICE_NAME_LEN;
-
-    /* Load application parameters from command-line (if provided), otherwise use default values. */
-    ptx_Utils_AppParameters_Load((uint32_t)argc, argv, &app_params);
-
-    /* Initialize Main RUL API Component.
-     *
-     * Note: The used Host-Interface i.e. the HAL-component and the Logging-component (if used) get selected via the Build-process (see User Manual)
-     *       and get also initialized during the next call to "ptx_RUL_Init".
-     */
-    rul_init_params.InterfaceInitParams.InterfaceName = (uint8_t*)&app_params.DeviceName[0];
-    rul_init_params.InterfaceInitParams.InterfaceNameLen = app_params.DeviceNameLen;
-    rul_init_params.InterfaceInitParams.InterfaceType = EXAMPLE_INTERFACE_TYPE;
-    rul_init_params.InterfaceInitParams.InterfacePortType = EXAMPLE_INTERFACE_PORT_TYPE;
-    rul_init_params.InterfaceInitParams.InterfacePortID = EXAMPLE_INTERFACE_PORT_ID;
-    rul_init_params.InterfaceInitParams.NumberOfTimers = EXAMPLE_NUMBER_OF_TIMERS;
-
-    status = ptx_RUL_Init(&sRul, &rul_init_params);
-
-    if (PTX_STATUS_SUCCESS == status)
-    {
-        /* Initialize the Hardware by
-        *  - downloading the Firmware-image and starting execution,
-        *  - initializing the hardware / firmware,
-        *  - downloading the default RF-configuration,
-        *  - changing into READY-state.
-        */
-        status = ptx_RUL_InitHardware(&sRul);
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            ptx_Utils_Print("PTX Hardware-/-Chip successfully initialized!\n");
-
-            /* Print HW-Info and all available Stack-revisions */
-            status = ptx_Utils_VersionInfo_Print_Revision(&sRul);
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                ptx_Utils_Print("RUL SW-Stack successfully initialized!\n");
-
-                // g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
-                // g_application_run (G_APPLICATION (gtkApp), argc, argv);
-
-                if(sWorkerThread != NULL)
-                {
-                    g_thread_join(sWorkerThread);
-                }
-
-                ptx_Utils_Print("Demo Application completed with Status %04X!\n", sPtxStatus);
-            }
-            else
-            {
-                ptx_Utils_Print("Print Status/Revision information failed with Error-Status %04X!\n", status);
-            }
-        }
-        else
-        {
-            ptx_Utils_Print("Hardware initialization failed with Error-Status %04X!\n", status);
-            sPtxStatus = status;
-            // g_signal_connect(gtkApp, "activate", G_CALLBACK (onPtxError), NULL);
-            // g_application_run (G_APPLICATION (gtkApp), argc, argv);
-        }
-    }
-    else
-    {
-        ptx_Utils_Print("RUL-Stack initialization failed with Error-Status %04X!\n", status);
-    }
 
     /* Switch RF-Field off (independent of previous state) */
     deactParams.Type = ptx_RUL_DeactivateType_Generic;
@@ -594,7 +553,7 @@ int main(int argc, char **argv)
     (void)ptx_RUL_Deactivate(&sRul, &deactParams);
 
     /* De-initialize the RUL API Component (independent of previous state) */
-    status = ptx_RUL_DeInit(&sRul);
+    ptx_Status_t status = ptx_RUL_DeInit(&sRul);
 
     if (PTX_STATUS_SUCCESS == status)
     {
@@ -611,6 +570,11 @@ int main(int argc, char **argv)
     if(sWorkerThread != NULL)
     {
         g_thread_unref(sWorkerThread);
+    }
+
+    if(sInitThread != NULL)
+    {
+        g_thread_unref(sInitThread);
     }
     
     g_object_unref(gtkApp);

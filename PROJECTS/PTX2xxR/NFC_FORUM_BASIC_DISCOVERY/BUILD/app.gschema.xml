@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="app">
+    <key name="red" type="s">
+      <default>''</default>
+      <summary>Red ID</summary>
+      <description>ID of red figurine.</description>
+    </key>
+    <key name="green" type="s">
+      <default>''</default>
+      <summary>Green ID</summary>
+      <description>ID of green figurine.</description>
+    </key>
+    <key name="blue" type="s">
+      <default>''</default>
+      <summary>Blue ID</summary>
+      <description>ID of blue figurine.</description>
+    </key>
+    <key name="yellow" type="s">
+      <default>''</default>
+      <summary>Yellow ID</summary>
+      <description>ID of Yellow figurine.</description>
+    </key>
+    <key name="use-dark-theme" type="b">
+      <default>true</default>
+      <summary>Use dark theme</summary>
+      <description>Use dark theme.</description>
+    </key>
+  </schema>
+</schemalist>
