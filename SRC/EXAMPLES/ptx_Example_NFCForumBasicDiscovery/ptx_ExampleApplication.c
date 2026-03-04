@@ -48,6 +48,7 @@
 #include "ptx_Utils_Print.h"
 #include "ptx_Utils_VersionInfo.h"
 #include "ptx_Utils_CardInfo.h"
+#include "ptx_NDEF.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,6 +89,15 @@ static const uint8_t EXAMPLE_INTERFACE_PORT_ID = 0;
 /* Requested number of hardware timer instances. */
 static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 
+/* Work-buffer max. sizes for current demo example. */
+#define NDEF_BUFFER_SIZE   256u
+
+static uint8_t sNdefRxBuffer[NDEF_BUFFER_SIZE];
+static uint8_t sNdefTxBuffer[NDEF_BUFFER_SIZE];
+static uint8_t sNdefWorkBuffer[NDEF_BUFFER_SIZE];
+static uint8_t sNdefMsgBuffer[NDEF_BUFFER_SIZE];
+static volatile uint32_t sNdefMsgBufferSize = (uint32_t)NDEF_BUFFER_SIZE;
+
 static ptx_RUL_t sRul = {0};
 static volatile bool sDoStopDiscovery = false;
 static volatile bool sDoRunDiscovery = false;
@@ -109,10 +119,64 @@ static GThread *sInitThread = NULL;
 static ptx_Status_t runDemo();
 static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry);
+static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry);
 static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *demoState);
 
-static gint updateCardInfo()
+static gboolean displayNdefMessage()
+{
+    char content[NDEF_BUFFER_SIZE];
+    const size_t maxSize = sizeof(content);
+    GtkTextIter iter;
+    snprintf(content, maxSize, "\nNDEF message: ");
+    GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    gtk_text_buffer_get_end_iter(buffer, &iter);
+    gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+
+    memset(content, 0U, maxSize);
+    memcpy(content, sNdefMsgBuffer, sNdefMsgBufferSize);
+
+    GError *error = NULL;
+
+    // convert to UTF-8 with fallback
+    gchar *utf8Str = g_convert(
+        content, sNdefMsgBufferSize, // Input string and length
+        "UTF-8", "ISO-8859-1",       // To and From encodings
+        NULL, NULL,
+        &error
+    );
+
+    if (utf8Str) {
+        snprintf(content, maxSize, "%s\n", utf8Str);
+        gtk_text_buffer_get_end_iter(buffer, &iter);
+        gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+        g_free(utf8Str); // Caller must free the result
+    } else {
+        memset(content, 0U, maxSize);
+        snprintf(content, maxSize, "Conversion failed: %s\n", error->message);
+        gtk_text_buffer_get_end_iter(buffer, &iter);
+        gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+        g_error_free(error);
+    }
+    
+    return FALSE;
+}
+
+static gboolean displayDiscoveryLoopError()
+{
+    char content[128] = "";
+    const size_t maxSize = sizeof(content);
+    GtkTextIter iter;
+
+    snprintf(content, maxSize, "\nDiscovery loop ended with ERROR: 0x%04X\nPlease close the application and open it again!\n", sPtxStatus);
+    GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    gtk_text_buffer_get_end_iter(buffer, &iter);
+    gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+
+    return FALSE;
+}
+
+static gboolean updateCardInfo()
 {
     if(!sDoRunDiscovery)
         return 0;
@@ -284,7 +348,7 @@ static gint updateCardInfo()
         }
     }
 
-    return 0;
+    return FALSE;
 }
 
 static gint onInitDone(gpointer userData)
@@ -549,11 +613,13 @@ int main(int argc, char **argv)
     if(sInitThread != NULL)
     {
         g_thread_join(sInitThread);
+        g_thread_unref(sInitThread);
     }
 
     if(sWorkerThread != NULL)
     {
         g_thread_join(sWorkerThread);
+        g_thread_unref(sWorkerThread);
     }
 
     ptx_RUL_DeactivateParams_t deactParams = {0};
@@ -577,16 +643,6 @@ int main(int argc, char **argv)
 
     (void)argc;
     (void)argv;
-
-    if(sWorkerThread != NULL)
-    {
-        g_thread_unref(sWorkerThread);
-    }
-
-    if(sInitThread != NULL)
-    {
-        g_thread_unref(sInitThread);
-    }
     
     g_object_unref(gtkApp);
 
@@ -649,6 +705,10 @@ static ptx_Status_t runDemo()
                             status = processStateWaitForDiscovery(&sRul, &demoState, cardRegistry);
                             break;
 
+                        case demoStateDataExchange:
+                            status = processStateDataExchange(&sRul, &demoState, cardRegistry);
+                            break;
+
                         case demoStateRestartDiscovery:
                             status = processStateRestartDiscovery(&sRul, &demoState);
                             break;
@@ -671,7 +731,11 @@ static ptx_Status_t runDemo()
         while ((PTX_STATUS_SUCCESS == status) && (demoStateExit != demoState) && (0 == gExit));
     }
 
-    ptx_Utils_Print("Exiting Demo-Application...\n");
+    if(status != PTX_STATUS_SUCCESS)
+    {
+        sPtxStatus = status;
+        g_idle_add(displayDiscoveryLoopError, NULL);
+    }
 
     return status;
 }
@@ -755,7 +819,8 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
                     sActiveCard = *cardRegistry->ActiveCard;
                     sActiveProtocol = cardRegistry->ActiveProtocol;
                     g_idle_add(updateCardInfo, NULL);
-                    *demoState = demoStateRestartDiscovery;
+
+                    *demoState = demoStateDataExchange;
                     break;
                 }
 
@@ -779,6 +844,53 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
             *demoState = demoStateExit;
             ptx_Utils_Print("Check status of RF-Discovery failed with Error-Status %04X!\n", status);
         }
+    }
+
+    return status;
+}
+
+static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if ((NULL != rul) && (NULL != demoState) && (NULL != cardRegistry))
+    {
+        ptx_NDEF_t ndefComp = {0};
+        ptx_NDEF_InitParams_t ndefInitParams = {0};
+        ndefInitParams.rul           = rul;
+        ndefInitParams.rx            = sNdefRxBuffer;
+        ndefInitParams.rxLen         = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.tx            = sNdefTxBuffer;
+        ndefInitParams.txLen         = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.workBuffer    = sNdefWorkBuffer;
+        ndefInitParams.workBufferLen = (uint32_t)NDEF_BUFFER_SIZE;
+
+        status = ptx_NDEF_Open(&ndefComp, &ndefInitParams);
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            /* Check if the activated Tag is NDEF-formatted. */
+            status = ptx_NDEF_CheckMessage(&ndefComp);
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* Tag is NDEF-formatted - let's try to read an NDEF message from it. */
+                uint32_t bufferSize = (uint32_t)NDEF_BUFFER_SIZE;
+                status = ptx_NDEF_ReadMessage(&ndefComp, sNdefMsgBuffer, &bufferSize);
+                sNdefMsgBufferSize = bufferSize;
+                if(status == PTX_STATUS_SUCCESS)
+                    g_idle_add(displayNdefMessage, NULL);
+            }
+            else
+            {
+                /* Activated Tag is probably not NDEF-formatted, let's move on. */
+                status = PTX_STATUS_SUCCESS;
+            }
+
+            (void)ptx_NDEF_Close(&ndefComp);
+        }
+
+        *demoState = demoStateRestartDiscovery;
     }
 
     return status;

@@ -332,7 +332,16 @@ ${SOURCES}
 	../../../SRC/EXAMPLES/Utils/ptx_Utils_CardInfo.c
 	../../../SRC/EXAMPLES/Utils/ptx_Utils_VersionInfo.c
 	../../../SRC/EXAMPLES/Utils/ptx_Utils_AppParameters.c
-
+	
+	../../../SRC/API/NATIVE_TAG/T2T/ptx_NativeTag_T2T.c
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T2T/ptx_NDEF_T2T.c
+	../../../SRC/API/NATIVE_TAG/T3T/ptx_NativeTag_T3T.c
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T3T/ptx_NDEF_T3T.c
+	../../../SRC/API/NATIVE_TAG/T4T/ptx_NativeTag_T4T.c
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T4T/ptx_NDEF_T4T.c
+	../../../SRC/API/NATIVE_TAG/T5T/ptx_NativeTag_T5T.c
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T5T/ptx_NDEF_T5T.c
+	../../../SRC/API/NDEF/GENERIC/ptx_NDEF.c
 )
 
 set(HEADER_DIRS
@@ -355,6 +364,19 @@ ${HEADER_DIRS}
 	../../../SRC/COMPS/HIP/RUL
 	../../../SRC/COMPS/HAL/DRV/MCU
 
+	../../../SRC/API/NATIVE_TAG
+	../../../SRC/API/NDEF
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T3T
+	../../../SRC/API/NATIVE_TAG/T4T
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T5T
+	../../../SRC/API/NATIVE_TAG/T3T
+	../../../SRC/API/NATIVE_TAG/T5T
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T4T
+	../../../SRC/API/NDEF/TAG_TYPES
+	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T2T
+	../../../SRC/API/NDEF/DEFINES
+	../../../SRC/API/NATIVE_TAG/T2T
+	../../../SRC/API/NDEF/GENERIC
 )
 
 # Build Target Configuration

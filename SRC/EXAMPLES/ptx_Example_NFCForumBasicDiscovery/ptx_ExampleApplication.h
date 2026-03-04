@@ -89,6 +89,7 @@ typedef enum demoState
 {
    demoStateStartDiscovery,
    demoStateWaitForDiscovery,
+   demoStateDataExchange,
    demoStateRestartDiscovery,
    demoStateDeactivateReader,
    demoStateExit
