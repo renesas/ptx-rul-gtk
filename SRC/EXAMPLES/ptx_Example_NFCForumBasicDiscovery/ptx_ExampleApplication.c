@@ -287,19 +287,27 @@ static gint updateCardInfo()
     return 0;
 }
 
-static gint onInitDone()
+static gint onInitDone(gpointer userData)
 {
+    GtkApplication *app = GTK_APPLICATION(userData);
+
     if(sPtxStatus == PTX_STATUS_SUCCESS)
     {
-        const char * content = "System initialization SUCCESS\n";
+        const char * content = "System initialized. Press START to begin discovery!";
         GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
         gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+
+        gtk_widget_set_sensitive(GTK_WIDGET(sStartStopButton), TRUE);
+        GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
+        GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
+        g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), TRUE);
+        g_simple_action_set_enabled(G_SIMPLE_ACTION(prefsAction), TRUE);
     }
     else
     {
-        char content[64] = "";
+        char content[128] = "";
         const size_t maxSize = sizeof(content);
-        snprintf(content, maxSize, "System initialization ERROR: 0x%04X\n", sPtxStatus);
+        snprintf(content, maxSize, "System initialization ERROR: 0x%04X\nPlease check the system and restart the application!", sPtxStatus);
         GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
         gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
     }
@@ -316,7 +324,7 @@ static gpointer workerThread()
     return NULL;
 }
 
-static gpointer initThread()
+static gpointer initThread(gpointer userData)
 {
     g_print("Init thread started.\n");
     ptx_Status_t status;
@@ -357,16 +365,16 @@ static gpointer initThread()
     }
 
     sPtxStatus = status;
-    g_idle_add(onInitDone, NULL);
+    g_idle_add(onInitDone, userData);
     g_print("Init thread finished with status %04X\n", status);
 
     return NULL;
 }
 
-static void startStop(GtkWidget *widget, gpointer data)
+static void startStop(GtkWidget *widget, gpointer userData)
 {
     (void)widget;
-    (void)data;
+    (void)userData;
 
     if(!sDoRunDiscovery)
     {
@@ -437,9 +445,12 @@ static void onActivate(GtkApplication *app, gpointer userData)
 {
     (void)userData;
 
+    g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE);
     char cwdPath[4096];
-    snprintf(cwdPath, sizeof(cwdPath), "%s/", g_get_current_dir());
+    gchar *cwd = g_get_current_dir();
+    snprintf(cwdPath, sizeof(cwdPath), "%s/", cwd);
     GSettings *settings = g_settings_new_with_path("app", cwdPath);
+    g_free(cwd);
     GtkSettings *defaulSettings = gtk_settings_get_default();
     g_object_set(defaulSettings, "gtk-application-prefer-dark-theme", g_settings_get_boolean(settings, "use-dark-theme"), NULL);
 
@@ -494,7 +505,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), FALSE);
     g_simple_action_set_enabled(G_SIMPLE_ACTION(prefsAction), FALSE);
 
-    sInitThread = g_thread_new("init", initThread, NULL);
+    sInitThread = g_thread_new("init", initThread, app);
 
     gtk_widget_set_visible(GTK_WIDGET (window), TRUE);
 
@@ -529,7 +540,7 @@ int main(int argc, char **argv)
 {
     signal(SIGINT,  handler);
 
-    GtkApplication *gtkApp = gtk_application_new("com.nfc.renesas",
+    GtkApplication *gtkApp = gtk_application_new("com.renesas.nfc",
                                             G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(gtkApp, "startup", G_CALLBACK (onStartup), NULL);
     g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
