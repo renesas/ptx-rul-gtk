@@ -102,6 +102,8 @@ static ptx_RUL_t sRul = {0};
 static volatile bool sDoStopDiscovery = false;
 static volatile bool sDoRunDiscovery = false;
 static volatile bool sDoReset = false;
+static volatile bool sIsNdefMessage = false;
+static volatile bool sIsNdefMessageRead = false;
 static volatile ptx_RUL_CardParams_t sActiveCard = {0};
 static volatile ptx_RUL_CardProtocolType_t sActiveProtocol;
 static volatile ptx_Status_t sPtxStatus;
@@ -123,44 +125,44 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *demoState);
 
-static gboolean displayNdefMessage()
-{
-    char content[NDEF_BUFFER_SIZE];
-    const size_t maxSize = sizeof(content);
-    GtkTextIter iter;
-    snprintf(content, maxSize, "\nNDEF message: ");
-    GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
-    gtk_text_buffer_get_end_iter(buffer, &iter);
-    gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+// static gboolean displayNdefMessage()
+// {
+//     char ndefBuffer[NDEF_BUFFER_SIZE];
+//     const size_t maxSize = sizeof(ndefBuffer);
+//     GtkTextIter iter;
+//     snprintf(ndefBuffer, maxSize, "\nNDEF message: ");
+//     GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+//     gtk_text_buffer_get_end_iter(buffer, &iter);
+//     gtk_text_buffer_insert(buffer, &iter, ndefBuffer, (int)strlen(ndefBuffer));
 
-    memset(content, 0U, maxSize);
-    memcpy(content, sNdefMsgBuffer, sNdefMsgBufferSize);
+//     memset(ndefBuffer, 0U, maxSize);
+//     memcpy(ndefBuffer, sNdefMsgBuffer, sNdefMsgBufferSize);
 
-    GError *error = NULL;
+//     GError *error = NULL;
 
-    // convert to UTF-8 with fallback
-    gchar *utf8Str = g_convert(
-        content, sNdefMsgBufferSize, // Input string and length
-        "UTF-8", "ISO-8859-1",       // To and From encodings
-        NULL, NULL,
-        &error
-    );
+//     // convert to UTF-8 with fallback
+//     gchar *utf8Str = g_convert(
+//         ndefBuffer, sNdefMsgBufferSize, // Input string and length
+//         "UTF-8", "ISO-8859-1",       // To and From encodings
+//         NULL, NULL,
+//         &error
+//     );
 
-    if (utf8Str) {
-        snprintf(content, maxSize, "%s\n", utf8Str);
-        gtk_text_buffer_get_end_iter(buffer, &iter);
-        gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-        g_free(utf8Str); // Caller must free the result
-    } else {
-        memset(content, 0U, maxSize);
-        snprintf(content, maxSize, "Conversion failed: %s\n", error->message);
-        gtk_text_buffer_get_end_iter(buffer, &iter);
-        gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-        g_error_free(error);
-    }
+//     if (utf8Str) {
+//         snprintf(ndefBuffer, maxSize, "%s\n", utf8Str);
+//         gtk_text_buffer_get_end_iter(buffer, &iter);
+//         gtk_text_buffer_insert(buffer, &iter, ndefBuffer, (int)strlen(ndefBuffer));
+//         g_free(utf8Str); // Caller must free the result
+//     } else {
+//         memset(ndefBuffer, 0U, maxSize);
+//         snprintf(ndefBuffer, maxSize, "Conversion failed: %s\n", error->message);
+//         gtk_text_buffer_get_end_iter(buffer, &iter);
+//         gtk_text_buffer_insert(buffer, &iter, ndefBuffer, (int)strlen(ndefBuffer));
+//         g_error_free(error);
+//     }
     
-    return FALSE;
-}
+//     return FALSE;
+// }
 
 static gboolean displayDiscoveryLoopError()
 {
@@ -181,7 +183,7 @@ static gboolean updateCardInfo()
     if(!sDoRunDiscovery)
         return 0;
 
-    char content[256] = "";
+    char content[NDEF_BUFFER_SIZE] = "";
     const size_t maxSize = sizeof(content);
 
     snprintf(content, maxSize, "Card activated\n");
@@ -345,6 +347,48 @@ static gboolean updateCardInfo()
             gtk_text_buffer_get_end_iter(buffer, &iter);
             gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
             break;
+        }
+    }
+
+    if(sIsNdefMessage)
+    {
+        if(sIsNdefMessageRead)
+        {
+            snprintf(content, maxSize, "\nNDEF message: ");
+            gtk_text_buffer_get_end_iter(buffer, &iter);
+            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+
+            memset(content, 0U, maxSize);
+            memcpy(content, sNdefMsgBuffer, sNdefMsgBufferSize);
+
+            GError *error = NULL;
+
+            // convert to UTF-8 with fallback
+            gchar *utf8Str = g_convert(
+                content, sNdefMsgBufferSize, // Input string and length
+                "UTF-8", "ISO-8859-1",       // To and From encodings
+                NULL, NULL,
+                &error
+            );
+
+            if (utf8Str) {
+                snprintf(content, maxSize, "%s\n", utf8Str);
+                gtk_text_buffer_get_end_iter(buffer, &iter);
+                gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+                g_free(utf8Str); // Caller must free the result
+            } else {
+                memset(content, 0U, maxSize);
+                snprintf(content, maxSize, "Conversion failed: %s\n", error->message);
+                gtk_text_buffer_get_end_iter(buffer, &iter);
+                gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+                g_error_free(error);
+            }
+        }
+        else
+        {
+            snprintf(content, maxSize, "\nCould not read NDEF message.");
+            gtk_text_buffer_get_end_iter(buffer, &iter);
+            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
         }
     }
 
@@ -816,9 +860,9 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
                      * An NFC-device has been activated i.e. selected and is ready for (user) data exchange.
                      * Activation / Selection takes directly place if single device / card supporting only one protocol was detected.
                      */
-                    sActiveCard = *cardRegistry->ActiveCard;
-                    sActiveProtocol = cardRegistry->ActiveProtocol;
-                    g_idle_add(updateCardInfo, NULL);
+                    // sActiveCard = *cardRegistry->ActiveCard;
+                    // sActiveProtocol = cardRegistry->ActiveProtocol;
+                    // g_idle_add(updateCardInfo, NULL);
 
                     *demoState = demoStateDataExchange;
                     break;
@@ -852,6 +896,7 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
 static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    sIsNdefMessage = false;
 
     if ((NULL != rul) && (NULL != demoState) && (NULL != cardRegistry))
     {
@@ -874,12 +919,20 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 
             if (PTX_STATUS_SUCCESS == status)
             {
+                sIsNdefMessage = true;
                 /* Tag is NDEF-formatted - let's try to read an NDEF message from it. */
                 uint32_t bufferSize = (uint32_t)NDEF_BUFFER_SIZE;
                 status = ptx_NDEF_ReadMessage(&ndefComp, sNdefMsgBuffer, &bufferSize);
+                ptx_Utils_Print("ptx_NDEF_ReadMessage %04X\n", status);
                 sNdefMsgBufferSize = bufferSize;
                 if(status == PTX_STATUS_SUCCESS)
-                    g_idle_add(displayNdefMessage, NULL);
+                    sIsNdefMessageRead = true;
+                else
+                {
+                    /* Reading NDEF failed, let's move on. */
+                    sIsNdefMessageRead = false;
+                    status = PTX_STATUS_SUCCESS;
+                }
             }
             else
             {
@@ -889,6 +942,10 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 
             (void)ptx_NDEF_Close(&ndefComp);
         }
+
+        sActiveCard = *cardRegistry->ActiveCard;
+        sActiveProtocol = cardRegistry->ActiveProtocol;
+        g_idle_add(updateCardInfo, NULL);
 
         *demoState = demoStateRestartDiscovery;
     }
