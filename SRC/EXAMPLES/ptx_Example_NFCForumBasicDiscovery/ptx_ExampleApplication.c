@@ -111,7 +111,7 @@ static GObject *sText = NULL;
 static GObject *sStartStopButton = NULL;
 static GThread *sWorkerThread = NULL;
 static GThread *sInitThread = NULL;
-//static GSettings sSettings;
+static GSettings sSettings;
 
 /*
  * ####################################################################################################################
@@ -124,45 +124,6 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
 static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry);
 static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *demoState);
-
-// static gboolean displayNdefMessage()
-// {
-//     char ndefBuffer[NDEF_BUFFER_SIZE];
-//     const size_t maxSize = sizeof(ndefBuffer);
-//     GtkTextIter iter;
-//     snprintf(ndefBuffer, maxSize, "\nNDEF message: ");
-//     GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
-//     gtk_text_buffer_get_end_iter(buffer, &iter);
-//     gtk_text_buffer_insert(buffer, &iter, ndefBuffer, (int)strlen(ndefBuffer));
-
-//     memset(ndefBuffer, 0U, maxSize);
-//     memcpy(ndefBuffer, sNdefMsgBuffer, sNdefMsgBufferSize);
-
-//     GError *error = NULL;
-
-//     // convert to UTF-8 with fallback
-//     gchar *utf8Str = g_convert(
-//         ndefBuffer, sNdefMsgBufferSize, // Input string and length
-//         "UTF-8", "ISO-8859-1",       // To and From encodings
-//         NULL, NULL,
-//         &error
-//     );
-
-//     if (utf8Str) {
-//         snprintf(ndefBuffer, maxSize, "%s\n", utf8Str);
-//         gtk_text_buffer_get_end_iter(buffer, &iter);
-//         gtk_text_buffer_insert(buffer, &iter, ndefBuffer, (int)strlen(ndefBuffer));
-//         g_free(utf8Str); // Caller must free the result
-//     } else {
-//         memset(ndefBuffer, 0U, maxSize);
-//         snprintf(ndefBuffer, maxSize, "Conversion failed: %s\n", error->message);
-//         gtk_text_buffer_get_end_iter(buffer, &iter);
-//         gtk_text_buffer_insert(buffer, &iter, ndefBuffer, (int)strlen(ndefBuffer));
-//         g_error_free(error);
-//     }
-    
-//     return FALSE;
-// }
 
 static gboolean displayDiscoveryLoopError()
 {
@@ -515,7 +476,7 @@ static void closeRequest(GtkApplication *app, gpointer userData)
 }
 
 
-static void onReset (GSimpleAction *action, GVariant *parameter, gpointer userData)
+static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
     (void)action;
     (void)parameter;
@@ -529,7 +490,7 @@ static void onReset (GSimpleAction *action, GVariant *parameter, gpointer userDa
     sActiveCard = activeCard;
 }
 
-static void onPreferences (GSimpleAction *action, GVariant *parameter, gpointer userData)
+static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
     (void)action;
     (void)parameter;
@@ -560,10 +521,11 @@ static void onActivate(GtkApplication *app, gpointer userData)
     char cwdPath[4096];
     gchar *cwd = g_get_current_dir();
     snprintf(cwdPath, sizeof(cwdPath), "%s/", cwd);
-    GSettings *settings = g_settings_new_with_path("app", cwdPath);
+    GSettings *pSettings = &sSettings;
+    pSettings = g_settings_new_with_path("app", cwdPath);
     g_free(cwd);
     GtkSettings *defaulSettings = gtk_settings_get_default();
-    g_object_set(defaulSettings, "gtk-application-prefer-dark-theme", g_settings_get_boolean(settings, "use-dark-theme"), NULL);
+    g_object_set(defaulSettings, "gtk-application-prefer-dark-theme", g_settings_get_boolean(pSettings, "use-dark-theme"), NULL);
 
     GtkBuilder *windowBuilder = gtk_builder_new();
     gtk_builder_add_from_file(windowBuilder, "window.ui", NULL);
