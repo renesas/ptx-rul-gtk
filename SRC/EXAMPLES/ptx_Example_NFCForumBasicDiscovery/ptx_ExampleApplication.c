@@ -501,6 +501,8 @@ static void startStop(GtkWidget *widget, gpointer userData)
     {
         gtk_button_set_label(GTK_BUTTON(sStartStopButton), "START");
         sDoStopDiscovery = true;
+        ptx_RUL_CardParams_t activeCard = {0};
+        sActiveCard = activeCard;
     }
 }
 
@@ -523,7 +525,8 @@ static void onReset (GSimpleAction *action, GVariant *parameter, gpointer userDa
     gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
     if(sDoRunDiscovery)
         sDoReset = true;
-
+    ptx_RUL_CardParams_t activeCard = {0};
+    sActiveCard = activeCard;
 }
 
 static void onPreferences (GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -923,7 +926,6 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
                 /* Tag is NDEF-formatted - let's try to read an NDEF message from it. */
                 uint32_t bufferSize = (uint32_t)NDEF_BUFFER_SIZE;
                 status = ptx_NDEF_ReadMessage(&ndefComp, sNdefMsgBuffer, &bufferSize);
-                ptx_Utils_Print("ptx_NDEF_ReadMessage %04X\n", status);
                 sNdefMsgBufferSize = bufferSize;
                 if(status == PTX_STATUS_SUCCESS)
                     sIsNdefMessageRead = true;
@@ -943,9 +945,14 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
             (void)ptx_NDEF_Close(&ndefComp);
         }
 
-        sActiveCard = *cardRegistry->ActiveCard;
-        sActiveProtocol = cardRegistry->ActiveProtocol;
-        g_idle_add(updateCardInfo, NULL);
+        ptx_RUL_CardParams_t activeCard = sActiveCard;
+        // only update UI if the card is different from the previous one
+        if(0 != memcmp(&activeCard, cardRegistry->ActiveCard, sizeof(activeCard)))
+        {
+            sActiveCard = *cardRegistry->ActiveCard;
+            sActiveProtocol = cardRegistry->ActiveProtocol;
+            g_idle_add(updateCardInfo, NULL);
+        }
 
         *demoState = demoStateRestartDiscovery;
     }
