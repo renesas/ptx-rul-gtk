@@ -113,6 +113,16 @@ static GThread *sWorkerThread = NULL;
 static GThread *sInitThread = NULL;
 static GSettings sSettings;
 
+typedef struct {
+    gboolean darkMode;
+    // UI cache
+    GtkWindow *prefsWindow;
+    GtkSwitch *darkModeSwitch;
+    // Settings
+    GSettings *settings;
+} AppState;
+
+
 /*
  * ####################################################################################################################
  * INTERNAL FUNCTIONS DECLARATIONS / HELPERS
