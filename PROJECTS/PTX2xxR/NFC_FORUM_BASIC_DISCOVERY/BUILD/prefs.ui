@@ -1,0 +1,65 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+  <!-- A GtkDialog with content area and OK/Cancel -->
+  <object class="GtkDialog" id="prefsDialog">
+    <property name="title">Preferences</property>
+    <property name="modal">true</property>
+    <property name="destroy-with-parent">true</property>
+    <child type="action">
+      <object class="GtkButton">
+        <property name="label" translatable="yes">_Cancel</property>
+        <property name="use-underline">true</property>
+        <property name="receives-default">true</property>
+        <property name="action-name">dialog.cancel</property>
+        <property name="halign">end</property>
+      </object>
+    </child>
+    <child type="action">
+      <object class="GtkButton">
+        <property name="label" translatable="yes">_OK</property>
+        <property name="use-underline">true</property>
+        <property name="receives-default">true</property>
+        <property name="action-name">dialog.ok</property>
+        <property name="halign">end</property>
+      </object>
+    </child>
+    <child type="content">
+      <object class="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">12</property>
+        <property name="margin-top">12</property>
+        <property name="margin-bottom">12</property>
+        <property name="margin-start">12</property>
+        <property name="margin-end">12</property>
+        <!-- Appearance -->
+        <child>
+          <object class="GtkLabel">
+            <property name="use-markup">true</property>
+            <property name="xalign">0.0</property>
+            <property name="label">&lt;b&gt;Appearance&lt;/b&gt;</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">horizontal</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="label" translatable="yes">Enable dark mode</property>
+                <property name="xalign">0.0</property>
+                <property name="hexpand">true</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkSwitch" id="darkModeSwitch">
+                <property name="valign">center</property>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

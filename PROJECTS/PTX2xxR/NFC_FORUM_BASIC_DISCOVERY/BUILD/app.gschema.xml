@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="app">
-    <key name="use-dark-theme" type="b">
+    <key name="dark-mode" type="b">
       <default>true</default>
       <summary>Use dark theme</summary>
       <description>Use dark theme.</description>

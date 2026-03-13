@@ -111,15 +111,13 @@ static GObject *sText = NULL;
 static GObject *sStartStopButton = NULL;
 static GThread *sWorkerThread = NULL;
 static GThread *sInitThread = NULL;
-static GSettings sSettings;
 
 typedef struct {
     gboolean darkMode;
-    // UI cache
     GtkWindow *prefsWindow;
     GtkSwitch *darkModeSwitch;
-    // Settings
     GSettings *settings;
+    GtkBuilder *builder;
 } AppState;
 
 
@@ -485,6 +483,38 @@ static void closeRequest(GtkApplication *app, gpointer userData)
     gtk_window_destroy(GTK_WINDOW(userData));
 }
 
+// static void onPrefsResponse(GtkDialog *dialog, int response, gpointer userData)
+// {
+//     (void)dialog;
+//     (void)response;
+//     (void)userData;
+// }
+
+// static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
+// {
+//     // Load UI from file (could also use gresources)
+//     state->builder = gtk_builder_new_from_file("prefs.ui");
+
+//     GtkWidget *dialog = GTK_WIDGET(gtk_builder_get_object(state->builder, "prefsDialog"));
+//     if (!dialog) {
+//         g_error("Failed to load 'prefsDialog' from prefs.ui");
+//     }
+
+//     // Widgets
+//     state->darkModeSwitch = GTK_SWITCH(gtk_builder_get_object(state->builder, "darkModeSwitch"));
+
+//     // Initialize from current state (loaded from GSettings earlier)
+//     gtk_switch_set_active(state->darkModeSwitch, state->darkMode);
+
+//     // Set relationships
+//     gtk_window_set_application(GTK_WINDOW(dialog), app);
+//     if (parent) gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
+
+//     // Connect response. In GTK4, dialog buttons use the "response" signal.
+//     g_signal_connect(dialog, "response", G_CALLBACK(onPrefsResponse), state);
+
+//     return GTK_WINDOW(dialog);
+// }
 
 static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
@@ -502,6 +532,21 @@ static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userDat
 
 static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
+    // (void)action;
+    // (void)parameter;
+
+    // GtkApplication *app = GTK_APPLICATION(userData);
+    // AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+    // GtkWindow *parent = gtk_application_get_active_window(app);
+
+    // if (!state->prefsWindow) {
+    //     state->prefsWindow = loadPrefsWindow(app, state, parent);
+    // } else if (parent) {
+    //     gtk_window_set_transient_for(state->prefsWindow, parent);
+    // }
+
+    // gtk_window_present(state->prefsWindow);
+
     (void)action;
     (void)parameter;
 
@@ -509,6 +554,7 @@ static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer u
     GtkAlertDialog *dlg = gtk_alert_dialog_new ("Preferences selected");
     gtk_alert_dialog_show (dlg, parent);
     g_object_unref (dlg);
+
 }
 
 static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -522,20 +568,22 @@ static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData
     g_application_quit(G_APPLICATION(userData));
 }
 
-
 static void onActivate(GtkApplication *app, gpointer userData)
 {
     (void)userData;
+
+    AppState *state = g_new0(AppState, 1);
+    g_object_set_data_full(G_OBJECT(app), "app-state", state, (GDestroyNotify)g_free);
 
     g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE);
     char cwdPath[4096];
     gchar *cwd = g_get_current_dir();
     snprintf(cwdPath, sizeof(cwdPath), "%s/", cwd);
-    GSettings *pSettings = &sSettings;
-    pSettings = g_settings_new_with_path("app", cwdPath);
+    state->settings = g_settings_new_with_path("app", cwdPath);
     g_free(cwd);
+    state->darkMode = g_settings_get_boolean(state->settings, "dark-mode");
     GtkSettings *defaulSettings = gtk_settings_get_default();
-    g_object_set(defaulSettings, "gtk-application-prefer-dark-theme", g_settings_get_boolean(pSettings, "use-dark-theme"), NULL);
+    g_object_set(defaulSettings, "gtk-application-prefer-dark-theme", state->darkMode, NULL);
 
     GtkBuilder *windowBuilder = gtk_builder_new();
     gtk_builder_add_from_file(windowBuilder, "window.ui", NULL);
