@@ -117,7 +117,6 @@ typedef struct {
     GtkWindow *prefsWindow;
     GtkSwitch *darkModeSwitch;
     GSettings *settings;
-    GtkBuilder *builder;
 } AppState;
 
 
@@ -483,38 +482,44 @@ static void closeRequest(GtkApplication *app, gpointer userData)
     gtk_window_destroy(GTK_WINDOW(userData));
 }
 
-// static void onPrefsResponse(GtkDialog *dialog, int response, gpointer userData)
-// {
-//     (void)dialog;
-//     (void)response;
-//     (void)userData;
-// }
+static gboolean onDarkModeSwitchSet(GtkSwitch *self, gboolean state, gpointer userData)
+{
+    (void)self;
+    (void)userData;
+    
+    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", state, NULL);
+    // Return FALSE to let the switch change its visual state normally
+    return FALSE; 
+}
 
-// static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
-// {
-//     // Load UI from file (could also use gresources)
-//     state->builder = gtk_builder_new_from_file("prefs.ui");
+static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
+{
+    GtkBuilder *builder = gtk_builder_new_from_file("prefs.ui");
 
-//     GtkWidget *dialog = GTK_WIDGET(gtk_builder_get_object(state->builder, "prefsDialog"));
-//     if (!dialog) {
-//         g_error("Failed to load 'prefsDialog' from prefs.ui");
-//     }
+    GtkWidget *prefsWindow = GTK_WIDGET(gtk_builder_get_object(builder, "prefsWindow"));
+    if (!prefsWindow) {
+        g_error("Failed to load 'prefsDialog' from prefs.ui");
+    }
 
-//     // Widgets
-//     state->darkModeSwitch = GTK_SWITCH(gtk_builder_get_object(state->builder, "darkModeSwitch"));
+    // Widgets
+    state->darkModeSwitch = GTK_SWITCH(gtk_builder_get_object(builder, "darkModeSwitch"));
 
-//     // Initialize from current state (loaded from GSettings earlier)
-//     gtk_switch_set_active(state->darkModeSwitch, state->darkMode);
+    // Initialize from current state (loaded from GSettings earlier)
+    gtk_switch_set_active(state->darkModeSwitch, state->darkMode);
 
-//     // Set relationships
-//     gtk_window_set_application(GTK_WINDOW(dialog), app);
-//     if (parent) gtk_window_set_transient_for(GTK_WINDOW(dialog), parent);
+    // Set relationships
+    gtk_window_set_application(GTK_WINDOW(prefsWindow), app);
+    if (parent) gtk_window_set_transient_for(GTK_WINDOW(prefsWindow), parent);
 
-//     // Connect response. In GTK4, dialog buttons use the "response" signal.
-//     g_signal_connect(dialog, "response", G_CALLBACK(onPrefsResponse), state);
+    g_settings_bind(state->settings, "dark-mode",
+                    state->darkModeSwitch, "active",
+                    G_SETTINGS_BIND_DEFAULT);
 
-//     return GTK_WINDOW(dialog);
-// }
+    g_signal_connect(state->darkModeSwitch, "state-set", G_CALLBACK(onDarkModeSwitchSet), NULL);
+
+    g_object_unref(builder);
+    return GTK_WINDOW(prefsWindow);
+}
 
 static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
@@ -532,29 +537,20 @@ static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userDat
 
 static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
-    // (void)action;
-    // (void)parameter;
-
-    // GtkApplication *app = GTK_APPLICATION(userData);
-    // AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
-    // GtkWindow *parent = gtk_application_get_active_window(app);
-
-    // if (!state->prefsWindow) {
-    //     state->prefsWindow = loadPrefsWindow(app, state, parent);
-    // } else if (parent) {
-    //     gtk_window_set_transient_for(state->prefsWindow, parent);
-    // }
-
-    // gtk_window_present(state->prefsWindow);
-
     (void)action;
     (void)parameter;
 
-    GtkWindow *parent = gtk_application_get_active_window (GTK_APPLICATION (userData));
-    GtkAlertDialog *dlg = gtk_alert_dialog_new ("Preferences selected");
-    gtk_alert_dialog_show (dlg, parent);
-    g_object_unref (dlg);
+    GtkApplication *app = GTK_APPLICATION(userData);
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+    GtkWindow *parent = gtk_application_get_active_window(app);
 
+    if (!state->prefsWindow) {
+        state->prefsWindow = loadPrefsWindow(app, state, parent);
+    } else if (parent) {
+        gtk_window_set_transient_for(state->prefsWindow, parent);
+    }
+
+    gtk_window_present(state->prefsWindow);
 }
 
 static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -582,15 +578,13 @@ static void onActivate(GtkApplication *app, gpointer userData)
     state->settings = g_settings_new_with_path("app", cwdPath);
     g_free(cwd);
     state->darkMode = g_settings_get_boolean(state->settings, "dark-mode");
-    GtkSettings *defaulSettings = gtk_settings_get_default();
-    g_object_set(defaulSettings, "gtk-application-prefer-dark-theme", state->darkMode, NULL);
+    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", state->darkMode, NULL);
 
-    GtkBuilder *windowBuilder = gtk_builder_new();
-    gtk_builder_add_from_file(windowBuilder, "window.ui", NULL);
+    GtkBuilder *windowBuilder = gtk_builder_new_from_file("window.ui");
 
     /* Connect signal handlers to the constructed widgets. */
-    GObject *window = gtk_builder_get_object (windowBuilder, "window");
-    gtk_window_set_application (GTK_WINDOW (window), app);
+    GObject *window = gtk_builder_get_object(windowBuilder, "window");
+    gtk_window_set_application(GTK_WINDOW (window), app);
 
     g_signal_connect(window, "close_request", G_CALLBACK (closeRequest), window);
 
@@ -608,12 +602,10 @@ static void onActivate(GtkApplication *app, gpointer userData)
     gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
 
     GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
+    GtkBuilder *menuBuilder = gtk_builder_new_from_file("menu.ui");
+    GMenuModel *menuModel = G_MENU_MODEL(gtk_builder_get_object(menuBuilder, "menu"));
 
-    GtkBuilder *menuBuilder = gtk_builder_new();
-    gtk_builder_add_from_file(menuBuilder, "menu.ui", NULL);
-    GMenuModel *menuModel = G_MENU_MODEL(gtk_builder_get_object (menuBuilder, "menu"));
-
-    gtk_menu_button_set_menu_model (GTK_MENU_BUTTON(menuButton), menuModel);
+    gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menuButton), menuModel);
 
     const GActionEntry actions[] = {
         { .name = "reset", .activate = onReset },
@@ -621,14 +613,20 @@ static void onActivate(GtkApplication *app, gpointer userData)
         { .name = "quit", .activate = onQuit },
     };
 
-    g_action_map_add_action_entries (G_ACTION_MAP(app),
-                                     actions,
-                                     G_N_ELEMENTS(actions),
-                                     app);
+    g_action_map_add_action_entries(G_ACTION_MAP(app),
+                                    actions,
+                                    G_N_ELEMENTS(actions),
+                                    app);
     
     /* Optional accelerator: Ctrl+Q */
-    gtk_application_set_accels_for_action (app, "app.quit",
-                                           (const char *[]) { "<Primary>q", NULL });
+    gtk_application_set_accels_for_action(app, "app.quit",
+                                         (const char *[]) { "<Primary>q", NULL });
+    /* Optional accelerator: Ctrl+P */
+    gtk_application_set_accels_for_action(app, "app.preferences",
+                                         (const char *[]) { "<Primary>p", NULL });
+    /* Optional accelerator: Ctrl+R */
+    gtk_application_set_accels_for_action(app, "app.reset",
+                                         (const char *[]) { "<Primary>r", NULL });
     
     GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
     GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
