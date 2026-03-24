@@ -107,16 +107,16 @@ static volatile bool sIsNdefMessageRead = false;
 static volatile ptx_RUL_CardParams_t sActiveCard = {0};
 static volatile ptx_RUL_CardProtocolType_t sActiveProtocol;
 static volatile ptx_Status_t sPtxStatus;
-static GObject *sText = NULL;
-static GObject *sStartStopButton = NULL;
-static GThread *sWorkerThread = NULL;
-static GThread *sInitThread = NULL;
 
 typedef struct {
     gboolean darkMode;
+    GtkTextView *contentTextView;
+    GtkButton *startStopButton;
     GtkWindow *prefsWindow;
     GtkSwitch *darkModeSwitch;
     GSettings *settings;
+    GThread *workerThread;
+    GThread *initThread;
 } AppState;
 
 
@@ -134,12 +134,15 @@ static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *de
 
 static gboolean displayDiscoveryLoopError()
 {
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+
     char content[128] = "";
     const size_t maxSize = sizeof(content);
     GtkTextIter iter;
 
     snprintf(content, maxSize, "\nDiscovery loop ended with ERROR: 0x%04X\nPlease close the application and open it again!\n", sPtxStatus);
-    GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    GtkTextBuffer * const buffer = gtk_text_view_get_buffer(state->contentTextView);
     gtk_text_buffer_get_end_iter(buffer, &iter);
     gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
 
@@ -149,13 +152,16 @@ static gboolean displayDiscoveryLoopError()
 static gboolean updateCardInfo()
 {
     if(!sDoRunDiscovery)
-        return 0;
+        return FALSE;
+
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
 
     char content[NDEF_BUFFER_SIZE] = "";
     const size_t maxSize = sizeof(content);
 
     snprintf(content, maxSize, "Card activated\n");
-    GtkTextBuffer * const buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    GtkTextBuffer * const buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(state->contentTextView));
     gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
     
     GtkTextIter iter;
@@ -366,14 +372,15 @@ static gboolean updateCardInfo()
 static gint onInitDone(gpointer userData)
 {
     GtkApplication *app = GTK_APPLICATION(userData);
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
 
     if(sPtxStatus == PTX_STATUS_SUCCESS)
     {
         const char * content = "System initialized. Press START to begin discovery!";
-        GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+        GtkTextBuffer * buffer = gtk_text_view_get_buffer (state->contentTextView);
         gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
 
-        gtk_widget_set_sensitive(GTK_WIDGET(sStartStopButton), TRUE);
+        gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), TRUE);
         GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
         GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
         g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), TRUE);
@@ -384,7 +391,7 @@ static gint onInitDone(gpointer userData)
         char content[128] = "";
         const size_t maxSize = sizeof(content);
         snprintf(content, maxSize, "System initialization ERROR: 0x%04X\nPlease check the system and restart the application!", sPtxStatus);
-        GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+        GtkTextBuffer * buffer = gtk_text_view_get_buffer (state->contentTextView);
         gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
     }
 
@@ -450,24 +457,24 @@ static gpointer initThread(gpointer userData)
 static void startStop(GtkWidget *widget, gpointer userData)
 {
     (void)widget;
-    (void)userData;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
 
     if(!sDoRunDiscovery)
     {
         const char * content = "";
-        GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+        GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
         gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
-        gtk_button_set_label(GTK_BUTTON(sStartStopButton), "STOP");
+        gtk_button_set_label(state->startStopButton, "STOP");
         sDoRunDiscovery = true;
 
-        if(sWorkerThread == NULL)
+        if(state->workerThread == NULL)
         {
-            sWorkerThread = g_thread_new("worker", workerThread, NULL);
+            state->workerThread = g_thread_new("worker", workerThread, NULL);
         }
     }
     else
     {
-        gtk_button_set_label(GTK_BUTTON(sStartStopButton), "START");
+        gtk_button_set_label(state->startStopButton, "START");
         sDoStopDiscovery = true;
         ptx_RUL_CardParams_t activeCard = {0};
         sActiveCard = activeCard;
@@ -498,7 +505,7 @@ static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindo
 
     GtkWidget *prefsWindow = GTK_WIDGET(gtk_builder_get_object(builder, "prefsWindow"));
     if (!prefsWindow) {
-        g_error("Failed to load 'prefsDialog' from prefs.ui");
+        g_error("Failed to load 'prefsWindow' from prefs.ui");
     }
 
     // Widgets
@@ -525,10 +532,12 @@ static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userDat
 {
     (void)action;
     (void)parameter;
-    (void)userData;
+
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+
     const char * content = "";
-    GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
-    gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+    GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
+    gtk_text_buffer_set_text(buffer, content, (int)strlen(content));
     if(sDoRunDiscovery)
         sDoReset = true;
     ptx_RUL_CardParams_t activeCard = {0};
@@ -568,43 +577,47 @@ static void onActivate(GtkApplication *app, gpointer userData)
 {
     (void)userData;
 
+    // intialize app state
     AppState *state = g_new0(AppState, 1);
     g_object_set_data_full(G_OBJECT(app), "app-state", state, (GDestroyNotify)g_free);
 
-    g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE);
+    // set up settings
+    g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE); // compiled schema file is expected to be inside the current working directory
     char cwdPath[4096];
     gchar *cwd = g_get_current_dir();
     snprintf(cwdPath, sizeof(cwdPath), "%s/", cwd);
     state->settings = g_settings_new_with_path("app", cwdPath);
-    g_free(cwd);
+    g_free(cwd); // memeory must be freed manually
     state->darkMode = g_settings_get_boolean(state->settings, "dark-mode");
     g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", state->darkMode, NULL);
 
+    // set up UI
     GtkBuilder *windowBuilder = gtk_builder_new_from_file("window.ui");
-
     /* Connect signal handlers to the constructed widgets. */
     GObject *window = gtk_builder_get_object(windowBuilder, "window");
-    gtk_window_set_application(GTK_WINDOW (window), app);
+    gtk_window_set_application(GTK_WINDOW(window), app);
+    g_signal_connect(window, "close_request", G_CALLBACK(closeRequest), window);
 
-    g_signal_connect(window, "close_request", G_CALLBACK (closeRequest), window);
-
-    sStartStopButton = gtk_builder_get_object (windowBuilder, "startstop");
-    gtk_widget_set_sensitive(GTK_WIDGET(sStartStopButton), FALSE);
-    g_signal_connect(sStartStopButton, "clicked", G_CALLBACK (startStop), NULL);
-
-    sText = gtk_builder_get_object(windowBuilder, "text");
-
-    if(sText == NULL || sStartStopButton == NULL)
+    GObject *obj = gtk_builder_get_object(windowBuilder, "startstop");
+    if(obj == NULL)
         return;
+    state->startStopButton = GTK_BUTTON(obj);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), FALSE); // disable start/stop button until the PTX is initialized
+    g_signal_connect(state->startStopButton, "clicked", G_CALLBACK(startStop), app);
+
+    obj = gtk_builder_get_object(windowBuilder, "text");
+    if(obj == NULL)
+        return;
+    state->contentTextView = GTK_TEXT_VIEW(obj);
 
     const char * content = "Initializing ...";
-    GtkTextBuffer * buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (sText));
+    GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
     gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
 
+    // set up menu
     GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
     GtkBuilder *menuBuilder = gtk_builder_new_from_file("menu.ui");
     GMenuModel *menuModel = G_MENU_MODEL(gtk_builder_get_object(menuBuilder, "menu"));
-
     gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menuButton), menuModel);
 
     const GActionEntry actions[] = {
@@ -631,21 +644,17 @@ static void onActivate(GtkApplication *app, gpointer userData)
     GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
     GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
 
+    // disable menu items until the PTX is initialized
     g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), FALSE);
     g_simple_action_set_enabled(G_SIMPLE_ACTION(prefsAction), FALSE);
 
-    sInitThread = g_thread_new("init", initThread, app);
+    // initialze the PTX
+    state->initThread = g_thread_new("init", initThread, app);
 
     gtk_widget_set_visible(GTK_WIDGET (window), TRUE);
 
     g_object_unref(windowBuilder);
     g_object_unref(menuBuilder);
-}
-
-static void onStartup(GtkApplication *app, gpointer userData)
-{
-    (void)app;
-    (void)userData;
 }
 
 /*
@@ -671,20 +680,20 @@ int main(int argc, char **argv)
 
     GtkApplication *gtkApp = gtk_application_new("com.renesas.nfc",
                                             G_APPLICATION_DEFAULT_FLAGS);
-    g_signal_connect(gtkApp, "startup", G_CALLBACK (onStartup), NULL);
-    g_signal_connect(gtkApp, "activate", G_CALLBACK (onActivate), NULL);
+    g_signal_connect(gtkApp, "activate", G_CALLBACK(onActivate), NULL);
     g_application_run (G_APPLICATION (gtkApp), argc, argv);
+    AppState *state = g_object_get_data(G_OBJECT(gtkApp), "app-state");
 
-    if(sInitThread != NULL)
-    {
-        g_thread_join(sInitThread);
-        g_thread_unref(sInitThread);
+    if(state->initThread != NULL)
+    {   // wait for thread to end and unref
+        g_thread_join(state->initThread);
+        g_thread_unref(state->initThread);
     }
 
-    if(sWorkerThread != NULL)
-    {
-        g_thread_join(sWorkerThread);
-        g_thread_unref(sWorkerThread);
+    if(state->workerThread != NULL)
+    {   // wait for thread to end and unref
+        g_thread_join(state->workerThread);
+        g_thread_unref(state->workerThread);
     }
 
     ptx_RUL_DeactivateParams_t deactParams = {0};
@@ -708,7 +717,6 @@ int main(int argc, char **argv)
 
     (void)argc;
     (void)argv;
-    
     g_object_unref(gtkApp);
 
     return 0;
