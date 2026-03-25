@@ -1,0 +1,72 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <requires lib="gtk" version="4.0"/>
+
+  
+<!-- Text buffer that contains hard-coded text -->
+  <object class="GtkTextBuffer" id="buffer">
+    <property name="text">GTK4 application using the PTX205R and the RUL SDK's reference implementation for the Raspberry Pi and SPI.
+
+Polls for RF-technologies A, B, F, V. If a card is activated, card inforamtion is displayed. If the card contains an NDEF message, it's displayed as UTF-8 encoded text, without any parsing. Only one single card in the field is supported.
+
+LICENSE INFORMATION
+
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of Renesas nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY Renesas "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL RENESAS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</property>
+  </object>
+
+
+  <object class="GtkWindow" id="aboutWindow">
+    <property name="title">About</property>
+    <property name="resizable">false</property>
+    <property name="default-width">400</property>
+    <property name="default-height">300</property>
+    <property name="modal">true</property>
+    <property name="hide-on-close">true</property>
+    <property name="destroy-with-parent">true</property>
+
+    <!-- Headerbar with native title buttons -->
+    <child type="titlebar">
+      <object class="GtkHeaderBar" id="headerbar">
+        <property name="show-title-buttons">true</property>
+        <property name="title-widget">
+          <object class="GtkLabel">
+            <property name="label">About</property>
+            <property name="xalign">0</property>
+          </object>
+        </property>
+      </object>
+    </child>
+
+    <!-- Main content -->
+    <child>
+        <object id="scrollableArea" class="GtkScrolledWindow">
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+        <property name="margin-start">4</property>
+        <property name="margin-end">4</property>
+        <property name="margin-bottom">4</property>
+            <child>
+                <object id="aboutText" class="GtkTextView">
+                <property name="editable">False</property>
+                <property name="wrap-mode">word</property>
+                <property name="cursor-visible">False</property>
+                <property name="buffer">buffer</property>
+                </object>
+            </child>
+        </object>
+    </child>
+  </object>
+</interface>

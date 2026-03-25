@@ -400,9 +400,9 @@ set(TARGET_EXE_NAME "NFC_FORUM_BASIC_DISCOVERY")
 add_executable(${TARGET_EXE_NAME})
 target_sources(${TARGET_EXE_NAME} PRIVATE
 	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.c
-
 )
 
+# link GTK
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE PkgConfig::GTK4)
 
 if (PTX_BUILD_MCU)
@@ -444,6 +444,4 @@ else()
 	)
 
 endif()
-
-
 

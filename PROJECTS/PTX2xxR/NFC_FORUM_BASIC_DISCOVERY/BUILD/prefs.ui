@@ -5,6 +5,7 @@
 
   <object class="GtkWindow" id="prefsWindow">
     <property name="title">Preferences</property>
+    <property name="resizable">false</property>
     <property name="default-width">200</property>
     <property name="default-height">100</property>
     <property name="modal">true</property>

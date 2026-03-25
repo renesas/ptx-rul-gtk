@@ -38,7 +38,22 @@
     Module      : SDK Example (NFC Forum Basic Discovery)
     File        : EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.c
 
-    Description : GTK Discovery example application
+    Description : GTK4 application using the PTX205R and the RUL SDK's reference implementation
+                  for the Raspberry Pi and SPI.
+                  Polls for RF-technologies A, B, F, V. If a card is activated, card
+                  inforamtion is displayed. If the card contains an NDEF message, it's
+                  displayed as UTF-8 encoded text, without any parsing.
+                  Only one single card in the field is supported.
+                  When the app is launched, the PTX is initialized and discovery can be
+                  started/stopped by clicking the START/STOP button. There's a menu offering
+                  the following options:
+                  - Reset - displayed card informaiton is cleared and siscovery is restarted.
+                  - Preferences - enable/disable dark mode.
+                  - About - display about information.
+                  - Quit - close the applicatoin.
+
+                  Settings are permanently stored in the gschemas file.
+                  If run from the command line, messages will be printed there.
 */
 
 #include "ptx_ExampleApplication.h"
@@ -115,6 +130,7 @@ typedef struct {
     GtkWindow *prefsWindow;
     GtkSwitch *darkModeSwitch;
     GSettings *settings;
+    GtkWindow *aboutWindow;
     GThread *workerThread;
     GThread *initThread;
 } AppState;
@@ -528,6 +544,23 @@ static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindo
     return GTK_WINDOW(prefsWindow);
 }
 
+static GtkWindow *loadAboutWindow(GtkApplication *app, GtkWindow *parent)
+{
+    GtkBuilder *builder = gtk_builder_new_from_file("about.ui");
+
+    GtkWidget *aboutWindow = GTK_WIDGET(gtk_builder_get_object(builder, "aboutWindow"));
+    if (!aboutWindow) {
+        g_error("Failed to load 'aboutWindow' from about.ui");
+    }
+
+    // Set relationships
+    gtk_window_set_application(GTK_WINDOW(aboutWindow), app);
+    if (parent) gtk_window_set_transient_for(GTK_WINDOW(aboutWindow), parent);
+
+    g_object_unref(builder);
+    return GTK_WINDOW(aboutWindow);
+}
+
 static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
     (void)action;
@@ -560,6 +593,24 @@ static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer u
     }
 
     gtk_window_present(state->prefsWindow);
+}
+
+static void onAbout(GSimpleAction *action, GVariant *parameter, gpointer userData)
+{
+    (void)action;
+    (void)parameter;
+
+    GtkApplication *app = GTK_APPLICATION(userData);
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+    GtkWindow *parent = gtk_application_get_active_window(app);
+
+    if (!state->aboutWindow) {
+        state->aboutWindow = loadAboutWindow(app, parent);
+    } else if (parent) {
+        gtk_window_set_transient_for(state->aboutWindow, parent);
+    }
+
+    gtk_window_present(state->aboutWindow);
 }
 
 static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -605,7 +656,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), FALSE); // disable start/stop button until the PTX is initialized
     g_signal_connect(state->startStopButton, "clicked", G_CALLBACK(startStop), app);
 
-    obj = gtk_builder_get_object(windowBuilder, "text");
+    obj = gtk_builder_get_object(windowBuilder, "cardInfoText");
     if(obj == NULL)
         return;
     state->contentTextView = GTK_TEXT_VIEW(obj);
@@ -620,9 +671,11 @@ static void onActivate(GtkApplication *app, gpointer userData)
     GMenuModel *menuModel = G_MENU_MODEL(gtk_builder_get_object(menuBuilder, "menu"));
     gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menuButton), menuModel);
 
+    // add menu actions
     const GActionEntry actions[] = {
         { .name = "reset", .activate = onReset },
         { .name = "preferences", .activate = onPreferences },
+        { .name = "about", .activate = onAbout },
         { .name = "quit", .activate = onQuit },
     };
 
@@ -762,7 +815,8 @@ static ptx_Status_t runDemo()
                     }
                     else if (ptx_RUL_StatusInfoSystem_OK != statusInfo.Info.System)
                     {
-                        demoState = demoStateExit;
+                        ptx_Utils_Print("System status ERROR: %d\n", statusInfo.Info.System);
+                        status = PTX_STATUS_E_GEN_INTERNAL;
                     }
                 }
 
@@ -871,7 +925,7 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
         memset(&discoverStatus, 0x00, sizeof(ptx_RUL_Status_Params_t));
         discoverStatus.Type = ptx_RUL_StatusType_Discover;
         status = ptx_RUL_GetStatusInfo(rul, &discoverStatus);
-
+        
         if (PTX_STATUS_SUCCESS == status)
         {
             switch (discoverStatus.Info.Discover)
@@ -889,10 +943,6 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
                      * An NFC-device has been activated i.e. selected and is ready for (user) data exchange.
                      * Activation / Selection takes directly place if single device / card supporting only one protocol was detected.
                      */
-                    // sActiveCard = *cardRegistry->ActiveCard;
-                    // sActiveProtocol = cardRegistry->ActiveProtocol;
-                    // g_idle_add(updateCardInfo, NULL);
-
                     *demoState = demoStateDataExchange;
                     break;
                 }
@@ -1001,7 +1051,6 @@ static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *de
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            //ptx_Utils_Print("Reset of RF-Field successful - waiting for Cards ... \n");
             *demoState = demoStateWaitForDiscovery;
         }
         else
