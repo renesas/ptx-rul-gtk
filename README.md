@@ -6,7 +6,7 @@ GTK4 application using the PTX205R and the RUL SDK 1.2.0 reference implementatio
 
 The project is based on the SDK's `NFC_FORUM_BASIC_DISCOVERY` example.
 `CMakeLists.txt` under `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY` was modified to work with GTK and NDEF reading.
-The source and header file under `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery` were modified and unnecessary pieces of application code were removed.
+The source and header files under `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery` were modified and unnecessary pieces of application code were removed.
 The basic structure of the SDK deliverable was kept, only unnecessary project and example files and directories were removed.
 
 ## Hardware requiriements
@@ -31,18 +31,26 @@ Connect the PTX board via USB-C for power.
 
 ## Software requirements
 
-Install GTK4 on the Raspberry Pi by installing the `libgtk-4-dev` package.
+- GTK4 - install the `libgtk-4-dev` package
+- cmake
 
 ## Application settings
 
-The app permanently stores preferences using `GSettings`.
+The appliactoin permanently stores preferences using `GSettings`.
 The settings are defined in `app.gschema.xml`, and actual settings are stored in `gschemas.compiled`.
+Both files are located in the `BUILD` directory.
 
-Each time new settings are added or settings are removed, the settings file must be compiled again.
-In order to do that, run the following command from inside `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY/BUILD`:
+Each time settings are modified, the settings file must be compiled again, by runnig the following command from the `BUILD` directory:
 ```
 glib-compile-schemas .
 ```
+For the sake of demonstration, there's one setting implemented, which is a switch to enable or disable dark mode.
+It can be accessed by clicking the menu button and *Preferences*.
+The state of the swithc is bound to the setting stored in `gschemas.compiled`.
+When the switch is changed, `gschemas.compiled` is updated.
+Upon launching the application, the setting is retrieved from `gschemas.compiled` and applied.
+When opening the *Preferences* window, the state of the swithc is set according to the setting in `gschemas.compiled`.
+The presence of a compiled settings file with the expected settings is necessary for running the application.
 
 ## Build and run
 
@@ -66,22 +74,25 @@ Run:
 The appliactoin can also be launched by double-clinking the executable.
 If the appliactoin is run from the command line, information will be printed there.
 
-## Necessary files for the GTK application
+## Necessary files for running the application
 
-All necessary files for running the application are inside the `BUILD` directory, from where the application must be launched.
+All necessary files for running the application are inside the `BUILD` directory, from where the it must be launched.
+
+For running the executable outside the `BUILD` directory, the following files must be copied and they must be inside the same directory as the executable:
 
 - `window.ui` - main window file
 - `prefs.ui` - preferences window file
 - `menu.ui` - menu file
 - `about.ui` - about window file
-- `app.gschemas.xml` - settings schema file
 - `gschemas.compiled` - the compiled settings file, where the actual settings are stored
+
+The settings schema file `app.gschemas.xml` is only reqired for compiling the settings file once, not for running the application.
 
 ## Under the hood
 
-When the app is launched, UI files and settings are loaded, and the PTX is initilized in a separate thread.
+When the application is launched, UI files and settings are loaded, and the PTX is initilized in a separate thread.
 If initialization was successful, discovery can be started by clicking the START button.
-When discovery is started, the START button changes into the STOP button, and vica-versa.
+When discovery is started, the START button becomes the STOP button, and vica-versa.
 The discovery loop runs in a separate thread and it polls for RF-technologies A, B, F, V.
 If a card is activated, the UI thread is updated and card inforamtion is displayed.
 If the card contains an NDEF message, it's displayed as UTF-8 encoded text, without any parsing.
@@ -90,7 +101,7 @@ Only one single card in the field is supported.
 If the initialization fails, an error message will be displayed and the application must be closed.
 If discovery fails to start or the discovery loop ends with an error, an error message will be displayed and the application must be closed.
 Some menu items are disabled until the initialization is successfully finished.
-If the appliaction is closed, the PTX is de-initialized (if discovery was running, it will stop).
+If the appliaction is closed, the PTX is de-initialized - if discovery was running, it will stop.
 
 ## The UI
 
@@ -99,7 +110,7 @@ There's also a window for the preferences and the about information, which can b
 
 Menu items:
 - Reset - displayed card informaiton is cleared and discovery is restarted.
-- Preferences - enable/disable dark mode.
-- About - display information about the application.
+- Preferences - access the settings.
+- About - show information about the application.
 - Quit - close the applicatoin.
 
