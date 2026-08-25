@@ -68,6 +68,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <stdarg.h>
 
 #include <gtk/gtk.h>
 
@@ -77,14 +78,8 @@
  * ####################################################################################################################
  */
 
-/* Application specific Exit-Flag (controllable by the user on Windows-/Linux-platforms via Ctrl-C). */
-static volatile int gExit = 0;
-
 /* Delay/Sleep between checking RF-Discovery state and no device was found. */
 static const uint32_t PTX_DEMO_APP_NO_CARD_SLEEP_MS = 10u;
-
-/* Delay/Sleep between checking RF-Discovery state and Discovery-procedure is ongoing. */
-//static const uint32_t PTX_DEMO_APP_CARD_RESOVLVE_SLEEP_MS = 5u;
 
 /* Device Name used during RUL-initialization. Only used for Desktop-OS versions like Windows or Linux. Can be omitted for MCU platforms. */
 static const char *EXAMPLE_DEVICE_NAME = "COM4";
@@ -104,24 +99,47 @@ static const uint8_t EXAMPLE_INTERFACE_PORT_ID = 0;
 /* Requested number of hardware timer instances. */
 static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 
+/* Keyboard accelerator shortcuts. */
+#define ACCEL_QUIT        "<Primary>q"
+#define ACCEL_PREFERENCES "<Primary>p"
+#define ACCEL_RESET       "<Primary>r"
+
 /* Work-buffer max. sizes for current demo example. */
 #define NDEF_BUFFER_SIZE   256u
 
+/* Consolidated shared state with single mutex protecting all shared data */
+typedef struct {
+    GMutex mutex;                              /* Single mutex protecting all shared state */
+
+    /* Control flags */
+    int gExit;                                 /* Exit flag (was volatile int) */
+    gboolean doStopDiscovery;                  /* Was sDoStopDiscovery (volatile bool) */
+    gboolean doRunDiscovery;                   /* Was sDoRunDiscovery (volatile bool) */
+    gboolean doReset;                          /* Was sDoReset (volatile bool) */
+
+    /* Card state */
+    ptx_RUL_CardParams_t activeCard;           /* Was sActiveCard (volatile) */
+    ptx_RUL_CardProtocolType_t activeProtocol; /* Was sActiveProtocol (volatile) */
+    gboolean isNdefMessage;                    /* Was sIsNdefMessage (volatile bool) */
+    gboolean isNdefMessageRead;                /* Was sIsNdefMessageRead (volatile bool) */
+
+    /* NDEF buffer */
+    uint8_t ndefMsgBuffer[NDEF_BUFFER_SIZE];   /* Was sNdefMsgBuffer */
+    uint32_t ndefMsgBufferSize;                /* Was sNdefMsgBufferSize (volatile uint32_t) */
+
+    /* Status */
+    ptx_Status_t ptxStatus;                    /* Was sPtxStatus (volatile) */
+} SharedState;
+
+static SharedState sSharedState = {0};
+
+/* Temporary NDEF work buffers (not shared across threads) */
 static uint8_t sNdefRxBuffer[NDEF_BUFFER_SIZE];
 static uint8_t sNdefTxBuffer[NDEF_BUFFER_SIZE];
 static uint8_t sNdefWorkBuffer[NDEF_BUFFER_SIZE];
-static uint8_t sNdefMsgBuffer[NDEF_BUFFER_SIZE];
-static volatile uint32_t sNdefMsgBufferSize = (uint32_t)NDEF_BUFFER_SIZE;
 
+/* PTX device handle (protected by application synchronization, not by sSharedState mutex) */
 static ptx_RUL_t sRul = {0};
-static volatile bool sDoStopDiscovery = false;
-static volatile bool sDoRunDiscovery = false;
-static volatile bool sDoReset = false;
-static volatile bool sIsNdefMessage = false;
-static volatile bool sIsNdefMessageRead = false;
-static volatile ptx_RUL_CardParams_t sActiveCard = {0};
-static volatile ptx_RUL_CardProtocolType_t sActiveProtocol;
-static volatile ptx_Status_t sPtxStatus;
 
 typedef struct {
     gboolean darkMode;
@@ -141,6 +159,11 @@ typedef struct {
  * INTERNAL FUNCTIONS DECLARATIONS / HELPERS
  * ####################################################################################################################
  */
+static void appendToTextBuffer(GtkTextBuffer *buffer, const char *fmt, ...);
+static void formatHexBytes(char *buffer, size_t maxLen, const volatile uint8_t *data, size_t len);
+static void displayCardTechInfo(GtkTextBuffer *buffer, const volatile ptx_RUL_CardParams_t *card);
+typedef GtkWindow* (*LoadWindowFunc)(GtkApplication *app, AppState *state, GtkWindow *parent);
+static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplication *app, AppState *state);
 static ptx_Status_t runDemo();
 static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry);
@@ -148,237 +171,173 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *demoState);
 
+static void appendToTextBuffer(GtkTextBuffer *buffer, const char *fmt, ...)
+{
+    char content[256];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(content, sizeof(content), fmt, args);
+    va_end(args);
+
+    GtkTextIter iter;
+    gtk_text_buffer_get_end_iter(buffer, &iter);
+    gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+}
+
+static void formatHexBytes(char *buffer, size_t maxLen, const volatile uint8_t *data, size_t len)
+{
+    size_t n = 0;
+    for (size_t i = 0; i < len && n + 2 < maxLen; ++i) {
+        int written = snprintf(&buffer[n], maxLen - n, "%02X", data[i]);
+        if (written > 0) {
+            n += (size_t)written;
+        }
+    }
+}
+
+static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplication *app, AppState *state)
+{
+    GtkWindow *parent = gtk_application_get_active_window(app);
+    if (!*window) {
+        *window = loader(app, state, parent);
+    } else if (parent) {
+        gtk_window_set_transient_for(*window, parent);
+    }
+    gtk_window_present(*window);
+}
+
+static void displayCardTechInfo(GtkTextBuffer *buffer, const volatile ptx_RUL_CardParams_t *card)
+{
+    char hexBuf[256];
+
+    switch(card->TechType)
+    {
+        case ptx_RUL_CardRfTechType_A:
+            appendToTextBuffer(buffer, "RF-technology: Type-A\n");
+            appendToTextBuffer(buffer, "SENS_RES: ");
+            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeA.SensRes, sizeof(card->TechParam.TypeA.SensRes));
+            appendToTextBuffer(buffer, "%s\n", hexBuf);
+            appendToTextBuffer(buffer, "ID length: %02X\n", card->TechParam.TypeA.NfcId1Len);
+            appendToTextBuffer(buffer, "ID: ");
+            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeA.NfcId1, card->TechParam.TypeA.NfcId1Len);
+            appendToTextBuffer(buffer, "%s\n", hexBuf);
+            break;
+
+        case ptx_RUL_CardRfTechType_B:
+            appendToTextBuffer(buffer, "RF-technology: Type-B\n");
+            appendToTextBuffer(buffer, "SENSB_RES: ");
+            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeB.SensBRes, sizeof(card->TechParam.TypeB.SensBRes));
+            appendToTextBuffer(buffer, "%s\n", hexBuf);
+            break;
+
+        case ptx_RUL_CardRfTechType_F:
+            appendToTextBuffer(buffer, "RF-technology: Type-F\n");
+            appendToTextBuffer(buffer, "SENSF_RES: ");
+            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeF.SensFRes, sizeof(card->TechParam.TypeF.SensFRes));
+            appendToTextBuffer(buffer, "%s\n", hexBuf);
+            break;
+
+        case ptx_RUL_CardRfTechType_V:
+            appendToTextBuffer(buffer, "RF-technology: Type-V\n");
+            appendToTextBuffer(buffer, "INVENTORY_RES: ");
+            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeV.InventoryRes, sizeof(card->TechParam.TypeV.InventoryRes));
+            appendToTextBuffer(buffer, "%s\n", hexBuf);
+            break;
+
+        default:
+            appendToTextBuffer(buffer, "RF-technology: Unsupported\n");
+            break;
+    }
+}
+
 static gboolean displayDiscoveryLoopError()
 {
     GtkApplication *app = GTK_APPLICATION(g_application_get_default());
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
 
-    char content[128] = "";
-    const size_t maxSize = sizeof(content);
-    GtkTextIter iter;
+    g_mutex_lock(&sSharedState.mutex);
+    ptx_Status_t status = sSharedState.ptxStatus;
+    g_mutex_unlock(&sSharedState.mutex);
 
-    snprintf(content, maxSize, "\nDiscovery loop ended with ERROR: 0x%04X\nPlease close the application and open it again!\n", sPtxStatus);
     GtkTextBuffer * const buffer = gtk_text_view_get_buffer(state->contentTextView);
-    gtk_text_buffer_get_end_iter(buffer, &iter);
-    gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+    appendToTextBuffer(buffer, "\nDiscovery loop ended with ERROR: 0x%04X\nPlease close the application and open it again!\n", status);
 
     return FALSE;
 }
 
 static gboolean updateCardInfo()
 {
-    if(!sDoRunDiscovery)
+    g_mutex_lock(&sSharedState.mutex);
+    gboolean isRunning = sSharedState.doRunDiscovery;
+    g_mutex_unlock(&sSharedState.mutex);
+
+    if(!isRunning)
         return FALSE;
 
     GtkApplication *app = GTK_APPLICATION(g_application_get_default());
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
-
-    char content[NDEF_BUFFER_SIZE] = "";
-    const size_t maxSize = sizeof(content);
-
-    snprintf(content, maxSize, "Card activated\n");
     GtkTextBuffer * const buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(state->contentTextView));
-    gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
-    
-    GtkTextIter iter;
 
-    switch(sActiveCard.TechType)
-    {
-        case ptx_RUL_CardRfTechType_A:
-        {
-            snprintf(content, maxSize, "RF-technology: Type-A\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+    gtk_text_buffer_set_text(buffer, "Card activated\n", 15);
 
-            snprintf(content, maxSize, "SENS_RES: ");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+    g_mutex_lock(&sSharedState.mutex);
+    ptx_RUL_CardParams_t localCard = sSharedState.activeCard;
+    ptx_RUL_CardProtocolType_t localProtocol = sSharedState.activeProtocol;
+    gboolean isNdef = sSharedState.isNdefMessage;
+    gboolean isNdefRead = sSharedState.isNdefMessageRead;
+    uint32_t ndefSize = sSharedState.ndefMsgBufferSize;
+    g_mutex_unlock(&sSharedState.mutex);
 
-            int n = 0;
-            for (uint8_t i = 0; i < sizeof(sActiveCard.TechParam.TypeA.SensRes); ++i)
-            {
-                n += sprintf(&content[n], "%02X", sActiveCard.TechParam.TypeA.SensRes[i]);
-            }
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+    displayCardTechInfo(buffer, &localCard);
 
-            snprintf(content, maxSize, "\nID length: %02X\n", sActiveCard.TechParam.TypeA.NfcId1Len);
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            snprintf(content, maxSize, "ID: ");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            n = 0;
-            for (uint8_t i = 0; i < sActiveCard.TechParam.TypeA.NfcId1Len; ++i)
-            {
-                n += sprintf(&content[n], "%02X", sActiveCard.TechParam.TypeA.NfcId1[i]);
-            }
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-            break;
-        }
-
-        case ptx_RUL_CardRfTechType_B:
-        {
-            snprintf(content, maxSize, "RF-technology: Type-B\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            snprintf(content, maxSize, "SENSB_RES: ");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            int n = 0;
-            for (uint8_t i = 0; i < sizeof(sActiveCard.TechParam.TypeB.SensBRes); ++i)
-            {
-                n += sprintf(&content[n], "%02X", sActiveCard.TechParam.TypeB.SensBRes[i]);
-            }
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-            break;
-        }
-
-        case ptx_RUL_CardRfTechType_F:
-        {
-            snprintf(content, maxSize, "RF-technology: Type-F\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            snprintf(content, maxSize, "SENSF_RES: ");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            int n = 0;
-            for (uint8_t i = 0; i < sizeof(sActiveCard.TechParam.TypeF.SensFRes); ++i)
-            {
-                n += sprintf(&content[n], "%02X", sActiveCard.TechParam.TypeF.SensFRes[i]);
-            }
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-            break;
-        }
-
-        case ptx_RUL_CardRfTechType_V:
-        {
-            snprintf(content, maxSize, "RF-technology: Type-V\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            snprintf(content, maxSize, "INVENTORY_RES: ");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-
-            int n = 0;
-            for (uint8_t i = 0; i < sizeof(sActiveCard.TechParam.TypeV.InventoryRes); ++i)
-            {
-                n += sprintf(&content[n], "%02X", sActiveCard.TechParam.TypeV.InventoryRes[i]);
-            }
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-            break;
-        }
-
-        default:
-        {
-            snprintf(content, maxSize, "RF-technology: Unsupported\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-            break;
-        }
-    }
-
-    switch(sActiveProtocol)
+    switch(localProtocol)
     {
         case ptx_RUL_CardProtocolType_T2T:
-        {
-            snprintf(content, maxSize, "\nProtocol: T2T\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "Protocol: T2T\n");
             break;
-        }
-
         case ptx_RUL_CardProtocolType_T3T:
-        {
-            snprintf(content, maxSize, "\nProtocol: T3T\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "Protocol: T3T\n");
             break;
-        }
-
         case ptx_RUL_CardProtocolType_T4T:
-        {
-            snprintf(content, maxSize, "\nProtocol: T4T (ISO-DEP)\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "Protocol: T4T (ISO-DEP)\n");
             break;
-        }
-
         case ptx_RUL_CardProtocolType_NfcDep:
-        {
-            snprintf(content, maxSize, "\nProtocol: P2P (NFC-DEP)\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "Protocol: P2P (NFC-DEP)\n");
             break;
-        }
-
         case ptx_RUL_CardProtocolType_T5T:
-        {
-            snprintf(content, maxSize, "\nProtocol: T5T\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "Protocol: T5T\n");
             break;
-        }
-
         default:
-        {
-            snprintf(content, maxSize, "\nProtocol: Unknown / Unsupported\n");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "Protocol: Unknown / Unsupported\n");
             break;
-        }
     }
 
-    if(sIsNdefMessage)
+    if(isNdef)
     {
-        if(sIsNdefMessageRead)
+        if(isNdefRead)
         {
-            snprintf(content, maxSize, "\nNDEF message: ");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "\nNDEF message: ");
 
-            memset(content, 0U, maxSize);
-            memcpy(content, sNdefMsgBuffer, sNdefMsgBufferSize);
+            // Make a local copy of the NDEF buffer
+            uint8_t ndefCopy[NDEF_BUFFER_SIZE] = {0};
+            g_mutex_lock(&sSharedState.mutex);
+            memcpy(ndefCopy, sSharedState.ndefMsgBuffer, ndefSize);
+            g_mutex_unlock(&sSharedState.mutex);
 
             GError *error = NULL;
-
-            // convert to UTF-8 with fallback
-            gchar *utf8Str = g_convert(
-                content, sNdefMsgBufferSize, // Input string and length
-                "UTF-8", "ISO-8859-1",       // To and From encodings
-                NULL, NULL,
-                &error
-            );
+            gchar *utf8Str = g_convert((const char *)ndefCopy, ndefSize, "UTF-8", "ISO-8859-1", NULL, NULL, &error);
 
             if (utf8Str) {
-                snprintf(content, maxSize, "%s\n", utf8Str);
-                gtk_text_buffer_get_end_iter(buffer, &iter);
-                gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
-                g_free(utf8Str); // Caller must free the result
+                appendToTextBuffer(buffer, "%s\n", utf8Str);
+                g_free(utf8Str);
             } else {
-                memset(content, 0U, maxSize);
-                snprintf(content, maxSize, "Conversion failed: %s\n", error->message);
-                gtk_text_buffer_get_end_iter(buffer, &iter);
-                gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+                appendToTextBuffer(buffer, "Conversion failed: %s\n", error->message);
                 g_error_free(error);
             }
         }
         else
         {
-            snprintf(content, maxSize, "\nCould not read NDEF message.");
-            gtk_text_buffer_get_end_iter(buffer, &iter);
-            gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
+            appendToTextBuffer(buffer, "\nCould not read NDEF message.");
         }
     }
 
@@ -389,13 +348,15 @@ static gint onInitDone(gpointer userData)
 {
     GtkApplication *app = GTK_APPLICATION(userData);
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+    GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
 
-    if(sPtxStatus == PTX_STATUS_SUCCESS)
+    g_mutex_lock(&sSharedState.mutex);
+    ptx_Status_t status = sSharedState.ptxStatus;
+    g_mutex_unlock(&sSharedState.mutex);
+
+    if(status == PTX_STATUS_SUCCESS)
     {
-        const char * content = "System initialized. Press START to begin discovery!";
-        GtkTextBuffer * buffer = gtk_text_view_get_buffer (state->contentTextView);
-        gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
-
+        gtk_text_buffer_set_text(buffer, "System initialized. Press START to begin discovery!", 50);
         gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), TRUE);
         GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
         GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
@@ -404,11 +365,9 @@ static gint onInitDone(gpointer userData)
     }
     else
     {
-        char content[128] = "";
-        const size_t maxSize = sizeof(content);
-        snprintf(content, maxSize, "System initialization ERROR: 0x%04X\nPlease check the system and restart the application!", sPtxStatus);
-        GtkTextBuffer * buffer = gtk_text_view_get_buffer (state->contentTextView);
-        gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+        char content[128];
+        snprintf(content, sizeof(content), "System initialization ERROR: 0x%04X\nPlease check the system and restart the application!", status);
+        gtk_text_buffer_set_text(buffer, content, (int)strlen(content));
     }
 
     return 0;
@@ -463,7 +422,9 @@ static gpointer initThread(gpointer userData)
         status = ptx_RUL_InitHardware(&sRul);
     }
 
-    sPtxStatus = status;
+    g_mutex_lock(&sSharedState.mutex);
+    sSharedState.ptxStatus = status;
+    g_mutex_unlock(&sSharedState.mutex);
     g_idle_add(onInitDone, userData);
     g_print("Init thread finished with status %04X\n", status);
 
@@ -475,13 +436,19 @@ static void startStop(GtkWidget *widget, gpointer userData)
     (void)widget;
     AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
 
-    if(!sDoRunDiscovery)
+    g_mutex_lock(&sSharedState.mutex);
+    gboolean isRunning = sSharedState.doRunDiscovery;
+    g_mutex_unlock(&sSharedState.mutex);
+
+    if(!isRunning)
     {
-        const char * content = "";
         GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-        gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+        gtk_text_buffer_set_text(buffer, "", 0);
         gtk_button_set_label(state->startStopButton, "STOP");
-        sDoRunDiscovery = true;
+
+        g_mutex_lock(&sSharedState.mutex);
+        sSharedState.doRunDiscovery = true;
+        g_mutex_unlock(&sSharedState.mutex);
 
         if(state->workerThread == NULL)
         {
@@ -491,17 +458,23 @@ static void startStop(GtkWidget *widget, gpointer userData)
     else
     {
         gtk_button_set_label(state->startStopButton, "START");
-        sDoStopDiscovery = true;
-        ptx_RUL_CardParams_t activeCard = {0};
-        sActiveCard = activeCard;
+        g_mutex_lock(&sSharedState.mutex);
+        sSharedState.doStopDiscovery = true;
+        g_mutex_unlock(&sSharedState.mutex);
+
+        g_mutex_lock(&sSharedState.mutex);
+        sSharedState.activeCard = (ptx_RUL_CardParams_t){0};
+        g_mutex_unlock(&sSharedState.mutex);
     }
 }
 
 static void closeRequest(GtkApplication *app, gpointer userData)
 {
     (void)app;
-    sDoRunDiscovery = false;
-    gExit = 1;
+    g_mutex_lock(&sSharedState.mutex);
+    sSharedState.doRunDiscovery = false;
+    sSharedState.gExit = 1;
+    g_mutex_unlock(&sSharedState.mutex);
     gtk_window_destroy(GTK_WINDOW(userData));
 }
 
@@ -544,8 +517,10 @@ static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindo
     return GTK_WINDOW(prefsWindow);
 }
 
-static GtkWindow *loadAboutWindow(GtkApplication *app, GtkWindow *parent)
+static GtkWindow *loadAboutWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
 {
+    (void)state;
+
     GtkBuilder *builder = gtk_builder_new_from_file("about.ui");
 
     GtkWidget *aboutWindow = GTK_WIDGET(gtk_builder_get_object(builder, "aboutWindow"));
@@ -553,7 +528,6 @@ static GtkWindow *loadAboutWindow(GtkApplication *app, GtkWindow *parent)
         g_error("Failed to load 'aboutWindow' from about.ui");
     }
 
-    // Set relationships
     gtk_window_set_application(GTK_WINDOW(aboutWindow), app);
     if (parent) gtk_window_set_transient_for(GTK_WINDOW(aboutWindow), parent);
 
@@ -567,14 +541,18 @@ static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userDat
     (void)parameter;
 
     AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
-
-    const char * content = "";
     GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-    gtk_text_buffer_set_text(buffer, content, (int)strlen(content));
-    if(sDoRunDiscovery)
-        sDoReset = true;
-    ptx_RUL_CardParams_t activeCard = {0};
-    sActiveCard = activeCard;
+    gtk_text_buffer_set_text(buffer, "", 0);
+
+    g_mutex_lock(&sSharedState.mutex);
+    gboolean isRunning = sSharedState.doRunDiscovery;
+    if(isRunning)
+        sSharedState.doReset = true;
+    g_mutex_unlock(&sSharedState.mutex);
+
+    g_mutex_lock(&sSharedState.mutex);
+    sSharedState.activeCard = (ptx_RUL_CardParams_t){0};
+    g_mutex_unlock(&sSharedState.mutex);
 }
 
 static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -584,15 +562,7 @@ static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer u
 
     GtkApplication *app = GTK_APPLICATION(userData);
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
-    GtkWindow *parent = gtk_application_get_active_window(app);
-
-    if (!state->prefsWindow) {
-        state->prefsWindow = loadPrefsWindow(app, state, parent);
-    } else if (parent) {
-        gtk_window_set_transient_for(state->prefsWindow, parent);
-    }
-
-    gtk_window_present(state->prefsWindow);
+    presentWindow(&state->prefsWindow, (LoadWindowFunc)loadPrefsWindow, app, state);
 }
 
 static void onAbout(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -602,31 +572,27 @@ static void onAbout(GSimpleAction *action, GVariant *parameter, gpointer userDat
 
     GtkApplication *app = GTK_APPLICATION(userData);
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
-    GtkWindow *parent = gtk_application_get_active_window(app);
-
-    if (!state->aboutWindow) {
-        state->aboutWindow = loadAboutWindow(app, parent);
-    } else if (parent) {
-        gtk_window_set_transient_for(state->aboutWindow, parent);
-    }
-
-    gtk_window_present(state->aboutWindow);
+    presentWindow(&state->aboutWindow, (LoadWindowFunc)loadAboutWindow, app, state);
 }
 
 static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData)
 {
     (void)action;
     (void)parameter;
-    (void)userData;
 
-    sDoRunDiscovery = false;
-    gExit = 1;
+    g_mutex_lock(&sSharedState.mutex);
+    sSharedState.doRunDiscovery = false;
+    sSharedState.gExit = 1;
+    g_mutex_unlock(&sSharedState.mutex);
     g_application_quit(G_APPLICATION(userData));
 }
 
 static void onActivate(GtkApplication *app, gpointer userData)
 {
     (void)userData;
+
+    // initialize mutexes for thread-safe access
+    g_mutex_init(&sSharedState.mutex);
 
     // intialize app state
     AppState *state = g_new0(AppState, 1);
@@ -650,20 +616,23 @@ static void onActivate(GtkApplication *app, gpointer userData)
     g_signal_connect(window, "close_request", G_CALLBACK(closeRequest), window);
 
     GObject *obj = gtk_builder_get_object(windowBuilder, "startstop");
-    if(obj == NULL)
+    if(obj == NULL) {
+        g_object_unref(windowBuilder);
         return;
+    }
     state->startStopButton = GTK_BUTTON(obj);
-    gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), FALSE); // disable start/stop button until the PTX is initialized
+    gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), FALSE);
     g_signal_connect(state->startStopButton, "clicked", G_CALLBACK(startStop), app);
 
     obj = gtk_builder_get_object(windowBuilder, "cardInfoText");
-    if(obj == NULL)
+    if(obj == NULL) {
+        g_object_unref(windowBuilder);
         return;
+    }
     state->contentTextView = GTK_TEXT_VIEW(obj);
 
-    const char * content = "Initializing ...";
     GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-    gtk_text_buffer_set_text (buffer, content, (int)strlen(content));
+    gtk_text_buffer_set_text(buffer, "Initializing ...", 16);
 
     // set up menu
     GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
@@ -684,15 +653,9 @@ static void onActivate(GtkApplication *app, gpointer userData)
                                     G_N_ELEMENTS(actions),
                                     app);
     
-    /* Optional accelerator: Ctrl+Q */
-    gtk_application_set_accels_for_action(app, "app.quit",
-                                         (const char *[]) { "<Primary>q", NULL });
-    /* Optional accelerator: Ctrl+P */
-    gtk_application_set_accels_for_action(app, "app.preferences",
-                                         (const char *[]) { "<Primary>p", NULL });
-    /* Optional accelerator: Ctrl+R */
-    gtk_application_set_accels_for_action(app, "app.reset",
-                                         (const char *[]) { "<Primary>r", NULL });
+    gtk_application_set_accels_for_action(app, "app.quit", (const char *[]) { ACCEL_QUIT, NULL });
+    gtk_application_set_accels_for_action(app, "app.preferences", (const char *[]) { ACCEL_PREFERENCES, NULL });
+    gtk_application_set_accels_for_action(app, "app.reset", (const char *[]) { ACCEL_RESET, NULL });
     
     GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
     GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
@@ -719,7 +682,7 @@ static void handler(int sig)
     if (sig == SIGINT)
     {
         ptx_Utils_Print("Application interrupted by user\n");
-        gExit = 1;
+        sSharedState.gExit = 1;
     }
     else
     {
@@ -748,6 +711,9 @@ int main(int argc, char **argv)
         g_thread_join(state->workerThread);
         g_thread_unref(state->workerThread);
     }
+
+    // cleanup mutexes
+    g_mutex_clear(&sSharedState.mutex);
 
     ptx_RUL_DeactivateParams_t deactParams = {0};
 
@@ -788,17 +754,30 @@ static ptx_Status_t runDemo()
 
     if (PTX_STATUS_SUCCESS == status)
     {
+        gboolean doRun = FALSE;
+        gboolean doReset = FALSE;
+        gboolean doStop = FALSE;
+        int exitFlag = 0;
+
         do
         {
-            if(sDoRunDiscovery)
-            {   
-                if(sDoReset)
+            g_mutex_lock(&sSharedState.mutex);
+            doRun = sSharedState.doRunDiscovery;
+            doReset = sSharedState.doReset;
+            doStop = sSharedState.doStopDiscovery;
+            if(doReset)
+                sSharedState.doReset = false;
+            exitFlag = sSharedState.gExit;
+            g_mutex_unlock(&sSharedState.mutex);
+
+            if(doRun)
+            {
+                if(doReset)
                 {
                     demoState = demoStateRestartDiscovery;
-                    sDoReset = false;
                 }
 
-                if(sDoStopDiscovery)
+                if(doStop)
                 {
                     demoState = demoStateDeactivateReader;
                 }
@@ -853,14 +832,16 @@ static ptx_Status_t runDemo()
                             break;
                     }
                 }
-            }             
+            }
         }
-        while ((PTX_STATUS_SUCCESS == status) && (demoStateExit != demoState) && (0 == gExit));
+        while ((PTX_STATUS_SUCCESS == status) && (demoStateExit != demoState) && (0 == exitFlag));
     }
 
     if(status != PTX_STATUS_SUCCESS)
     {
-        sPtxStatus = status;
+        g_mutex_lock(&sSharedState.mutex);
+        sSharedState.ptxStatus = status;
+        g_mutex_unlock(&sSharedState.mutex);
         g_idle_add(displayDiscoveryLoopError, NULL);
     }
 
@@ -917,12 +898,10 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    ptx_RUL_Status_Params_t discoverStatus;
-
     if ((NULL != rul) && (NULL != demoState) && (NULL != cardRegistry))
     {
         /* Check the status of the Discovery-Loop */
-        memset(&discoverStatus, 0x00, sizeof(ptx_RUL_Status_Params_t));
+        ptx_RUL_Status_Params_t discoverStatus = {0};
         discoverStatus.Type = ptx_RUL_StatusType_Discover;
         status = ptx_RUL_GetStatusInfo(rul, &discoverStatus);
         
@@ -975,7 +954,7 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
 static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    sIsNdefMessage = false;
+    sSharedState.isNdefMessage = false;
 
     if ((NULL != rul) && (NULL != demoState) && (NULL != cardRegistry))
     {
@@ -998,17 +977,30 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                sIsNdefMessage = true;
+                g_mutex_lock(&sSharedState.mutex);
+                sSharedState.isNdefMessage = true;
+                g_mutex_unlock(&sSharedState.mutex);
+
                 /* Tag is NDEF-formatted - let's try to read an NDEF message from it. */
                 uint32_t bufferSize = (uint32_t)NDEF_BUFFER_SIZE;
-                status = ptx_NDEF_ReadMessage(&ndefComp, sNdefMsgBuffer, &bufferSize);
-                sNdefMsgBufferSize = bufferSize;
+                status = ptx_NDEF_ReadMessage(&ndefComp, sSharedState.ndefMsgBuffer, &bufferSize);
+
+                g_mutex_lock(&sSharedState.mutex);
+                sSharedState.ndefMsgBufferSize = bufferSize;
+                g_mutex_unlock(&sSharedState.mutex);
+
                 if(status == PTX_STATUS_SUCCESS)
-                    sIsNdefMessageRead = true;
+                {
+                    g_mutex_lock(&sSharedState.mutex);
+                    sSharedState.isNdefMessageRead = true;
+                    g_mutex_unlock(&sSharedState.mutex);
+                }
                 else
                 {
                     /* Reading NDEF failed, let's move on. */
-                    sIsNdefMessageRead = false;
+                    g_mutex_lock(&sSharedState.mutex);
+                    sSharedState.isNdefMessageRead = false;
+                    g_mutex_unlock(&sSharedState.mutex);
                     status = PTX_STATUS_SUCCESS;
                 }
             }
@@ -1021,12 +1013,17 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
             (void)ptx_NDEF_Close(&ndefComp);
         }
 
-        ptx_RUL_CardParams_t activeCard = sActiveCard;
+        g_mutex_lock(&sSharedState.mutex);
+        ptx_RUL_CardParams_t activeCard = sSharedState.activeCard;
+        g_mutex_unlock(&sSharedState.mutex);
+
         // only update UI if the card is different from the previous one
         if(0 != memcmp(&activeCard, cardRegistry->ActiveCard, sizeof(activeCard)))
         {
-            sActiveCard = *cardRegistry->ActiveCard;
-            sActiveProtocol = cardRegistry->ActiveProtocol;
+            g_mutex_lock(&sSharedState.mutex);
+            sSharedState.activeCard = *cardRegistry->ActiveCard;
+            sSharedState.activeProtocol = cardRegistry->ActiveProtocol;
+            g_mutex_unlock(&sSharedState.mutex);
             g_idle_add(updateCardInfo, NULL);
         }
 
@@ -1079,8 +1076,10 @@ static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *de
         if (PTX_STATUS_SUCCESS == status)
         {
             ptx_Utils_Print("RF-Field switched off successfully.\n");
-            sDoStopDiscovery = false;
-            sDoRunDiscovery = false;
+            g_mutex_lock(&sSharedState.mutex);
+            sSharedState.doStopDiscovery = false;
+            sSharedState.doRunDiscovery = false;
+            g_mutex_unlock(&sSharedState.mutex);
             *demoState = demoStateStartDiscovery;
         }
         else
