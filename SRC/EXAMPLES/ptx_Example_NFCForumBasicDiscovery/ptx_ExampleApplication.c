@@ -41,16 +41,16 @@
     Description : GTK4 application using the PTX205R and the RUL SDK's reference implementation
                   for the Raspberry Pi and SPI.
                   Polls for RF-technologies A, B, F, V. If a card is activated, card
-                  inforamtion is displayed. If the card contains an NDEF message, it's
+                  information is displayed. If the card contains an NDEF message, it's
                   displayed as UTF-8 encoded text, without any parsing.
                   Only one single card in the field is supported.
                   When the app is launched, the PTX is initialized and discovery can be
                   started/stopped by clicking the START/STOP button. There's a menu offering
                   the following options:
-                  - Reset - displayed card informaiton is cleared and siscovery is restarted.
+                  - Reset - displayed card information is cleared and discovery is restarted.
                   - Preferences - enable/disable dark mode.
                   - About - display about information.
-                  - Quit - close the applicatoin.
+                  - Quit - close the application.
 
                   Settings are permanently stored in the gschemas file.
                   If run from the command line, messages will be printed there.
@@ -105,7 +105,11 @@ static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 #define ACCEL_RESET       "<Primary>r"
 
 /* Work-buffer max. sizes for current demo example. */
-#define NDEF_BUFFER_SIZE   256u
+#define NDEF_BUFFER_SIZE    256u
+#define APP_TEXT_BUFFER_SIZE 256u
+#define HEX_BUFFER_SIZE     256u
+#define CWD_BUFFER_SIZE     4096u
+#define ERROR_MSG_SIZE      512u
 
 /* Consolidated shared state with single mutex protecting all shared data */
 typedef struct {
@@ -129,6 +133,9 @@ typedef struct {
 
     /* Status */
     ptx_Status_t ptxStatus;                    /* Was sPtxStatus (volatile) */
+    ptx_Status_t lastError;                    /* Most recent error code */
+    char errorContext[256];                    /* Human-readable error context */
+    gboolean hasNewError;                      /* Flag for UI update */
 } SharedState;
 
 static SharedState sSharedState = {0};
@@ -140,6 +147,10 @@ static uint8_t sNdefWorkBuffer[NDEF_BUFFER_SIZE];
 
 /* PTX device handle (protected by application synchronization, not by sSharedState mutex) */
 static ptx_RUL_t sRul = {0};
+
+typedef struct {
+    ptx_Status_t errorCode;
+} ErrorCallbackData;
 
 typedef struct {
     gboolean darkMode;
@@ -171,9 +182,48 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *demoState);
 
+static inline void lockSharedState(void) {
+    g_mutex_lock(&sSharedState.mutex);
+}
+
+static inline void unlockSharedState(void) {
+    g_mutex_unlock(&sSharedState.mutex);
+}
+
+static inline void setErrorState(ptx_Status_t status, const char *context) {
+    lockSharedState();
+    sSharedState.lastError = status;
+    sSharedState.hasNewError = TRUE;
+    snprintf(sSharedState.errorContext, sizeof(sSharedState.errorContext), "%s", context);
+    unlockSharedState();
+}
+
+static const char* getErrorDescription(ptx_Status_t status)
+{
+    switch(status) {
+        case PTX_STATUS_SUCCESS: return "Success";
+        case PTX_STATUS_E_GEN_INVALID_PARAMETER: return "Invalid parameter";
+        case PTX_STATUS_E_GEN_INTERNAL: return "Internal system error";
+        case PTX_STATUS_E_GEN_TIMEOUT: return "Timeout occurred";
+        default: return "Unknown error";
+    }
+}
+
+static const char* getProtocolTypeString(ptx_RUL_CardProtocolType_t protocol)
+{
+    switch(protocol) {
+        case ptx_RUL_CardProtocolType_T2T: return "Protocol: T2T";
+        case ptx_RUL_CardProtocolType_T3T: return "Protocol: T3T";
+        case ptx_RUL_CardProtocolType_T4T: return "Protocol: T4T (ISO-DEP)";
+        case ptx_RUL_CardProtocolType_NfcDep: return "Protocol: P2P (NFC-DEP)";
+        case ptx_RUL_CardProtocolType_T5T: return "Protocol: T5T";
+        default: return "Protocol: Unknown / Unsupported";
+    }
+}
+
 static void appendToTextBuffer(GtkTextBuffer *buffer, const char *fmt, ...)
 {
-    char content[256];
+    char content[APP_TEXT_BUFFER_SIZE];
     va_list args;
     va_start(args, fmt);
     vsnprintf(content, sizeof(content), fmt, args);
@@ -208,7 +258,7 @@ static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplicat
 
 static void displayCardTechInfo(GtkTextBuffer *buffer, const volatile ptx_RUL_CardParams_t *card)
 {
-    char hexBuf[256];
+    char hexBuf[HEX_BUFFER_SIZE];
 
     switch(card->TechType)
     {
@@ -250,26 +300,34 @@ static void displayCardTechInfo(GtkTextBuffer *buffer, const volatile ptx_RUL_Ca
     }
 }
 
-static gboolean displayDiscoveryLoopError()
+static gboolean displayDiscoveryLoopError(gpointer data)
 {
+    ErrorCallbackData *errorData = (ErrorCallbackData *)data;
     GtkApplication *app = GTK_APPLICATION(g_application_get_default());
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
 
-    g_mutex_lock(&sSharedState.mutex);
-    ptx_Status_t status = sSharedState.ptxStatus;
-    g_mutex_unlock(&sSharedState.mutex);
+    if (state == NULL) {
+        g_free(errorData);
+        return FALSE;
+    }
 
-    GtkTextBuffer * const buffer = gtk_text_view_get_buffer(state->contentTextView);
-    appendToTextBuffer(buffer, "\nDiscovery loop ended with ERROR: 0x%04X\nPlease close the application and open it again!\n", status);
+    const char *description = getErrorDescription(errorData->errorCode);
+    GtkTextBuffer *const buffer = gtk_text_view_get_buffer(state->contentTextView);
 
+    appendToTextBuffer(buffer, "\nERROR 0x%04X - %s\nPlease restart the application.\n",
+                       errorData->errorCode, description);
+
+    gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), FALSE);
+
+    g_free(errorData);
     return FALSE;
 }
 
 static gboolean updateCardInfo()
 {
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     gboolean isRunning = sSharedState.doRunDiscovery;
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
 
     if(!isRunning)
         return FALSE;
@@ -278,39 +336,18 @@ static gboolean updateCardInfo()
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
     GtkTextBuffer * const buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(state->contentTextView));
 
-    gtk_text_buffer_set_text(buffer, "Card activated\n", 15);
+    gtk_text_buffer_set_text(buffer, "Card activated\n", -1);
 
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     ptx_RUL_CardParams_t localCard = sSharedState.activeCard;
     ptx_RUL_CardProtocolType_t localProtocol = sSharedState.activeProtocol;
     gboolean isNdef = sSharedState.isNdefMessage;
     gboolean isNdefRead = sSharedState.isNdefMessageRead;
     uint32_t ndefSize = sSharedState.ndefMsgBufferSize;
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
 
     displayCardTechInfo(buffer, &localCard);
-
-    switch(localProtocol)
-    {
-        case ptx_RUL_CardProtocolType_T2T:
-            appendToTextBuffer(buffer, "Protocol: T2T\n");
-            break;
-        case ptx_RUL_CardProtocolType_T3T:
-            appendToTextBuffer(buffer, "Protocol: T3T\n");
-            break;
-        case ptx_RUL_CardProtocolType_T4T:
-            appendToTextBuffer(buffer, "Protocol: T4T (ISO-DEP)\n");
-            break;
-        case ptx_RUL_CardProtocolType_NfcDep:
-            appendToTextBuffer(buffer, "Protocol: P2P (NFC-DEP)\n");
-            break;
-        case ptx_RUL_CardProtocolType_T5T:
-            appendToTextBuffer(buffer, "Protocol: T5T\n");
-            break;
-        default:
-            appendToTextBuffer(buffer, "Protocol: Unknown / Unsupported\n");
-            break;
-    }
+    appendToTextBuffer(buffer, "%s\n", getProtocolTypeString(localProtocol));
 
     if(isNdef)
     {
@@ -320,9 +357,9 @@ static gboolean updateCardInfo()
 
             // Make a local copy of the NDEF buffer
             uint8_t ndefCopy[NDEF_BUFFER_SIZE] = {0};
-            g_mutex_lock(&sSharedState.mutex);
+            lockSharedState();
             memcpy(ndefCopy, sSharedState.ndefMsgBuffer, ndefSize);
-            g_mutex_unlock(&sSharedState.mutex);
+            unlockSharedState();
 
             GError *error = NULL;
             gchar *utf8Str = g_convert((const char *)ndefCopy, ndefSize, "UTF-8", "ISO-8859-1", NULL, NULL, &error);
@@ -350,13 +387,13 @@ static gint onInitDone(gpointer userData)
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
     GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
 
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     ptx_Status_t status = sSharedState.ptxStatus;
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
 
     if(status == PTX_STATUS_SUCCESS)
     {
-        gtk_text_buffer_set_text(buffer, "System initialized. Press START to begin discovery!", 50);
+        gtk_text_buffer_set_text(buffer, "System initialized. Press START to begin discovery!", -1);
         gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), TRUE);
         GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
         GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
@@ -388,28 +425,28 @@ static gpointer initThread(gpointer userData)
     ptx_Status_t status;
 
     /* Demo Application Parameters */
-    ptx_Utils_AppParams_t app_params;
+    ptx_Utils_AppParams_t appParams;
 
     /* Main API component */
-    ptx_RUL_InitParams_t rul_init_params = {0};
+    ptx_RUL_InitParams_t rulInitParams = {0};
 
     /* Initialize demo application parameters with default values. */
-    (void)memcpy(&app_params.DeviceName[0], EXAMPLE_DEVICE_NAME, EXAMPLE_DEVICE_NAME_LEN);
-    app_params.DeviceNameLen = EXAMPLE_DEVICE_NAME_LEN;
+    (void)memcpy(&appParams.DeviceName[0], EXAMPLE_DEVICE_NAME, EXAMPLE_DEVICE_NAME_LEN);
+    appParams.DeviceNameLen = EXAMPLE_DEVICE_NAME_LEN;
 
     /* Initialize Main RUL API Component.
      *
      * Note: The used Host-Interface i.e. the HAL-component and the Logging-component (if used) get selected via the Build-process (see User Manual)
      *       and get also initialized during the next call to "ptx_RUL_Init".
      */
-    rul_init_params.InterfaceInitParams.InterfaceName = (uint8_t*)&app_params.DeviceName[0];
-    rul_init_params.InterfaceInitParams.InterfaceNameLen = app_params.DeviceNameLen;
-    rul_init_params.InterfaceInitParams.InterfaceType = EXAMPLE_INTERFACE_TYPE;
-    rul_init_params.InterfaceInitParams.InterfacePortType = EXAMPLE_INTERFACE_PORT_TYPE;
-    rul_init_params.InterfaceInitParams.InterfacePortID = EXAMPLE_INTERFACE_PORT_ID;
-    rul_init_params.InterfaceInitParams.NumberOfTimers = EXAMPLE_NUMBER_OF_TIMERS;
+    rulInitParams.InterfaceInitParams.InterfaceName = (uint8_t*)&appParams.DeviceName[0];
+    rulInitParams.InterfaceInitParams.InterfaceNameLen = appParams.DeviceNameLen;
+    rulInitParams.InterfaceInitParams.InterfaceType = EXAMPLE_INTERFACE_TYPE;
+    rulInitParams.InterfaceInitParams.InterfacePortType = EXAMPLE_INTERFACE_PORT_TYPE;
+    rulInitParams.InterfaceInitParams.InterfacePortID = EXAMPLE_INTERFACE_PORT_ID;
+    rulInitParams.InterfaceInitParams.NumberOfTimers = EXAMPLE_NUMBER_OF_TIMERS;
 
-    status = ptx_RUL_Init(&sRul, &rul_init_params);
+    status = ptx_RUL_Init(&sRul, &rulInitParams);
 
     if (PTX_STATUS_SUCCESS == status)
     {
@@ -422,33 +459,33 @@ static gpointer initThread(gpointer userData)
         status = ptx_RUL_InitHardware(&sRul);
     }
 
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     sSharedState.ptxStatus = status;
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
     g_idle_add(onInitDone, userData);
     g_print("Init thread finished with status %04X\n", status);
 
     return NULL;
 }
 
-static void startStop(GtkWidget *widget, gpointer userData)
+static void onStartStop(GtkWidget *widget, gpointer userData)
 {
     (void)widget;
     AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
 
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     gboolean isRunning = sSharedState.doRunDiscovery;
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
 
     if(!isRunning)
     {
         GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-        gtk_text_buffer_set_text(buffer, "", 0);
+        gtk_text_buffer_set_text(buffer, "", -1);
         gtk_button_set_label(state->startStopButton, "STOP");
 
-        g_mutex_lock(&sSharedState.mutex);
+        lockSharedState();
         sSharedState.doRunDiscovery = true;
-        g_mutex_unlock(&sSharedState.mutex);
+        unlockSharedState();
 
         if(state->workerThread == NULL)
         {
@@ -458,23 +495,20 @@ static void startStop(GtkWidget *widget, gpointer userData)
     else
     {
         gtk_button_set_label(state->startStopButton, "START");
-        g_mutex_lock(&sSharedState.mutex);
+        lockSharedState();
         sSharedState.doStopDiscovery = true;
-        g_mutex_unlock(&sSharedState.mutex);
-
-        g_mutex_lock(&sSharedState.mutex);
         sSharedState.activeCard = (ptx_RUL_CardParams_t){0};
-        g_mutex_unlock(&sSharedState.mutex);
+        unlockSharedState();
     }
 }
 
-static void closeRequest(GtkApplication *app, gpointer userData)
+static void onCloseRequest(GtkApplication *app, gpointer userData)
 {
     (void)app;
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     sSharedState.doRunDiscovery = false;
     sSharedState.gExit = 1;
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
     gtk_window_destroy(GTK_WINDOW(userData));
 }
 
@@ -488,51 +522,56 @@ static gboolean onDarkModeSwitchSet(GtkSwitch *self, gboolean state, gpointer us
     return FALSE; 
 }
 
-static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
+/* Setup function for preferences window */
+static void setupPrefsWindow(GtkBuilder *builder, AppState *state)
 {
-    GtkBuilder *builder = gtk_builder_new_from_file("prefs.ui");
-
-    GtkWidget *prefsWindow = GTK_WIDGET(gtk_builder_get_object(builder, "prefsWindow"));
-    if (!prefsWindow) {
-        g_error("Failed to load 'prefsWindow' from prefs.ui");
-    }
-
-    // Widgets
     state->darkModeSwitch = GTK_SWITCH(gtk_builder_get_object(builder, "darkModeSwitch"));
-
-    // Initialize from current state (loaded from GSettings earlier)
     gtk_switch_set_active(state->darkModeSwitch, state->darkMode);
-
-    // Set relationships
-    gtk_window_set_application(GTK_WINDOW(prefsWindow), app);
-    if (parent) gtk_window_set_transient_for(GTK_WINDOW(prefsWindow), parent);
-
     g_settings_bind(state->settings, "dark-mode",
                     state->darkModeSwitch, "active",
                     G_SETTINGS_BIND_DEFAULT);
-
     g_signal_connect(state->darkModeSwitch, "state-set", G_CALLBACK(onDarkModeSwitchSet), NULL);
+}
+
+/* Setup function for about window (empty, no special setup needed) */
+static void setupAboutWindow(GtkBuilder *builder, AppState *state)
+{
+    (void)builder;
+    (void)state;
+}
+
+/* Generic window loader that handles common setup */
+static GtkWindow* loadWindowFromUI(const char *filename, const char *objectName,
+                                    GtkApplication *app, GtkWindow *parent,
+                                    AppState *state,
+                                    void (*setupFn)(GtkBuilder*, AppState*))
+{
+    GtkBuilder *builder = gtk_builder_new_from_file(filename);
+    GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, objectName));
+
+    if (!window) {
+        g_warning("Failed to load '%s' from %s", objectName, filename);
+        g_object_unref(builder);
+        return NULL;
+    }
+
+    gtk_window_set_application(GTK_WINDOW(window), app);
+    if (parent) gtk_window_set_transient_for(GTK_WINDOW(window), parent);
+
+    if (setupFn) setupFn(builder, state);
 
     g_object_unref(builder);
-    return GTK_WINDOW(prefsWindow);
+    return GTK_WINDOW(window);
+}
+
+static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
+{
+    return loadWindowFromUI("prefs.ui", "prefsWindow", app, parent, state, setupPrefsWindow);
 }
 
 static GtkWindow *loadAboutWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
 {
-    (void)state;
-
-    GtkBuilder *builder = gtk_builder_new_from_file("about.ui");
-
-    GtkWidget *aboutWindow = GTK_WIDGET(gtk_builder_get_object(builder, "aboutWindow"));
-    if (!aboutWindow) {
-        g_error("Failed to load 'aboutWindow' from about.ui");
-    }
-
-    gtk_window_set_application(GTK_WINDOW(aboutWindow), app);
-    if (parent) gtk_window_set_transient_for(GTK_WINDOW(aboutWindow), parent);
-
-    g_object_unref(builder);
-    return GTK_WINDOW(aboutWindow);
+    return loadWindowFromUI("about.ui", "aboutWindow", app, parent, state, setupAboutWindow);
 }
 
 static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -542,17 +581,14 @@ static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userDat
 
     AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
     GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-    gtk_text_buffer_set_text(buffer, "", 0);
+    gtk_text_buffer_set_text(buffer, "", -1);
 
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     gboolean isRunning = sSharedState.doRunDiscovery;
     if(isRunning)
         sSharedState.doReset = true;
-    g_mutex_unlock(&sSharedState.mutex);
-
-    g_mutex_lock(&sSharedState.mutex);
     sSharedState.activeCard = (ptx_RUL_CardParams_t){0};
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
 }
 
 static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -580,10 +616,10 @@ static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData
     (void)action;
     (void)parameter;
 
-    g_mutex_lock(&sSharedState.mutex);
+    lockSharedState();
     sSharedState.doRunDiscovery = false;
     sSharedState.gExit = 1;
-    g_mutex_unlock(&sSharedState.mutex);
+    unlockSharedState();
     g_application_quit(G_APPLICATION(userData));
 }
 
@@ -600,11 +636,15 @@ static void onActivate(GtkApplication *app, gpointer userData)
 
     // set up settings
     g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE); // compiled schema file is expected to be inside the current working directory
-    char cwdPath[4096];
+    char cwdPath[CWD_BUFFER_SIZE];
     gchar *cwd = g_get_current_dir();
+    if (!cwd) {
+        g_warning("Failed to get current directory, using fallback");
+        cwd = g_strdup(".");
+    }
     snprintf(cwdPath, sizeof(cwdPath), "%s/", cwd);
     state->settings = g_settings_new_with_path("app", cwdPath);
-    g_free(cwd); // memeory must be freed manually
+    g_free(cwd);
     state->darkMode = g_settings_get_boolean(state->settings, "dark-mode");
     g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", state->darkMode, NULL);
 
@@ -613,26 +653,28 @@ static void onActivate(GtkApplication *app, gpointer userData)
     /* Connect signal handlers to the constructed widgets. */
     GObject *window = gtk_builder_get_object(windowBuilder, "window");
     gtk_window_set_application(GTK_WINDOW(window), app);
-    g_signal_connect(window, "close_request", G_CALLBACK(closeRequest), window);
+    g_signal_connect(window, "close_request", G_CALLBACK(onCloseRequest), window);
 
     GObject *obj = gtk_builder_get_object(windowBuilder, "startstop");
     if(obj == NULL) {
+        g_warning("Failed to load 'startstop' button from window.ui - application may not function correctly");
         g_object_unref(windowBuilder);
         return;
     }
     state->startStopButton = GTK_BUTTON(obj);
     gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), FALSE);
-    g_signal_connect(state->startStopButton, "clicked", G_CALLBACK(startStop), app);
+    g_signal_connect(state->startStopButton, "clicked", G_CALLBACK(onStartStop), app);
 
     obj = gtk_builder_get_object(windowBuilder, "cardInfoText");
     if(obj == NULL) {
+        g_warning("Failed to load 'cardInfoText' from window.ui - cannot display card information");
         g_object_unref(windowBuilder);
         return;
     }
     state->contentTextView = GTK_TEXT_VIEW(obj);
 
     GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-    gtk_text_buffer_set_text(buffer, "Initializing ...", 16);
+    gtk_text_buffer_set_text(buffer, "Initializing ...", -1);
 
     // set up menu
     GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
@@ -700,6 +742,9 @@ int main(int argc, char **argv)
     g_application_run (G_APPLICATION (gtkApp), argc, argv);
     AppState *state = g_object_get_data(G_OBJECT(gtkApp), "app-state");
 
+    if(!state)
+        return 0;
+
     if(state->initThread != NULL)
     {   // wait for thread to end and unref
         g_thread_join(state->initThread);
@@ -761,14 +806,14 @@ static ptx_Status_t runDemo()
 
         do
         {
-            g_mutex_lock(&sSharedState.mutex);
+            lockSharedState();
             doRun = sSharedState.doRunDiscovery;
             doReset = sSharedState.doReset;
             doStop = sSharedState.doStopDiscovery;
             if(doReset)
                 sSharedState.doReset = false;
             exitFlag = sSharedState.gExit;
-            g_mutex_unlock(&sSharedState.mutex);
+            unlockSharedState();
 
             if(doRun)
             {
@@ -794,7 +839,10 @@ static ptx_Status_t runDemo()
                     }
                     else if (ptx_RUL_StatusInfoSystem_OK != statusInfo.Info.System)
                     {
-                        ptx_Utils_Print("System status ERROR: %d\n", statusInfo.Info.System);
+                        lockSharedState();
+                        sSharedState.ptxStatus = PTX_STATUS_E_GEN_INTERNAL;
+                        unlockSharedState();
+                        ptx_Utils_Print("ERROR [System error: status code %d]: %s (0x%04X)\n", statusInfo.Info.System, getErrorDescription(PTX_STATUS_E_GEN_INTERNAL), PTX_STATUS_E_GEN_INTERNAL);
                         status = PTX_STATUS_E_GEN_INTERNAL;
                     }
                 }
@@ -827,7 +875,10 @@ static ptx_Status_t runDemo()
                             break;
 
                         default:
-                            ptx_Utils_Print("Invalid Application-State detected!\n");
+                            lockSharedState();
+                            sSharedState.ptxStatus = PTX_STATUS_E_GEN_INTERNAL;
+                            unlockSharedState();
+                            ptx_Utils_Print("ERROR [Invalid application state detected]: %s (0x%04X)\n", getErrorDescription(PTX_STATUS_E_GEN_INTERNAL), PTX_STATUS_E_GEN_INTERNAL);
                             demoState = demoStateExit;
                             break;
                     }
@@ -837,12 +888,10 @@ static ptx_Status_t runDemo()
         while ((PTX_STATUS_SUCCESS == status) && (demoStateExit != demoState) && (0 == exitFlag));
     }
 
-    if(status != PTX_STATUS_SUCCESS)
-    {
-        g_mutex_lock(&sSharedState.mutex);
-        sSharedState.ptxStatus = status;
-        g_mutex_unlock(&sSharedState.mutex);
-        g_idle_add(displayDiscoveryLoopError, NULL);
+    if (status != PTX_STATUS_SUCCESS) {
+        ErrorCallbackData *errorData = g_malloc0(sizeof(ErrorCallbackData));
+        errorData->errorCode = status;
+        g_idle_add(displayDiscoveryLoopError, errorData);
     }
 
     return status;
@@ -852,32 +901,32 @@ static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demo
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    ptx_RUL_DiscoverConfig_t disc_params = {0};
+    ptx_RUL_DiscoverConfig_t discParams = {0};
 
     if ((NULL != rul) && (NULL != demoState))
     {
         /* Initialize RF-Discovery / Polling Loop in NFC Forum Poll-Mode with standard parameters.*/
-        disc_params.PollMode = ptx_RUL_PollMode_NfcForum;   /* Enable PolL-Mode only in this example (Listen-mode can be optionally enabled). */
-        disc_params.EnablePolling = 1u;                     /* Enable Polling only (Listen-mode can be optionally enabled). */
-        disc_params.IdleTime = 100u;                        /* System pauses / idles for 100ms after every full polling loop-cycle. */
-        disc_params.PollTypeA = 1u;                         /* Poll for NFC-A Technology. */
-        disc_params.PollTypeAPollFrequency = 1u;            /* Poll for NFC-A Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        disc_params.PollTypeADeviceLimit = 5u;              /* Limit the number of NFC-A devices / cards to max. 5 devices (application can define max. value). */
-        disc_params.PollTypeB = 1u;                         /* Poll for NFC-B Technology. */
-        disc_params.PollTypeBPollFrequency = 1u;            /* Poll for NFC-B Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        disc_params.PollTypeBDeviceLimit = 5u;              /* Limit the number of NFC-B devices / cards to max. 5 devices (application can define max. value). */
-        disc_params.PollTypeF212 = 1u;                      /* Poll for NFC-F 212 kBit/s Technology. */
-        disc_params.PollTypeFPollFrequency = 1u;            /* Poll for NFC-F Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        disc_params.PollTypeFDeviceLimit = 5u;              /* Limit the number of NFC-F devices / cards to max. 5 devices (application can define max. value). */
-        disc_params.PollTypeV = 1u;                         /* Poll for NFC-V Technology. */
-        disc_params.PollTypeVPollFrequency = 1u;            /* Poll for NFC-V Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        disc_params.PollTypeVDeviceLimit = 5u;              /* Limit the number of NFC-V devices / cards to max. 5 devices (application can define max. value). */
-        disc_params.EnableLPCD = 0;                         /* Don't use low-power-card-detection (LPCD) in this demo. */
+        discParams.PollMode = ptx_RUL_PollMode_NfcForum;   /* Enable PolL-Mode only in this example (Listen-mode can be optionally enabled). */
+        discParams.EnablePolling = 1u;                     /* Enable Polling only (Listen-mode can be optionally enabled). */
+        discParams.IdleTime = 100u;                        /* System pauses / idles for 100ms after every full polling loop-cycle. */
+        discParams.PollTypeA = 1u;                         /* Poll for NFC-A Technology. */
+        discParams.PollTypeAPollFrequency = 1u;            /* Poll for NFC-A Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
+        discParams.PollTypeADeviceLimit = 5u;              /* Limit the number of NFC-A devices / cards to max. 5 devices (application can define max. value). */
+        discParams.PollTypeB = 1u;                         /* Poll for NFC-B Technology. */
+        discParams.PollTypeBPollFrequency = 1u;            /* Poll for NFC-B Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
+        discParams.PollTypeBDeviceLimit = 5u;              /* Limit the number of NFC-B devices / cards to max. 5 devices (application can define max. value). */
+        discParams.PollTypeF212 = 1u;                      /* Poll for NFC-F 212 kBit/s Technology. */
+        discParams.PollTypeFPollFrequency = 1u;            /* Poll for NFC-F Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
+        discParams.PollTypeFDeviceLimit = 5u;              /* Limit the number of NFC-F devices / cards to max. 5 devices (application can define max. value). */
+        discParams.PollTypeV = 1u;                         /* Poll for NFC-V Technology. */
+        discParams.PollTypeVPollFrequency = 1u;            /* Poll for NFC-V Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
+        discParams.PollTypeVDeviceLimit = 5u;              /* Limit the number of NFC-V devices / cards to max. 5 devices (application can define max. value). */
+        discParams.EnableLPCD = 0;                         /* Don't use low-power-card-detection (LPCD) in this demo. */
 #if !defined(PTX_DISABLE_LISTEN_MODE)
-        disc_params.ListenMode = 0;                         /* Don't use Listen-mode (Card Emulation) in this demo. */
+        discParams.ListenMode = 0;                         /* Don't use Listen-mode (Card Emulation) in this demo. */
 #endif /* PTX_DISABLE_LISTEN_MODE */
 
-        status = ptx_RUL_InitiateDiscovery(rul, &disc_params);
+        status = ptx_RUL_InitiateDiscovery(rul, &discParams);
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -887,7 +936,10 @@ static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demo
         else
         {
             *demoState = demoStateExit;
-            ptx_Utils_Print("Starting RF-Discovery failed with Error-Status %04X!\n", status);
+            lockSharedState();
+            sSharedState.ptxStatus = status;
+            unlockSharedState();
+            ptx_Utils_Print("ERROR [RF-Discovery initialization failed]: %s (0x%04X)\n", getErrorDescription(status), status);
         }
     }
 
@@ -929,14 +981,17 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
                 case ptx_RUL_StatusInfoDiscover_CardDetectionOngoing:
                 case ptx_RUL_StatusInfoDiscover_CardsAvailable:
                 case ptx_RUL_StatusInfoDiscover_MultiProtocol:
-                    // not dealing wiht multiple cards, multiprotocol or card selection
+                    // not dealing with multiple cards, multiprotocol or card selection
                     *demoState = demoStateRestartDiscovery;
                     break;
 
                 default:
                 {
                     *demoState = demoStateExit;
-                    ptx_Utils_Print("Invalid/Unsupported Application-State detected!\n");
+                    lockSharedState();
+                    sSharedState.ptxStatus = PTX_STATUS_E_GEN_INTERNAL;
+                    unlockSharedState();
+                    ptx_Utils_Print("ERROR [Unsupported discovery state detected]: %s (0x%04X)\n", getErrorDescription(PTX_STATUS_E_GEN_INTERNAL), PTX_STATUS_E_GEN_INTERNAL);
                     break;
                 }
             }
@@ -944,7 +999,10 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
         else
         {
             *demoState = demoStateExit;
-            ptx_Utils_Print("Check status of RF-Discovery failed with Error-Status %04X!\n", status);
+            lockSharedState();
+            sSharedState.ptxStatus = status;
+            unlockSharedState();
+            ptx_Utils_Print("ERROR [RF-Discovery status check failed]: %s (0x%04X)\n", getErrorDescription(status), status);
         }
     }
 
@@ -954,7 +1012,11 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
 static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    /* Initialize NDEF state */
+    lockSharedState();
     sSharedState.isNdefMessage = false;
+    sSharedState.isNdefMessageRead = false;
+    unlockSharedState();
 
     if ((NULL != rul) && (NULL != demoState) && (NULL != cardRegistry))
     {
@@ -977,53 +1039,43 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                g_mutex_lock(&sSharedState.mutex);
-                sSharedState.isNdefMessage = true;
-                g_mutex_unlock(&sSharedState.mutex);
-
                 /* Tag is NDEF-formatted - let's try to read an NDEF message from it. */
                 uint32_t bufferSize = (uint32_t)NDEF_BUFFER_SIZE;
                 status = ptx_NDEF_ReadMessage(&ndefComp, sSharedState.ndefMsgBuffer, &bufferSize);
 
-                g_mutex_lock(&sSharedState.mutex);
+                lockSharedState();
+                sSharedState.isNdefMessage = true;
                 sSharedState.ndefMsgBufferSize = bufferSize;
-                g_mutex_unlock(&sSharedState.mutex);
+                sSharedState.isNdefMessageRead = (status == PTX_STATUS_SUCCESS);
+                unlockSharedState();
 
-                if(status == PTX_STATUS_SUCCESS)
-                {
-                    g_mutex_lock(&sSharedState.mutex);
-                    sSharedState.isNdefMessageRead = true;
-                    g_mutex_unlock(&sSharedState.mutex);
-                }
-                else
-                {
-                    /* Reading NDEF failed, let's move on. */
-                    g_mutex_lock(&sSharedState.mutex);
-                    sSharedState.isNdefMessageRead = false;
-                    g_mutex_unlock(&sSharedState.mutex);
-                    status = PTX_STATUS_SUCCESS;
+                if(status != PTX_STATUS_SUCCESS) {
+                    ptx_Utils_Print("Warning: NDEF read failed with status 0x%04X\n", status);
+                    status = PTX_STATUS_SUCCESS; /* Allow graceful degradation, not silent failure */
                 }
             }
-            else
-            {
-                /* Activated Tag is probably not NDEF-formatted, let's move on. */
-                status = PTX_STATUS_SUCCESS;
+            else {
+                /* Tag is not NDEF-formatted - no special handling needed */
+                status = PTX_STATUS_SUCCESS; /* Allow graceful degradation */
             }
 
-            (void)ptx_NDEF_Close(&ndefComp);
+            ptx_Status_t closeStatus = ptx_NDEF_Close(&ndefComp);
+            if (closeStatus != PTX_STATUS_SUCCESS) {
+                ptx_Utils_Print("Warning: NDEF close failed with status 0x%04X\n", closeStatus);
+            }
         }
 
-        g_mutex_lock(&sSharedState.mutex);
+        /* Check if card changed and update if needed */
+        lockSharedState();
         ptx_RUL_CardParams_t activeCard = sSharedState.activeCard;
-        g_mutex_unlock(&sSharedState.mutex);
+        unlockSharedState();
 
-        // only update UI if the card is different from the previous one
         if(0 != memcmp(&activeCard, cardRegistry->ActiveCard, sizeof(activeCard)))
         {
-            g_mutex_lock(&sSharedState.mutex);
+            lockSharedState();
             sSharedState.activeCard = *cardRegistry->ActiveCard;
             sSharedState.activeProtocol = cardRegistry->ActiveProtocol;
-            g_mutex_unlock(&sSharedState.mutex);
+            unlockSharedState();
             g_idle_add(updateCardInfo, NULL);
         }
 
@@ -1052,7 +1104,10 @@ static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *de
         }
         else
         {
-            ptx_Utils_Print("Reseting RF-Field failed with Error-Status %04X!\n", status);
+            lockSharedState();
+            sSharedState.ptxStatus = status;
+            unlockSharedState();
+            ptx_Utils_Print("ERROR [RF-Field reset failed]: %s (0x%04X)\n", getErrorDescription(status), status);
             *demoState = demoStateExit;
         }
     }
@@ -1076,15 +1131,18 @@ static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *de
         if (PTX_STATUS_SUCCESS == status)
         {
             ptx_Utils_Print("RF-Field switched off successfully.\n");
-            g_mutex_lock(&sSharedState.mutex);
+            lockSharedState();
             sSharedState.doStopDiscovery = false;
             sSharedState.doRunDiscovery = false;
-            g_mutex_unlock(&sSharedState.mutex);
+            unlockSharedState();
             *demoState = demoStateStartDiscovery;
         }
         else
         {
-            ptx_Utils_Print("Switching RF-Field off failed with Error-Status %04X!\n", status);
+            lockSharedState();
+            sSharedState.ptxStatus = status;
+            unlockSharedState();
+            ptx_Utils_Print("ERROR [RF-Field deactivation failed]: %s (0x%04X)\n", getErrorDescription(status), status);
             *demoState = demoStateExit;
         }
     }
