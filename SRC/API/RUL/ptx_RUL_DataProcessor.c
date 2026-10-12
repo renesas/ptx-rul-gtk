@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -90,6 +90,8 @@ ptx_Status_t ptx_RUL_ProcessRfDiscoverNtf (void *ctx, ptx_NSC_RfDiscover_Ntf_t *
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessRfDiscoverNtf");
+
         status = PTX_STATUS_SUCCESS;
 
         for (uint8_t i = 0; (i < PTX_RUL_MAX_EXTENSIONS) && (PTX_STATUS_SUCCESS == status); i++)
@@ -116,6 +118,8 @@ ptx_Status_t ptx_RUL_ProcessRfLpcdNtf (void *ctx)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessRfLpcdNtf");
+
         status = PTX_STATUS_SUCCESS;
 
         uint8_t ntf_used = PTX_RUL_EXTENSION_NTF_UNUSED;
@@ -145,7 +149,26 @@ ptx_Status_t ptx_RUL_ProcessResetNtf (void *ctx)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessResetNtf");
+
         status = PTX_STATUS_SUCCESS;
+
+        /* Last received NSC message is the Reset Notification (ResetNtf) in this case. */
+        uint32_t rst_ntf_len = rul->Nsc.CmdProcessor.LastMsg.Length;
+        uint8_t *rst_ntf_payload = rul->Nsc.CmdProcessor.LastMsg.Payload;
+        /*
+         * ROM version field is optional depending on silicon revision.
+         * Some devices send a shorter ResetNtf that does not include the ROM version byte.
+         */
+        if(PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN_MAX == rst_ntf_len)
+        {
+            rul->Nsc.RomVersion = rst_ntf_payload[PTX_NSC_RESET_NTF_ROMVERSION_IDX];
+        }
+        else 
+        {
+            /* ROM version not present in this ResetNtf. */
+            rul->Nsc.RomVersion = 0;
+        }
 
         for (uint8_t i = 0; (i < PTX_RUL_MAX_EXTENSIONS) && (PTX_STATUS_SUCCESS == status); i++)
         {
@@ -173,6 +196,8 @@ ptx_Status_t ptx_RUL_ProcessRfActivateNtf (void *ctx, ptx_NSC_RfActivate_Ntf_t *
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessRfActivateNtf");
+
         status = ptx_RUL_SetActiveMode (rul, ntf);
 
         uint8_t ntf_used = PTX_RUL_EXTENSION_NTF_UNUSED;
@@ -191,6 +216,7 @@ ptx_Status_t ptx_RUL_ProcessRfActivateNtf (void *ctx, ptx_NSC_RfActivate_Ntf_t *
 
         if ((PTX_STATUS_SUCCESS == status) && (PTX_RUL_EXTENSION_NTF_UNUSED == ntf_used))
         {
+            rul->ActiveExtensionEndpoint = NULL;
             status = ptx_RUL_ReaderProcessRfActivateNtf(rul, ntf);
         }
     }
@@ -205,6 +231,9 @@ ptx_Status_t ptx_RUL_ProcessRfDeactivateNtf (void *ctx, ptx_NSC_RfDeactivate_Ntf
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessRfDeactivateNtf");
+
+
         status = ptx_RUL_SetIdleMode (rul, ntf);
 
         uint8_t ntf_used = PTX_RUL_EXTENSION_NTF_UNUSED;
@@ -268,6 +297,8 @@ ptx_Status_t ptx_RUL_ProcessErrorNtf (void *ctx, ptx_NSC_Error_Ntf_t *ntf)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessErrorNtf");
+
         status = PTX_STATUS_SUCCESS;
 
         uint8_t ntf_used = PTX_RUL_EXTENSION_NTF_UNUSED;
@@ -313,6 +344,9 @@ ptx_Status_t ptx_RUL_ProcessErrorNtf (void *ctx, ptx_NSC_Error_Ntf_t *ntf)
                 case NSC_ErrorCode_OverTemperature:
                     rul->SystemStatus = ptx_RUL_StatusInfoSystem_ErrorTemperature;
                     break;
+                case NSC_ErrorCode_OutOfMemory:
+                    rul->SystemStatus = ptx_RUL_StatusInfoSystem_ErrorOutOfMemory;
+                    break;
                 case NSC_ErrorCode_StandbyMode:
                     rul->SystemStatus = ptx_RUL_StatusInfoSystem_ErrorStandby;
                     break;
@@ -355,6 +389,7 @@ ptx_Status_t ptx_RUL_ProcessRfFieldNtf (void *ctx, uint8_t field)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessRfFieldNtf");
         status = PTX_STATUS_SUCCESS;
 
         uint8_t ntf_used = PTX_RUL_EXTENSION_NTF_UNUSED;
@@ -380,6 +415,7 @@ ptx_Status_t ptx_RUL_ProcessWlcWptStopNtf (void *ctx, ptx_NSC_WLC_WptStop_Ntf_t 
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessWlcWptStopNtf");
         status = PTX_STATUS_SUCCESS;
 
         uint8_t ntf_used = PTX_RUL_EXTENSION_NTF_UNUSED;
@@ -401,6 +437,7 @@ ptx_Status_t ptx_RUL_ProcessDataMsg (void *ctx, ptx_NSC_RfData_Msg_t *msg)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ProcessDataMsg");
         status = PTX_STATUS_SUCCESS;
 
         ptx_RUL_Extension_Endpoints_t *active_endpoint = rul->ActiveExtensionEndpoint;
@@ -426,6 +463,7 @@ static ptx_Status_t ptx_RUL_SetEmvCollision (ptx_RUL_t *rul)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_SetEmvCollision");
         rul->EmvCollisionFilter.Counter++;
 
         if (rul->EmvCollisionFilter.Counter >= rul->EmvCollisionFilter.Limit)
@@ -447,6 +485,8 @@ static ptx_Status_t ptx_RUL_ReaderProcessRfDiscoverNtf (ptx_RUL_t *rul, ptx_NSC_
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_ReaderProcessRfDiscoverNtf");
+
         ptx_RUL_CardParams_t discovered_card;
         memset(&discovered_card, 0, sizeof(discovered_card));
 
@@ -546,6 +586,8 @@ static ptx_Status_t ptx_RUL_ReaderProcessRfActivateNtf (ptx_RUL_t *rul, ptx_NSC_
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_ReaderProcessRfActivateNtf");
+
         uint8_t write_to_card_registry = 1;
         ptx_RUL_CardParams_t discovered_card;
         memset(&discovered_card, 0, sizeof(discovered_card));
@@ -788,6 +830,7 @@ static ptx_Status_t ptx_RUL_SetActiveMode (ptx_RUL_t *rul, ptx_NSC_RfActivate_Nt
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_SetActiveMode");
         status = PTX_STATUS_SUCCESS;
 
         switch (ntf->RfTech)
@@ -842,6 +885,7 @@ static ptx_Status_t ptx_RUL_SetIdleMode (ptx_RUL_t *rul, ptx_NSC_RfDeactivate_Nt
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != ntf))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_SetIdleMode");
         if (NSC_ErrorCode_NoErr == ntf->Error)
         {
             /* Deactivation was successful. */
@@ -882,17 +926,17 @@ static ptx_Status_t ptx_RUL_ParseSensBRes (ptx_RUL_CardParams_t *discovered_card
         ptx_RUL_BProtocolType_t protocolType;
         memset(&protocolType, 0, sizeof(protocolType));
         ptx_RUL_MinTr2B_t minTrb2; 
-        ptx_RUL_BPlatformType_t platfromType; 
+        ptx_RUL_BPlatformType_t platformType; 
         ptx_RUL_FsciToFsc_t fsci;
         ptx_RUL_BAdcCoding_t adcCoding; 
         ptx_RUL_BFoCoding_t foCoding;
         fsci=(ptx_RUL_FsciToFsc_t)(sensBRes[PTX_RUL_SENSB_FSCI_PROTOCOL_TYPE_OFFSET] & PTX_RUL_SENSB_FSCI_MASK ) >> 4 ;
         minTrb2= (ptx_RUL_MinTr2B_t)( ( (sensBRes[PTX_RUL_SENSB_FSCI_PROTOCOL_TYPE_OFFSET] & PTX_RUL_SENSB_PROTOCOL_TYPE_MASK) >> 1) & (uint8_t)0x03 ) ; 
-        platfromType= (ptx_RUL_BPlatformType_t) ( (sensBRes[PTX_RUL_SENSB_FSCI_PROTOCOL_TYPE_OFFSET] & PTX_RUL_SENSB_PROTOCOL_TYPE_MASK) & (uint8_t)0x01 ) ;
+        platformType= (ptx_RUL_BPlatformType_t) ( (sensBRes[PTX_RUL_SENSB_FSCI_PROTOCOL_TYPE_OFFSET] & PTX_RUL_SENSB_PROTOCOL_TYPE_MASK) & (uint8_t)0x01 ) ;
         adcCoding = (ptx_RUL_BAdcCoding_t) ((sensBRes[PTX_RUL_SENSB_FWI_ADC_FO_OFFSET] & PTX_RUL_SENSB_ADC_FO_MASK) >> 2); 
         foCoding = (ptx_RUL_BFoCoding_t) ((sensBRes[PTX_RUL_SENSB_FWI_ADC_FO_OFFSET] & PTX_RUL_SENSB_ADC_FO_MASK) & (uint8_t)0x03 );                    
         protocolType.minTr2B = minTrb2; 
-        protocolType.platformType = platfromType;
+        protocolType.platformType = platformType;
         sensBResProtocolInfo.BitRateCapability= sensBRes[PTX_RUL_SENSB_BIT_RATE_CAPABILITY_OFFSET];
         sensBResProtocolInfo.ProtocolType = protocolType;
         sensBResProtocolInfo.Fwi  = (sensBRes[PTX_RUL_SENSB_FWI_ADC_FO_OFFSET] & PTX_RUL_SENSB_FWI_MASK) >> 4 ;

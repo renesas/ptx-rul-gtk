@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -78,10 +78,6 @@ const ptx_PSL_QMeas_Parameters_t DefaultQMeasParameters =
  * INTERNAL FUNCTIONS DECLARATIONS / HELPERS
  * ####################################################################################################################
  */
-
-/*
- *  Calculate PLL parameters for a given frequency.
- */
 static ptx_Status_t ptx_PSL_HandlePmuSignal(ptx_PSL_t *psl, ptx_PSL_AnaMuxTestSignals_t signal);
 static ptx_Status_t ptx_PSL_HandleTxTestSignals(ptx_PSL_t *psl, ptx_PSL_AnaMuxTestSignals_t signal);
 static ptx_Status_t ptx_PSL_HandleAMuxSelection(ptx_PSL_t *psl, ptx_PSL_AnaMuxTestSignals_t signal);
@@ -107,7 +103,7 @@ ptx_Status_t ptx_PSL_Init(ptx_PSL_t *psl, ptx_PSL_InitParams_t *initParams)
     {
         memset(psl, 0, sizeof(ptx_PSL_t));
 
-        /* Expect valid and already initialized Rul component. Log may be NULL. */
+        /* Expect valid and already initialized RUL component. Log may be NULL. */
         if (PTX_COMP_CHECK(initParams->Rul, Comp_RUL))
         {
             psl->Rul = initParams->Rul;
@@ -137,10 +133,9 @@ ptx_Status_t ptx_PSL_RssiMeasurement(ptx_PSL_t *psl, uint8_t cwPowerLevel, ptx_R
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(psl, Comp_Support) && (NULL != result)
-         && (PTX_PSL_MAX_CW_MULTIPLIER >= cwPowerLevel) && (AdcAveraging_Max > averaging) )
+    if ( PTX_COMP_CHECK(psl, Comp_Support) && (NULL != result) && (AdcAveraging_Max > averaging) )
     {
-        status = ptx_RUL_RSSIMeasurement(psl->Rul, cwPowerLevel, averaging, result);
+        status = ptx_RUL_GetRSSIValue(psl->Rul, cwPowerLevel, averaging, result);
     }
 
     return status;
@@ -149,10 +144,11 @@ ptx_Status_t ptx_PSL_RssiMeasurement(ptx_PSL_t *psl, uint8_t cwPowerLevel, ptx_R
 ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *measParams, ptx_PSL_QMeas_Result_t *measResult)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
     if (PTX_COMP_CHECK(psl, Comp_Support) && (NULL != measResult))
     {
         ptx_PSL_QMeas_Parameters_t measurement_params;
+        uint32_t buffer_size = 0U;
+
         memset(&measurement_params, 0, sizeof(ptx_PSL_QMeas_Parameters_t));
 
         if (NULL == measParams)
@@ -165,25 +161,33 @@ ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *me
             status = PTX_STATUS_SUCCESS;
         }
 
-        if (measurement_params.FreqSpan > PTX_PSL_QMEAS_MAX_FREQ_SPAN)
-        {
-            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-        }
-
-        uint32_t buffer_size;
         if (PTX_STATUS_SUCCESS == status)
         {
-            buffer_size = (measurement_params.FreqSpan / measurement_params.FreqStep) + 1;
             /*
-             *  Check if we have enough memory, for the given measurement parameters.
-             *  Large FrequSpan and small FreqSteps will results in high memory usage!
-             *  We allow a maximum of PTX_PSL_QMEAS_BUFFERSIZE samples.
+             * Validate measurement parameters:
+             * - FreqStep must not be 0 (division by zero / endless loop protection)
+             * - AvgFactor must be valid
+             * - FreqSpan must be within supported range
              */
-            if (buffer_size < PTX_PSL_QMEAS_BUFFERSIZE)
+            if ((0U == measurement_params.FreqSpan) ||
+                (0U == measurement_params.FreqStep) ||
+                (measurement_params.FreqSpan < measurement_params.FreqStep) ||
+                (measurement_params.AvgFactor >= AdcAveraging_Max) ||
+                (measurement_params.FreqSpan > PTX_PSL_QMEAS_MAX_FREQ_SPAN))
             {
-                status = PTX_STATUS_SUCCESS;
+                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
             }
-            else
+        }
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            buffer_size = (measurement_params.FreqSpan / measurement_params.FreqStep) + 1U;
+            /*
+             * Check if we have enough memory for the given measurement parameters.
+             * Large FreqSpan values and small FreqStep values result in high memory usage.
+             * We allow a maximum of PTX_PSL_QMEAS_BUFFERSIZE samples.
+             */
+            if ((0U == buffer_size) || (buffer_size > PTX_PSL_QMEAS_BUFFERSIZE))
             {
                 status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
             }
@@ -200,13 +204,14 @@ ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *me
             uint32_t max_amplitude = 0;
             uint32_t max_amplitude_idx = 0;
             uint32_t start_freq = PTX_PSL_QMEAS_CENTER_FREQ - (measurement_params.FreqSpan / 2u);
-            uint32_t stop_freq = PTX_PSL_QMEAS_CENTER_FREQ + (measurement_params.FreqSpan / 2u);
+            uint32_t stop_freq  = PTX_PSL_QMEAS_CENTER_FREQ + (measurement_params.FreqSpan / 2u);
 
-            for (uint32_t cur_freq = start_freq; (cur_freq < stop_freq) && (PTX_STATUS_SUCCESS == status); cur_freq += measurement_params.FreqStep)
+            for (uint32_t cur_freq = start_freq;
+                 (cur_freq < stop_freq) && (PTX_STATUS_SUCCESS == status) && (idx < buffer_size);
+                 cur_freq += measurement_params.FreqStep)
             {
                 /* Get the amplitude at current frequency */
                 status = ptx_PSL_RfFieldMeasurement(psl, cur_freq, measurement_params.AvgFactor, &rf_amplitudes[idx]);
-
                 if (rf_amplitudes[idx] > max_amplitude)
                 {
                     max_amplitude = rf_amplitudes[idx];
@@ -215,9 +220,9 @@ ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *me
                 idx++;
             }
 
-            if (PTX_STATUS_SUCCESS == status)
+            if ((PTX_STATUS_SUCCESS == status) && (idx > 0U))
             {
-                /* We got all the results. There might more than one sample with the same max. amplitude value. Check this and choose the middle one. */
+                /* We got all the results. There might be more than one sample with the same max. amplitude value. Check this and choose the middle one. */
                 uint32_t amp_idx;
                 for (amp_idx = max_amplitude_idx; amp_idx < idx; amp_idx++)
                 {
@@ -229,12 +234,11 @@ ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *me
 
                 if ((amp_idx - max_amplitude_idx) >= 2U)
                 {
-                    amp_idx = (uint32_t)((uint32_t)((amp_idx - max_amplitude_idx) / 2U) + max_amplitude_idx);
+                    amp_idx = ((amp_idx - max_amplitude_idx) / 2U) + max_amplitude_idx;
                 }
 
-                /* Calculate -3dB value (0,708 * MaxAmplitude). */
-                uint32_t corner_freq_ampvalue = 0;
-                corner_freq_ampvalue = (uint32_t)(((uint64_t)max_amplitude * 708U) / PTX_PSL_AMP_MEAS_FACTOR);
+                /* Calculate -3dB value (0.708 * MaxAmplitude). */
+                uint32_t corner_freq_ampvalue = (uint32_t)(((uint64_t)max_amplitude * 708U) / PTX_PSL_AMP_MEAS_FACTOR);
 
                 /*
                  * For -3dB amplitude values find the matching frequencies.
@@ -253,8 +257,8 @@ ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *me
                     lower_corner_freq_idx = i;
                 }
 
-                /* Start from the resonant and go to the right lobe.*/
-                for (uint32_t i = amp_idx; i < buffer_size; i++)
+                /* Start from the resonant frequency and go to the right lobe. */
+                for (uint32_t i = amp_idx; i < idx; i++)
                 {
                     if (rf_amplitudes[i] < corner_freq_ampvalue)
                     {
@@ -264,13 +268,13 @@ ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *me
                 }
 
                 /* Calculate the measurement results. */
-                measResult->ResonaceFreq = start_freq + (measurement_params.FreqStep * max_amplitude_idx);
+                measResult->ResonanceFreq    = start_freq + (measurement_params.FreqStep * max_amplitude_idx);
                 measResult->LowerCornerFreq = start_freq + (measurement_params.FreqStep * lower_corner_freq_idx);
                 measResult->UpperCornerFreq = start_freq + (measurement_params.FreqStep * upper_corner_freq_idx);
 
                 if (measResult->UpperCornerFreq != measResult->LowerCornerFreq)
                 {
-                    measResult->QFactor = (measResult->ResonaceFreq * 100U) / (measResult->UpperCornerFreq - measResult->LowerCornerFreq);
+                    measResult->QFactor = (measResult->ResonanceFreq * 100U) / (measResult->UpperCornerFreq - measResult->LowerCornerFreq);
                 }
                 else
                 {
@@ -278,13 +282,16 @@ ptx_Status_t ptx_PSL_QMeasurement(ptx_PSL_t *psl, ptx_PSL_QMeas_Parameters_t *me
                     status = PTX_STATUS_E_GEN_INTERNAL;
                 }
             }
+            else if (PTX_STATUS_SUCCESS == status)
+            {
+                status = PTX_STATUS_E_GEN_INTERNAL;
+            }
 
-            /* Deactivate to Idle in any case, but do not overwrite the error status  */
+            /* Deactivate to Idle in any case, but do not overwrite the error status */
             ptx_Status_t temp_stat = ptx_NSC_RfTestStop(&(psl->Rul->Nsc));
             status = (PTX_STATUS_SUCCESS == status) ? temp_stat : status;
         }
     }
-
     return status;
 }
 
@@ -438,7 +445,7 @@ ptx_Status_t ptx_PSL_ModifyRegister(ptx_PSL_t *psl, uint16_t address, uint8_t bi
             /* Clear bit slice to be manipulated. */
             reg_value = (uint8_t)(reg_value & (~mask & 0xFF));
 
-            /* Bit value should store the bits to be set in correct order starting from it's own lowest bit. */
+            /* Bit value should store the bits to be set in correct order starting from its own lowest bit. */
             reg_value = (uint8_t)(reg_value | ((bitValue & 0xFF) << (offset_last_bit)));
 
             status = ptx_PSL_WriteRegister(psl, address, reg_value);
@@ -580,7 +587,7 @@ ptx_Status_t ptx_PSL_AnaMuxSelectSignal(ptx_PSL_t *psl, ptx_PSL_AnaTestPin_t tes
                 status = ptx_PSL_WriteRegister(psl, PAD_DIG4_IO2_REG, PAD_DIG4_IO2_REG_RST);
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    /* Disable by-pass */
+                    /* Disable bypass */
                     status = ptx_PSL_ModifyRegister(psl, ANA_TEST_BUF_REG, 0, 0x01);
                 }
                 if (PTX_STATUS_SUCCESS == status)
@@ -597,7 +604,7 @@ ptx_Status_t ptx_PSL_AnaMuxSelectSignal(ptx_PSL_t *psl, ptx_PSL_AnaTestPin_t tes
                 status = ptx_PSL_WriteRegister(psl, PAD_DIG6_IO2_REG, PAD_DIG6_IO2_REG_RST);
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    /* Disable by-pass */
+                    /* Disable bypass */
                     status = ptx_PSL_ModifyRegister(psl, ANA_TEST_BUF_REG, 0, 0x02);
                 }
                 if (PTX_STATUS_SUCCESS == status)
@@ -619,7 +626,7 @@ ptx_Status_t ptx_PSL_AnaMuxSelectSignal(ptx_PSL_t *psl, ptx_PSL_AnaTestPin_t tes
                 }
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    /* Enable by-pass */
+                    /* Enable bypass */
                     status = ptx_PSL_ModifyRegister(psl, ANA_TEST_BUF_REG, 1u, 0x01);
                 }
                 if (PTX_STATUS_SUCCESS == status)
@@ -636,7 +643,7 @@ ptx_Status_t ptx_PSL_AnaMuxSelectSignal(ptx_PSL_t *psl, ptx_PSL_AnaTestPin_t tes
                 }
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    /* Enable by-pass */
+                    /* Enable bypass */
                     status = ptx_PSL_ModifyRegister(psl, ANA_TEST_BUF_REG, 1u, 0x02);
                 }
                 if (PTX_STATUS_SUCCESS == status)
@@ -648,7 +655,7 @@ ptx_Status_t ptx_PSL_AnaMuxSelectSignal(ptx_PSL_t *psl, ptx_PSL_AnaTestPin_t tes
                 status = ptx_PSL_WriteRegister(psl, PAD_DIG7_IO2_REG, PAD_DIG7_IO2_REG_RST);
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    /* Enable by-pass (no buffer implemented) */
+                    /* Enable bypass (no buffer implemented) */
                     status = ptx_PSL_ModifyRegister(psl, ANA_TEST_BUF_REG, 1u, 0x04);
                 }
                 if (PTX_STATUS_SUCCESS == status)
@@ -660,7 +667,7 @@ ptx_Status_t ptx_PSL_AnaMuxSelectSignal(ptx_PSL_t *psl, ptx_PSL_AnaTestPin_t tes
                 status = ptx_PSL_WriteRegister(psl, PAD_DIG8_IO2_REG, PAD_DIG8_IO2_REG_RST);
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    /* Enable by-pass (no buffer implemented) */
+                    /* Enable bypass (no buffer implemented) */
                     status = ptx_PSL_ModifyRegister(psl, ANA_TEST_BUF_REG, 1u, 0x08);
                 }
                 if (PTX_STATUS_SUCCESS == status)
@@ -1070,7 +1077,11 @@ static ptx_Status_t ptx_PSL_HandleTxTestSignals(ptx_PSL_t *psl, ptx_PSL_AnaMuxTe
                     status = ptx_PSL_ModifyRegister(psl, ANA_TX_PA_REG, 1u, ANA_TX_PA_REG_TX_PA_BIAS_EN_MASK);
                 }
 
-                status = ptx_PSL_ReadRegister(psl, ANA_TX_CURLIM_CTRL_REG, &registerValue);
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    status = ptx_PSL_ReadRegister(psl, ANA_TX_CURLIM_CTRL_REG, &registerValue);
+                }
+
                 if ((PTX_STATUS_SUCCESS == status) && (ANA_TX_CURLIM_CTRL_REG_TX_CURLIM_EN_MASK != (registerValue & ANA_TX_CURLIM_CTRL_REG_TX_CURLIM_EN_MASK)))
                 {
                     status = PTX_STATUS_E_PSL_ENABLESIGNALMISSING;
@@ -1086,7 +1097,10 @@ static ptx_Status_t ptx_PSL_HandleTxTestSignals(ptx_PSL_t *psl, ptx_PSL_AnaMuxTe
                 break;
         }
 
-        status = ptx_PSL_ModifyRegister(psl, ANA_TX_TEST_REG, sub_block_signal, ANA_TX_TEST_REG_TX_TEST_SEL_MASK);
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            status = ptx_PSL_ModifyRegister(psl, ANA_TX_TEST_REG, sub_block_signal, ANA_TX_TEST_REG_TX_TEST_SEL_MASK);
+        }
     }
 
     return status;
@@ -1361,7 +1375,7 @@ static ptx_Status_t ptx_PSL_EnableDigPads8_1(ptx_PSL_t *psl)
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            /* GPIO2 is used as a reference clock input signal and can not be used for digital test bus signals. */
+            /* GPIO2 is used as a reference clock input signal and cannot be used for digital test bus signals. */
             psl->IgnoreGpio2 = (sys_clock_ctrl_val & SYS_CLOCK_CONTROL1_REG_CLOCK_REF_GPIO_EN_MASK);
         }
 

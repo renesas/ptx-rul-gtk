@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -730,7 +730,7 @@ static ptx_Status_t ptx_NativeTag_T5T_IsolatedEoF(ptx_NativeTag_T5T_t *t5t, uint
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T)) && (NULL != rxLen) && (NULL != rx))
+    if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rxLen) && (NULL != rx))
     {
         status = ptx_RUL_T5T_Isolated_EoF(t5t->rul, rx, rxLen, msTimeout);
     }
@@ -746,7 +746,7 @@ static ptx_Status_t ptx_NativeTag_T5T_Transceive(ptx_NativeTag_T5T_t *t5t, ptx_N
     uint8_t retry_cnt = 0;
 
     /* Aside from actual Tag-component, remaining parameters are checked within Data-Exchange function */
-    if ((PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T)) && (NULL != rxLen))
+    if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rxLen))
     {
         timeout_value = (T5T_FrameType_Special == frameType) ? 1 : msTimeout;
 

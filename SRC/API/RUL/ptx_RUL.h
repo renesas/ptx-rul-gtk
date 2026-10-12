@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -66,7 +66,7 @@
 #include "ptx_Log.h"
 #include "ptx_RUL_Cfg.h"
 
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
     #include "ptx_OSAL.h"
 #endif
 
@@ -126,7 +126,6 @@ extern "C" {
 #define PTX_RUL_SENSF_RES_PD2_OFFSET                     (19u)                  /**<  Offset for SENSF_RES PD offset, second byte */
 #define PTX_RUL_SENSF_RES_PD2_BR_MASK                    (3u)                   /**<  Mask for SENSF_RES PD bit rate */
 
-#if defined(ENABLE_EXTENDED_CARD_REGISTER)
 //Type B 
 #define PTX_RUL_SENSB_RES_NFCID0_OFFSET                  (1u)                   /**<  Offset for SENSB_RES NFCID0 */
 #define PTX_RUL_SENSB_RES_AFI_OFFSET                     (5u)                   /**<  Offset for SENSB_RES AFI */
@@ -167,8 +166,6 @@ extern "C" {
 #define PTX_RUL_ATR_RES_GB_OFFSET                        (18u)                  /**<  Offset General bytes in ATR_RES */
 #define PTX_RUL_ATR_RES_WT_MASK                          (0x0F)                 /**<  Mask for WT in PP field of ATR_RES*/
 #define PTX_RUL_ATR_RES_NFCID3_LEN                       (10u)                  /**<  Length of ATR_RES NFCID3 */ 
-#endif
-
 /** @} */
 
 /**
@@ -293,7 +290,7 @@ typedef enum ptx_RUL_PollDDPC
 typedef enum ptx_RUL_PollLPCD
 {
     ptx_RUL_PollLPCD_Disabled  =        0,      /**< LPCD Disabled. */
-    ptx_RUL_PollLPCD_Enabled   =        1,      /**< LPCD Enables. */
+    ptx_RUL_PollLPCD_Enabled   =        1,      /**< LPCD Enabled. */
     ptx_RUL_PollLPCD_HybridMin =        2,      /**< LPCD Hybrid Mode, regular RF Disc used every nth cycle, LPCD used in the others, minimum Value. */
     ptx_RUL_PollLPCD_HybridMax =        255,    /**< LPCD Hybrid Mode, regular RF Disc used every nth cycle, LPCD used in the others, maximum Value. */
     ptx_RUL_PollLPCD_Max                        /**< Safeguard. */
@@ -411,6 +408,7 @@ typedef enum ptx_RUL_StatusInfoSystem
     ptx_RUL_StatusInfoSystem_ErrorVddTx,        /**< System Error VDD Tx. */
     ptx_RUL_StatusInfoSystem_ErrorOTP,          /**< System Error OTP configuration. */
     ptx_RUL_StatusInfoSystem_ErrorStandby,      /**< System Error Standby. System exited Standby mode, Discovery is not active. */
+    ptx_RUL_StatusInfoSystem_ErrorOutOfMemory,  /**< System Error Out of memory. */
     ptx_RUL_StatusInfoSystem_Max                /**< Safeguard. */
 } ptx_RUL_StatusInfoSystem_t;
 
@@ -646,7 +644,6 @@ typedef enum ptx_RUL_RfBitRate
     ptx_RUL_RfBitRate_424   = 0x02,     /**< 424 kBit/s */
     ptx_RUL_RfBitRate_848   = 0x03,     /**< 848 kBit/s */
     ptx_RUL_RfBitRate_26    = 0x06,     /**< 26 kBit/s */
-    ptx_RUL_RfBitRate_53    = 0x07      /**< 53 kBit/s */
 } ptx_RUL_RfBitRate_t;
 
 #if defined(ENABLE_EXTENDED_CARD_REGISTER)
@@ -682,12 +679,12 @@ typedef enum ptx_RUL_MinTr2B
 } ptx_RUL_MinTr2B_t;
 
 /**
- * \brief Type B protocol info platfrom types.
+ * \brief Type B protocol info platform types.
  */
 typedef enum ptx_RUL_BPlatformType
 {
-    ptx_RUL_BPlatformType_t4t_not_configured    = 0x00,      /**< Not configured for T4T platfrom. */
-    ptx_RUL_BPlatformType_t4t_configured        = 0x01,      /**< Configured for T4T platfrom. */
+    ptx_RUL_BPlatformType_t4t_not_configured    = 0x00,      /**< Not configured for T4T platform. */
+    ptx_RUL_BPlatformType_t4t_configured        = 0x01,      /**< Configured for T4T platform. */
 } ptx_RUL_BPlatformType_t;
 
 /**
@@ -696,7 +693,7 @@ typedef enum ptx_RUL_BPlatformType
 typedef enum ptx_RUL_BAdcCoding
 {
     ptx_RUL_BAdcCoding_app_not_defined_in_spec        = 0x00,      /**< Application coding not defined in the current NCI spec. */
-    ptx_RUL_BAdcCoding_app_coded_as_nci_spec          = 0x01,      /**< Application is codded ad defined in NCI spec 2.3. */
+    ptx_RUL_BAdcCoding_app_coded_as_nci_spec          = 0x01,      /**< Application is coded as defined in NCI spec 2.3. */
 } ptx_RUL_BAdcCoding_t;
 
 /**
@@ -711,7 +708,7 @@ typedef enum ptx_RUL_BFoCoding
 } ptx_RUL_BFoCoding_t;
 
 /**
- * \brief Type F SENSF_RES Advanceed protocol Features Byte 19 automatic 
+ * \brief Type F SENSF_RES Advanced protocol Features Byte 19 automatic 
  * selection of bit rate feature Types.
  */
 typedef enum ptx_RUL_FAutomaticSelectableBr
@@ -721,7 +718,7 @@ typedef enum ptx_RUL_FAutomaticSelectableBr
 } ptx_RUL_FAutomaticSelectableBr_t;
 
 /**
- * \brief Type F SENSF_RES Advanceed protocol Features Byte 19 automatic 
+ * \brief Type F SENSF_RES Advanced protocol Features Byte 19 automatic 
  * Bit rate support types.
  */
 typedef enum ptx_RUL_FBitRateSupported
@@ -777,7 +774,7 @@ typedef struct ptx_RUL_SensBResponseProtocolInfo
 {
     uint8_t BitRateCapability;                       /**< Bit_Rate_Capability in the protocol info of SENSB_RES. */
     ptx_RUL_FsciToFsc_t Fsci;                        /**< The Frame Size for proximity Card Integer. */
-    ptx_RUL_BProtocolType_t ProtocolType;            /**< Encodes the platform Type support and tje minimum TRB2. */
+    ptx_RUL_BProtocolType_t ProtocolType;            /**< Encodes the platform Type support and the minimum TR2B. */
     uint8_t Fwi;                                     /**< The Frame Waiting Time Integer. */
     ptx_RUL_BAdcCoding_t Adc;                        /**< The application data coding supported. */
     ptx_RUL_BFoCoding_t Fo;                          /**< The Frame Option. */
@@ -959,7 +956,7 @@ typedef struct ptx_RUL_CardRfProtocolParamPollBIsoDep
 typedef struct ptx_RUL_CardRfProtocolParamPollAFACMNfcDep
 {
     uint8_t     AtrRes[PTX_RUL_CARD_RFPROTOCOL_ATR_RES_LEN];        /**< Received ATR_RES. */
-    uint8_t     Brs;                                                /**< BRS containing acivated Bitrate information. */
+    uint8_t     Brs;                                                /**< BRS containing activated Bitrate information. */
 } ptx_RUL_CardRfProtocolParamPollAFACMNfcDep_t;
 
 /**
@@ -968,7 +965,7 @@ typedef struct ptx_RUL_CardRfProtocolParamPollAFACMNfcDep
 typedef struct ptx_RUL_CardRfProtocolParamListenAIsoDep
 {
     uint8_t     Rats;                                               /**< Received RATS command parameter. */
-    uint8_t     Pps1;                                               /**< PPS1 containing acivated Bitrate information. */
+    uint8_t     Pps1;                                               /**< PPS1 containing activated Bitrate information. */
 } ptx_RUL_CardRfProtocolParamListenAIsoDep_t;
 
 /**
@@ -1047,26 +1044,6 @@ typedef struct ptx_RUL_BitsExchangeParams
     uint8_t   *Parity;    /**< Parity container. */
     uint32_t  DataLen;    /**< Length of Data and Parity container. */
 } ptx_RUL_BitsExchangeParams_t;
-
-/**
- * \brief RSSI Mode Types.
- */
-typedef enum ptx_RUL_RSSIMode
-{
-    ptx_RUL_RSSIMode_Enabled, /**< Enables RSSI Mode. */
-    ptx_RUL_RSSIMode_Disabled,/**< Disables RSSI Mode. */
-
-    ptx_RUL_RSSIMode_Max,     /**< Safeguard. */
-} ptx_RUL_RSSIMode_t;
-
-/**
- * \brief RSSI Parameters.
- */
-typedef struct ptx_RUL_RSSIParams
-{
-    ptx_RUL_RSSIMode_t  Mode;       /**< RSSI Mode. */
-    uint8_t             RssiPeriod; /**< RSSI Period. */
-} ptx_RUL_RSSIParams_t;
 
 /**
  * \brief GPIO Configuration.
@@ -1175,8 +1152,6 @@ typedef enum ptx_RUL_HWConfigID
     ptx_RUL_RF_CFG_LISTEN_B_212,    /**< Parameter Id for Listen B parameters with 212kbit/s. */
     ptx_RUL_RF_CFG_LISTEN_B_424,    /**< Parameter Id for Listen B parameters with 424kbit/s. */
     ptx_RUL_RF_CFG_LISTEN_B_848,    /**< Parameter Id for Listen B parameters with 848kbit/s. */
-    ptx_RUL_RF_CFG_POLL_V_53,       /**< Parameter Id for Poll V parameters with 56kbit/s. */
-    ptx_RUL_RF_CFG_POLL_V_106,      /**< Parameter Id for Poll V parameters with 106kbit/s. */
 
     ptx_RUL_RF_CFG_MAX,             /**< Safeguard RF Configuration Parameters. */
 
@@ -1373,6 +1348,8 @@ typedef struct ptx_RUL_InitParams
 {
     uint8_t                                 EmvCollisionLimit;     /**< EMV collision limit (Required for EMVCO/POS)*/
     ptx_RUL_InterfaceInitParams_t           InterfaceInitParams;   /**< Communication hardware interface parameters. */
+    ptx_Log_t                               Log;                   /**< LOG context. */
+
 } ptx_RUL_InitParams_t;
 
 
@@ -1856,7 +1833,7 @@ typedef enum ptx_RUL_RfProtocol
 } ptx_RUL_RfProtocol_t;
 
 /**
- * \brief RUL Techhnology Routing Type.
+ * \brief RUL Technology Routing Type.
  */
 typedef enum ptx_RUL_RfTech
 {
@@ -1952,7 +1929,7 @@ typedef struct ptx_RUL
 
     uint8_t                         GpioCfg[PTX_RUL_USER_GPIOS];    /**< GPIO Config Array. */
 
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
     ptx_OSAL_t                      Osal;                           /**< OSAL context used by HAL on WIN/LIN platforms. */   
 #endif
 
@@ -2383,7 +2360,7 @@ ptx_Status_t ptx_RUL_RegisterExtensionEndpoints(ptx_RUL_t *rul, ptx_RUL_Extensio
  *
  * This function removes a registered add-on library and its corresponding end points from RUL.
  *
- * \note The caller has to make sure, that the add-on is properly de-initalized!
+ * \note The caller has to make sure, that the add-on is properly de-initialized!
  *
  * \param[in]   rul             Pointer to RUL component.
  * \param[in]   compId          Component Identifier for the extension.
@@ -2420,20 +2397,6 @@ ptx_Status_t ptx_RUL_SetPowerMode(ptx_RUL_t *rul, ptx_RUL_PowerMode_t powerMode)
 ptx_Status_t ptx_RUL_WriteDAC(ptx_RUL_t *rul, uint8_t value);
 
 /**
- * \brief RUL RSSI Measurement at 13.56MHz using the CW power level of 0x58 and an average of 16 samples.
- * \deprecated Use \ref ptx_RUL_RSSIMeasurement instead
- *
- * \param[in]       rul                 Pointer to RUL component.
- * \param[out]      result              Pointer to store the measurement result.
- *
- * \return PTX_STATUS_SUCCESS                    Function executed successfully.
- * \return PTX_STATUS_E_GEN_INVALID_PARAMETER    Invalid input parameter.
- * \return Others                                Operation failed (typically in a sub-component API) with an error value other than the values described above.
- *                                               for further information see \ref ptx_Status_t.
- */
-ptx_Status_t ptx_RUL_GetRSSIValue(ptx_RUL_t *rul, uint32_t *result);
-
-/**
  * \brief RUL RSSI Measurement at 13.56MHz using the given CW power level.
  *
  * \param[in]       rul                 Pointer to RUL component.
@@ -2446,8 +2409,8 @@ ptx_Status_t ptx_RUL_GetRSSIValue(ptx_RUL_t *rul, uint32_t *result);
  * \return Others                                Operation failed (typically in a sub-component API) with an error value other than the values described above.
  *                                               for further information see \ref ptx_Status_t.
  */
-ptx_Status_t ptx_RUL_RSSIMeasurement(ptx_RUL_t *rul, uint8_t cwPowerLevel, ptx_RUL_AdcAveraging_t averaging, uint32_t *result);
-
+ptx_Status_t ptx_RUL_GetRSSIValue(ptx_RUL_t *rul, uint8_t cwPowerLevel, ptx_RUL_AdcAveraging_t averaging, uint32_t *result);
+ 
 /**
  * \brief RUL RF Field Amplitude Measurement at the provided frequency.
  * *

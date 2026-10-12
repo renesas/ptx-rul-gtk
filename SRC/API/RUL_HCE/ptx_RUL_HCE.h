@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -170,6 +170,8 @@ typedef struct ptx_RUL_HCE_InitParams
     uint32_t                            AppRxBufferSize;    /**< Application Rx Buffer size. */
 
     ptx_RUL_t                          *Rul;                /**< Pointer to the RUL component. */
+    ptx_Log_t                          *Log;                /**< Logger Component */
+  
 
 } ptx_RUL_HCE_InitParams_t;
 
@@ -194,6 +196,9 @@ typedef struct ptx_RUL_HCE
 
     ptx_NSC_RfProtocol_t            ActiveProtocol;     /**< Currently active protocol */
     uint8_t                         ActiveTech;         /**< Currently active Technology*/
+
+    ptx_Log_t                       *Log;               /**< Logger Component */
+
 
 } ptx_RUL_HCE_t;
 

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -74,7 +74,7 @@ extern "C" {
  */
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_Log_None
 {

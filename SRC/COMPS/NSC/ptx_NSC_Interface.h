@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -80,7 +80,7 @@ extern "C" {
  */
 typedef struct ptx_NSC_Interface_InitParams
 {
-    void    *Param;                         /**< Reference to Interface specific initialization parameters, defined by any of the variants (AIS or RUL). */
+   void    *Param;                         /**< Reference to Interface specific initialization parameters, defined by any of the variants (AIS or RUL). */
 } ptx_NSC_Interface_InitParams_t;
 
 

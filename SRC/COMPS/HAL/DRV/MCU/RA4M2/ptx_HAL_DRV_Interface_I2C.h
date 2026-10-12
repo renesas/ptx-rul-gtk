@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -139,7 +139,7 @@ typedef struct ptx_HAL_DRV_Interface_I2C_PortConfig
 } ptx_HAL_DRV_Interface_I2C_PortConfig_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_DRV_Interface_I2C
 {
@@ -148,7 +148,7 @@ typedef struct ptx_HAL_DRV_Interface_I2C
     ptx_HAL_DRV_Interface_I2C_PortConfig_t          *Port;              /**< Pointer to the I2C Port Configuration. */
     uint32_t                                        Speed;              /**< I2C Communication Speed. */
     uint8_t                                         Address;            /**< I2C Address. */
-    ptx_Log_t                                       *Logger;            /**< Logger. */
+    ptx_Log_t                                       *Log;               /**< Log. */
     ptx_HAL_GPIO_t                                  *Gpio;              /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_I2C_t;
 
@@ -162,7 +162,7 @@ typedef struct ptx_HAL_DRV_Interface_I2C_InitParams
 
     uint8_t                             Address;            /**< I2C Address. */
     uint32_t                            Speed;              /**< I2C Communication Speed. */
-    ptx_Log_t                           *Log;               /**< Initialised Logger Context. */
+    ptx_Log_t                           *Log;               /**< Initialised Log Context. */
     ptx_HAL_GPIO_t                      *Gpio;              /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_I2C_InitParams_t;
 
@@ -175,7 +175,13 @@ typedef struct ptx_HAL_DRV_Interface_I2C_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx             Pointer to component.
+ * Initializes the I2C interface driver component. Validates input parameters and searches for a matching
+ * port configuration based on PortType and PortID. Sets up component references including Log context,
+ * GPIO context, I2C communication speed, and slave device address. If Speed is 0, defaults to
+ * PTX_HAL_DRV_INTERFACE_I2C_SPEED_DEFAULT (100 kHz). If Address is 0, defaults to
+ * PTX_HAL_DRV_INTERFACE_I2C_ADDRESS_4C. The Log and GPIO contexts must be valid, initialized instances.
+ *
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -185,16 +191,24 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx              Pointer to component.
+ * Clears all component data and resets component ID to Comp_None. Does not close the I2C interface;
+ * ptx_HAL_DRV_Interface_I2C_Close should be called separately if the interface is open.
+ *
+ * \param[in,out]       ctx              Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C Open
+ * \brief Opens the I2C interface.
  *
- * Opens the Renesas I2C hardware block and configures it according to the given configuration in \see ptx_HAL_DRV_Interface_I2C_t.Port.
+ * Opens the SCI I2C hardware block and configures it according to the port configuration. If the I2C interface
+ * is already open (FSP_ERR_ALREADY_OPEN), it will be closed first and then reopened to ensure a clean state.
+ * Configures the I2C communication speed by directly updating hardware registers (MDDR and BRR) as the FSP
+ * does not provide an API to change speed at runtime. Supports 100 kHz (default) and 400 kHz (fast mode).
+ * Other speeds (1 MHz, 3.4 MHz) are not supported. Opens and enables the external IRQ
+ * interface and registers callbacks for both I2C transfer completion and external IRQ events.
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -203,9 +217,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx)
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C Close
+ * \brief Closes the I2C interface.
  *
- * Closes the Renesas I2C hardware block.
+ * Closes the SCI I2C hardware block and the external IRQ interface. Returns success if either
+ * interface is successfully closed or if it was not open (FSP_ERR_NOT_OPEN).
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -214,97 +229,79 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx);
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Close(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C Tx
+ * \brief Transmits data over I2C.
  *
- * Sends data to the Renesas I2C hardware block, to communicate with a slave endpoint.
+ * Sends data to the I2C slave device using the configured I2C interface. Initiates an asynchronous
+ * write operation and waits for transfer completion via callback. The transfer state is monitored
+ * with a timeout mechanism to detect transfer failures or timeouts.
  *
  * \param[in]       ctx             Pointer to component.
- * \param[in]       txBuf           Array of bytes to be transmitted.
- * \param[in]       txLen           Length of \see txBuf.
- * \param[in]       restart         Restart required flag.
+ * \param[in]       txBuf           Array of bytes to be transmitted (must not be NULL).
+ * \param[in]       txLen           Length of txBuf in bytes.
+ * \param[in]       restart         If non-zero, issues a repeated start condition after transfer (for continued communication).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *txBuf, uint32_t txLen, uint8_t restart);
 
 /**
- * \brief Driver I2C Rx
+ * \brief Receives data over I2C.
  *
- * Receives data from the Renesas I2C hardware block.
+ * Receives data from the I2C slave device using the configured I2C interface. Initiates an asynchronous
+ * read operation and waits for transfer completion via callback. The transfer state is monitored
+ * with a timeout mechanism to detect transfer failures or timeouts.
  *
  * \param[in]       ctx             Pointer to component.
- * \param[in]       rxBuf           Array of bytes to be received.
- * \param[in]       rxLen           Length of \see rxBuf. Must match the bytes received!
- * \param[in]       restart         Restart required flag.
+ * \param[out]      rxBuf           Array of bytes to receive data into (must not be NULL).
+ * \param[in]       rxLen           Length of rxBuf in bytes. Must match the number of bytes expected from slave.
+ * \param[in]       restart         If non-zero, issues a repeated start condition after transfer (for continued communication).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *rxBuf, uint32_t rxLen, uint8_t restart);
 
-/**
- * \brief Driver I2C Activate Rx IRQ.
- *
- * Activates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_I2C_t.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_ActivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C Deactivate Rx IRQ.
+ * \brief Reads the current level of the Rx IRQ pin.
  *
- * Deactivates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_I2C_t.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeactivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx);
-
-/**
- * \brief Driver I2C Rx IRQ Level
- *
- * Reads the Rx IRQ Level from the configured pin. The pin must be configured in \ref ptx_HAL_DRV_Interface_I2C_t.
+ * Reads the current logic level (HIGH or LOW) of the configured IRQ pin using the GPIO interface.
+ * The IRQ pin is configured in the port configuration structure (ptx_HAL_DRV_Interface_I2C_PortConfig_t.Irq).
  *
  * \param[in]       ctx             Pointer to component.
- * \param[out]      level           Pointer to the current value of the IRQ pin
+ * \param[out]      level           Pointer to variable for storing pin level (0 = LOW, 1 = HIGH).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_RxIrqLevel(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *level);
 
-/**
- * \brief Driver I2C Wait for IRQ to be triggered
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_WaitForIRQ(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C Set Parameter function.
+ * \brief Sets a parameter for the I2C interface.
  *
- * Sets a HAL I2C Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Configures an I2C interface parameter selected by type. Supported parameters include:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Changes the I2C communication speed.
+ *   The interface will be closed and reopened with the new speed. Supports 100 kHz and 400 kHz.
+ *   Other speeds return PTX_STATUS_E_GEN_INVALID_BITRATE.
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address: Changes the I2C slave device address.
+ *   Updates the address using R_SCI_I2C_SlaveAddressSet.
+ * - HAL_DRV_Interface_Parameter_Type_UART_Enable_Fast_Mode: Not available for I2C (returns PTX_STATUS_E_GEN_NOT_AVAILABLE).
  *
  * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * \param[in]       parameter      Parameter (type, value) struct specifying the parameter to set.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetParameter(ptx_HAL_DRV_Interface_I2C_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 
 /**
- * \brief Driver I2C Get Parameter function.
+ * \brief Gets a parameter from the I2C interface.
  *
- * Gets a HAL I2C Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Retrieves the current value of an I2C interface parameter selected by type. Supported parameters include:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Returns the current I2C communication speed.
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address: Returns the current I2C slave device address.
  *
  * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * \param[out]      parameter      Parameter (type, value) struct to receive the parameter value.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -317,4 +314,3 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_GetParameter(ptx_HAL_DRV_Interface_I2C_t 
 #endif /* Guard */
 
 /** @} */
-

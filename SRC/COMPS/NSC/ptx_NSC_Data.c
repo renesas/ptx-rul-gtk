@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -83,7 +83,7 @@ static ptx_Status_t ptx_NSC_CltMsg_BuildRawBits(ptx_NSC_t *nsc, uint8_t *pldByte
  * ####################################################################################################################
  */
 
-ptx_Status_t ptx_NSC_DataTx(ptx_NSC_t *nsc, uint8_t *payload, uint32_t len, uint8_t isChained)
+ptx_Status_t ptx_NSC_DataTx(ptx_NSC_t *nsc, uint8_t *payload, uint32_t len, uint8_t isChained, uint32_t timeout)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -94,6 +94,8 @@ ptx_Status_t ptx_NSC_DataTx(ptx_NSC_t *nsc, uint8_t *payload, uint32_t len, uint
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != payload))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_DataTx");
+
         /* Data message allowed only in RF_POLL(DEP) states */
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_Data, NULL);
     }
@@ -141,17 +143,6 @@ ptx_Status_t ptx_NSC_DataTx(ptx_NSC_t *nsc, uint8_t *payload, uint32_t len, uint
                 uint8_t rsp[PTX_NSC_DATA_MSG_ACK_LENGTH];
                 uint32_t rsp_len = PTX_NSC_DATA_MSG_ACK_LENGTH;
 
-                uint32_t timeout = PTX_NSC_TIMEOUT_DEFAULT;
-
-                /*
-                 * RFU
-                 */
-                #if 0
-                if (PTX_NSC_FWI_UNSET != nsc->FWI)
-                {
-                    timeout = ((PTX_NSC_FWI_MICROSECOND_STEP_SIZE << nsc->FWI) + PTX_NSC_FWI_T4T_DEFAULT) / 1000;
-                }
-                #endif
                 status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp, &rsp_len, timeout, 0);
 
                 if (PTX_STATUS_SUCCESS == status)
@@ -176,6 +167,8 @@ ptx_Status_t ptx_NSC_DataRx(ptx_NSC_t *nsc, uint8_t *payload, uint32_t *len, uin
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != payload) && (NULL != len) && (0 != *len))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_DataRx");
+
         uint8_t rx_buf[PTX_NSC_LENGTH_MAX];
         uint32_t rx_buf_len = PTX_NSC_LENGTH_MAX;
         uint8_t chaining;
@@ -246,6 +239,8 @@ ptx_Status_t ptx_NSC_CtrlTx(ptx_NSC_t *nsc, uint8_t msgType)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_CtrlTx");
+
         /* Data message allowed only in RF_POLL(DEP) states */
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_Data, NULL);
     }
@@ -286,8 +281,10 @@ ptx_Status_t ptx_NSC_CltMsg (ptx_NSC_t *nsc, uint8_t *pldBytes, uint8_t *pldPari
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != pldBytes) && (NULL != pldParityBits)
-        && (len > 0) && (len <= PTX_NSC_MAX_TRANSFER_UNIT_SIZE) )
+        && (len > 0) && (len <= PTX_NSC_MAX_TRANSFER_UNIT_SIZE))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CltMsg");
+
         /* Data message allowed only in RF_POLL(DEP) states */
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_Data, NULL);
     }
@@ -345,6 +342,8 @@ ptx_Status_t ptx_NSC_CltMsg_Enable(ptx_NSC_t *nsc, ptx_NSC_CltMode_t enable)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CltMsg_Enable");
+
         ptx_NSC_RfSetParameter_Param_t rf_par[PTX_NSC_DATA_CLTMODE_NBRRFPARAMETERS];
         uint8_t idx = 0;
 
@@ -381,6 +380,8 @@ ptx_Status_t ptx_NSC_DataSetNrResidualTxBits(ptx_NSC_t *nsc, uint8_t nrResidualT
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_DataSetNrResidualTxBits");
+
         nsc->ResidualTxBits = nrResidualTxBits;
         status = PTX_STATUS_SUCCESS;
     }
@@ -399,8 +400,10 @@ static ptx_Status_t ptx_NSC_CltMsg_BuildRawBits (ptx_NSC_t *nsc, uint8_t *pldByt
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     PTX_UNUSED_PARAMETER(nsc);
 
-    if ((NULL != pldBytes) && (NULL != pldParityBits) && (NULL != pldRawBits))
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != pldBytes) && (NULL != pldParityBits) && (NULL != pldRawBits))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CltMsg_BuildRawBits");
+
         /* Ensure there is enough capacity for writing the bit-stream */
         uint32_t num_tot_bits = (lengthBytes * 8u) + 8u;
         uint32_t is_last_byte = ((num_tot_bits % 8u) == 0) ? 0 : 1u;
@@ -458,8 +461,10 @@ static ptx_Status_t ptx_NSC_CltMsg_NumBytes (ptx_NSC_t *nsc, uint32_t length, ui
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     PTX_UNUSED_PARAMETER(nsc);
 
-    if ((NULL != numBitsLastByte) && (NULL != numBytesTotal))
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != numBitsLastByte) && (NULL != numBytesTotal))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CltMsg_NumBytes");
+
         uint32_t num_bits = (8 * length) + length;
         uint32_t is_last_byte = ((num_bits % 8u) == 0) ? 0 : 1u;
         *numBitsLastByte = num_bits % 8u;
@@ -475,8 +480,10 @@ static ptx_Status_t ptx_NSC_Data_CheckRxMsg(ptx_NSC_t *nsc, uint8_t *data, uint3
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != data) && (PTX_NSC_LENGTH_DATAMSG_MIN <= len))
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != data) && (PTX_NSC_LENGTH_DATAMSG_MIN <= len))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_Data_CheckRxMsg");
+
         uint8_t cont_checking = 0;
         uint32_t status_byte_present = 0;
         uint32_t total_len = 0;
@@ -565,6 +572,7 @@ static ptx_Status_t ptx_NSC_Data_CheckRxNtf(uint8_t *data, uint32_t len)
     {
         uint8_t ntfError = data[PTX_NSC_CMD_OPCODE_LEN];
 
+
         switch (ntfError)
         {
             case NSC_ErrorCode_RfTimeoutError:
@@ -587,8 +595,10 @@ static ptx_Status_t ptx_NSC_Data_CheckMsg(ptx_NSC_t *nsc, uint8_t *data, uint32_
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (NULL != data)
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != data))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_Data_CheckMsg");
+
         if  (PTX_NSC_LENGTH_DATAMSG_MIN <= len)
         {
             status = ptx_NSC_Data_CheckRxMsg(nsc, data, len);
@@ -608,6 +618,7 @@ static ptx_Status_t ptx_NSC_Data_CheckAck(uint8_t *data, uint32_t len)
 
     if ((NULL != data) && (0 != len))
     {
+
         uint8_t cont_checking = 0;
 
         status = PTX_STATUS_E_NSC_PROTOCOL;

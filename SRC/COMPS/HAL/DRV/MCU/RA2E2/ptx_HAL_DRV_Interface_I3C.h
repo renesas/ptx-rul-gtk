@@ -161,7 +161,7 @@ typedef struct ptx_HAL_DRV_Interface_I3C
     ptx_HAL_DRV_Interface_I3C_PortConfig_t          *Port;          /**< Pointer to the I3C Port Configuration */
     uint32_t                                        Speed;          /**< I3C Communication Speed */
     uint8_t                                         Address;        /**< I3C Address */
-    ptx_Log_t                                       *Logger;        /**< Logger */
+    ptx_Log_t                                       *Log;        /**< Logger */
     ptx_HAL_GPIO_t                                  *Gpio;          /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_I3C_t;
 
@@ -194,6 +194,14 @@ typedef struct ptx_HAL_DRV_Interface_I3C_InitParams
 /**
  * \brief Component Initialization.
  *
+ * Initializes the I3C interface driver component. Validates input parameters and searches for a matching
+ * port configuration based on PortType and PortID. Sets up component references including Log context,
+ * GPIO context, I3C communication speed, and slave device address. The Log and GPIO contexts must be
+ * valid, initialized instances.
+ *
+ * \param[in]       ctx             Pointer to component.
+ * \param[in]       initParams      Pointer to initialization parameters.
+ *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_Init(ptx_HAL_DRV_Interface_I3C_t *ctx, ptx_HAL_DRV_Interface_I3C_InitParams_t *initParams);
@@ -201,122 +209,124 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Init(ptx_HAL_DRV_Interface_I3C_t *ctx, pt
 /**
  * \brief Component De-Initialization.
  *
+ * Clears all component data and resets component ID to Comp_None. Does not close the I3C interface;
+ * ptx_HAL_DRV_Interface_I3C_Close should be called separately if the interface is open.
+ *
+ * \param[in]       ctx              Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_DeInit(ptx_HAL_DRV_Interface_I3C_t *ctx);
 
 /**
- * \brief Device Open.
+ * \brief Opens the I3C interface.
  *
- * Opens the initialised device.
+ * Opens and initializes the I3C hardware module with the following sequence:
+ * 1. Opens the I3C module via R_I3C_Open
+ * 2. Opens and enables the external IRQ interface for I3C interrupt handling
+ * 3. Registers the external IRQ callback
+ * 4. Sets the master device configuration (static and dynamic addresses)
+ * 5. Configures the I3C device table with slave device information
+ * 6. Enables I3C mode on the bus
+ * 7. Sets up IBI (In-Band Interrupt) read buffer
+ * 8. Initiates Dynamic Address Assignment (ENTDAA) for slave devices
+ * 9. Waits for address assignment completion
+ * 10. Selects the device and configures SDR0 bitrate mode
+ *
+ * \param[in]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_Open(ptx_HAL_DRV_Interface_I3C_t *ctx);
 
 /**
- * \brief Component De-Initialization.
+ * \brief Closes the I3C interface.
  *
+ * Closes the I3C hardware module and the external IRQ interface. Returns success if either
+ * interface is successfully closed or if it was not open (FSP_ERR_NOT_OPEN).
+ *
+ * \param[in]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_Close(ptx_HAL_DRV_Interface_I3C_t *ctx);
 
 /**
- * \brief Transmit data over I3C.
+ * \brief Transmits data over I3C.
  *
- * Sends data from the specified buffer to the I3C device.
+ * Sends data to the I3C slave device using the configured I3C interface. Copies the transmit data
+ * to an internal write buffer, initiates an asynchronous write operation, and waits for transfer
+ * completion via callback. The transfer state is monitored with a timeout mechanism to detect
+ * transfer failures or timeouts.
  *
- * \param[in]   ctx         Pointer to the I3C driver context.
- * \param[in]   txBuf       Pointer to the transmit data buffer.
- * \param[in]   txLen       Number of bytes to transmit.
- * \param[in]   restart     If non-zero, issues a repeated start condition after transfer.
+ * \param[in]       ctx         Pointer to component.
+ * \param[in]       txBuf       Array of bytes to be transmitted (must not be NULL).
+ * \param[in]       txLen       Length of txBuf in bytes (must not exceed PTX_HAL_DRV_INTERFACE_I3C_MAX_WRITE_DATA_LEN).
+ * \param[in]       restart     If non-zero, issues a repeated start condition after transfer (for continued communication).
  *
- * \return Status indicating the result of the operation. See \ref ptx_Status_t.
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_Tx(ptx_HAL_DRV_Interface_I3C_t *ctx, uint8_t txBuf[], uint32_t txLen, uint8_t restart);
 
 /**
- * \brief Receive data over I3C.
+ * \brief Receives data over I3C.
  *
- * Reads data from the I3C device into the specified buffer.
+ * Receives data from the I3C slave device using the configured I3C interface. Initiates an asynchronous
+ * read operation and waits for transfer completion via callback. The transfer state is monitored
+ * with a timeout mechanism to detect transfer failures or timeouts.
  *
- * \param[in]   ctx         Pointer to the I3C driver context.
- * \param[out]  rxBuf       Pointer to the receive data buffer.
- * \param[in]   rxLen       Number of bytes to receive.
- * \param[in]   restart     If non-zero, issues a repeated start condition after transfer.
+ * \param[in]       ctx         Pointer to component.
+ * \param[out]      rxBuf       Array of bytes to receive data into (must not be NULL).
+ * \param[in]       rxLen       Length of rxBuf in bytes (must not exceed PTX_HAL_DRV_INTERFACE_I3C_MAX_READ_DATA_LEN).
+ * \param[in]       restart     If non-zero, issues a repeated start condition after transfer (for continued communication).
  *
- * \return Status indicating the result of the operation. See \ref ptx_Status_t.
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_Rx(ptx_HAL_DRV_Interface_I3C_t *ctx, uint8_t *rxBuf, uint32_t rxLen, uint8_t restart);
 
 /**
- * \brief Enable RX interrupt for I3C device.
+ * \brief Sets a parameter for the I3C interface.
  *
- * Activates the receive interrupt for the I3C device, allowing asynchronous reception.
+ * Configures an I3C interface parameter selected by type. Supported parameters include:
+ * - HAL_DRV_Interface_Parameter_Type_I3C_DynamicAddressAssignment: Triggers a Dynamic Address Assignment (DAA)
+ *   operation using the ENTDAA command. The function waits for address assignment completion.
  *
- * \param[in]   ctx     Pointer to the I3C driver context.
+ * Other parameter types return PTX_STATUS_E_GEN_NOT_AVAILABLE.
  *
- * \return Status indicating the result of the operation. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I3C_ActivateRxIrq(ptx_HAL_DRV_Interface_I3C_t *ctx);
-
-/**
- * \brief Disable RX interrupt for I3C device.
- *
- * Deactivates the receive interrupt for the I3C device, disabling asynchronous reception.
- *
- * \param[in]   ctx     Pointer to the I3C driver context.
- *
- * \return Status indicating the result of the operation. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I3C_DeactivateRxIrq(ptx_HAL_DRV_Interface_I3C_t *ctx);
-/**
- * \brief HAL I3C Device Set Parameter function.
- *
- * Sets a HAL I3C Device parameter selected by a type through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
- *
+ * \param[in]       ctx            Pointer to component.
+ * \param[in]       parameter      Parameter (type, value) struct specifying the parameter to set.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_SetParameter(ptx_HAL_DRV_Interface_I3C_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 
 /**
- * \brief Retrieve a parameter value from the HAL I3C device.
+ * \brief Retrieves a parameter value from the I3C interface.
  *
  * Queries the value of a specified parameter for the I3C device context using the provided parameter descriptor.
+ * Currently not implemented and returns PTX_STATUS_E_GEN_NOT_IMPLEMENTED.
  *
- * \param[in]   ctx         Pointer to the I3C driver context.
- * \param[out]  parameter   Pointer to the parameter descriptor where the result will be stored. See \ref ptx_HAL_DRV_Interface_Parameter_t.
+ * \param[in]       ctx         Pointer to component.
+ * \param[out]      parameter   Pointer to the parameter descriptor where the result will be stored.
+ *                              See \ref ptx_HAL_DRV_Interface_Parameter_t.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_GetParameter(ptx_HAL_DRV_Interface_I3C_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 
 /**
- * \brief Retrieve the current RX interrupt threshold level.
+ * \brief Reads the current level of the Rx IRQ pin.
  *
- * Returns the interrupt trigger level for the receive FIFO for the specified I3C device.
+ * Reads the current logic level (HIGH or LOW) of the configured IRQ pin using the GPIO interface.
+ * The IRQ pin is configured in the port configuration structure (ptx_HAL_DRV_Interface_I3C_PortConfig_t.Irq).
  *
- * \param[in]   ctx     Pointer to the I3C driver context.
- * \param[out]  level   Pointer to the variable to receive the RX IRQ level.
+ * \param[in]       ctx     Pointer to component.
+ * \param[out]      level   Pointer to variable for storing pin level (0 = LOW, 1 = HIGH).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_RxIrqLevel(ptx_HAL_DRV_Interface_I3C_t *ctx, uint8_t *level);
 
-/**
- * \brief Wait for an I3C interrupt event.
- *
- * Blocks execution until an I3C hardware interrupt is received or a timeout occurs.
- *
- * \param[in]   ctx     Pointer to the I3C driver context.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I3C_WaitForIRQ(ptx_HAL_DRV_Interface_I3C_t *ctx);
 
 #ifdef __cplusplus
 }

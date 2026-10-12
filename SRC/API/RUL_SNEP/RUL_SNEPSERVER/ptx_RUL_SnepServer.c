@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -85,6 +85,8 @@ ptx_Status_t ptx_RUL_SnepServer_Init(ptx_RUL_SnepServer_t *ctx, ptx_RUL_LLCP_t *
     {
         ctx->Llcp = llcp;
         status = ptx_RUL_LLCP_EnableSnep(ctx->Llcp);
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_Init");
+
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -123,6 +125,8 @@ ptx_Status_t ptx_RUL_SnepServer_Start(ptx_RUL_SnepServer_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_Start");
+
         /* Allocate a link from the LLCP component. */
         status = ptx_RUL_LLCP_AllocateLink(ctx->Llcp, &ctx->Link);
 
@@ -166,6 +170,8 @@ ptx_Status_t ptx_RUL_SnepServer_Stop(ptx_RUL_SnepServer_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_Stop");
+
         ctx->Running = 0;
         status = PTX_STATUS_SUCCESS;
     }
@@ -179,6 +185,8 @@ ptx_Status_t ptx_RUL_SnepServer_DeInit(ptx_RUL_SnepServer_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_DeInit");
+
         status = ptx_RUL_LLCP_DisableSnep(ctx->Llcp);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -203,6 +211,8 @@ ptx_Status_t ptx_RUL_SnepServer_StartDefaultDiscovery(ptx_RUL_SnepServer_t *ctx,
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_StartDefaultDiscovery");
+
         /**
          * A wrapper function that starts the default RF discovery
          * for SNEP and takes care of the general bytes.
@@ -219,6 +229,8 @@ ptx_Status_t ptx_RUL_SnepServer_WaitForActivation(ptx_RUL_SnepServer_t *ctx, uin
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_WaitForActivation");
+
         /**
          * A wrapper function waiting for a defined amount of time
          * until the peer has been activated
@@ -235,6 +247,8 @@ ptx_Status_t ptx_RUL_SnepServer_WaitForClient(ptx_RUL_SnepServer_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_WaitForClient");
+
         status = ptx_RUL_LLCP_WaitForConnection(ctx->Llcp, ctx->Link, ctx->Llcp->ApplicationTimerTimeout);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -256,6 +270,8 @@ ptx_Status_t ptx_RUL_SnepServer_PutMessage(ptx_RUL_SnepServer_t *ctx, uint8_t *m
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP) && (NULL != message) && (0 != messageLength))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_PutMessage");
+
         if (messageLength <= PTX_SNEPSERVER_SENDBUFFER_SIZE)
         {
             memcpy(ctx->MsgBuffer, message, messageLength);
@@ -280,6 +296,8 @@ ptx_Status_t ptx_RUL_SnepServer_GetMessage(ptx_RUL_SnepServer_t *ctx, uint8_t *m
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP) && (NULL != message) && (NULL != messageLength))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_GetMessage");
+
         if (*messageLength >= ctx->MsgBufferIndex)
         {
             *messageLength = ctx->MsgBufferIndex;
@@ -302,6 +320,8 @@ ptx_Status_t ptx_RUL_SnepServer_Handle(ptx_RUL_SnepServer_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_Handle");
+
         status = ptx_RUL_LLCP_Handle(ctx->Llcp);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -320,6 +340,7 @@ ptx_Status_t ptx_RUL_SnepServer_Process(ptx_RUL_SnepServer_t *ctx)
 
     uint8_t is_llcp_down = 0;
     ptx_Status_t status = ptx_RUL_LLCP_IsLinkDown(ctx->Llcp, &is_llcp_down);
+    PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_Process");
 
     if (is_llcp_down || ctx->Link->LinkState == LinkState_Disconnected)
     {
@@ -377,6 +398,8 @@ ptx_Status_t ptx_RUL_SnepServer_ProcessReceiveRequest(ptx_RUL_SnepServer_t *ctx)
 
     if (PTX_STATUS_LLCP_TIMEOUT == status)
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_ProcessReceiveRequest");
+
         status = PTX_STATUS_SUCCESS;
         if (0 != ctx->TxContinuationMode)
         {
@@ -390,7 +413,7 @@ ptx_Status_t ptx_RUL_SnepServer_ProcessReceiveRequest(ptx_RUL_SnepServer_t *ctx)
 ptx_Status_t ptx_RUL_SnepServer_ProcessReceiveFragment(ptx_RUL_SnepServer_t *ctx, uint8_t *data, uint32_t *dataLength)
 {
     ptx_Status_t status = ptx_RUL_LLCP_Link_ReadMessageInbox(ctx->Link, data, dataLength);
-
+    PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_ProcessReceiveFragment");
     if (PTX_STATUS_SUCCESS == status)
     {
         if (*dataLength <= ctx->Link->Local.Miu)
@@ -426,6 +449,7 @@ ptx_Status_t ptx_RUL_SnepServer_ProcessReceiveFragment(ptx_RUL_SnepServer_t *ctx
 ptx_Status_t ptx_RUL_SnepServer_ProcessSendMessage(ptx_RUL_SnepServer_t *ctx)
 {
     ptx_Status_t status = ptx_RUL_LLCP_SendInfo(ctx->Llcp, ctx->Link, ctx->TxBuffer, (uint16_t) ctx->TxBufferLen, 1);
+    PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_ProcessSendMessage");
 
     switch (status)
     {
@@ -458,9 +482,11 @@ ptx_Status_t ptx_RUL_SnepServer_ProcessSendFragment(ptx_RUL_SnepServer_t *ctx)
     uint8_t rx_data[PTX_LLCP_FRAME_BUFFER_LEN];
     uint32_t rx_data_len = sizeof(rx_data);
     status = ptx_RUL_LLCP_Link_ReadMessageInbox(ctx->Link, rx_data, &rx_data_len);
+    PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_ProcessSendFragment");
 
     if (status != PTX_STATUS_SUCCESS)
     {
+        
         ctx->CurrentNrBytes = ptx_RUL_SnepServer_GetBytesToProcess(ctx, ctx->MsgBufferIndex, ctx->ProcessedBytes, 0);
         ptx_RUL_SnepServer_SetMessage(ctx, ServerResponseCode_Null, &ctx->MsgBuffer[ctx->ProcessedBytes], ctx->CurrentNrBytes, 0);
         ctx->ProcessedBytes += ctx->CurrentNrBytes;
@@ -503,6 +529,8 @@ ptx_Status_t ptx_RUL_SnepServer_ProcessRequest(ptx_RUL_SnepServer_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_ProcessRequest");
+
         uint8_t rx_data[PTX_LLCP_FRAME_BUFFER_LEN];
         uint32_t rx_data_len = sizeof(rx_data);
 
@@ -719,6 +747,7 @@ ptx_Status_t ptx_RUL_SnepServer_MapLlcpStatus(ptx_Status_t llcpStatus)
 void ptx_RUL_SnepServer_SetMessage(ptx_RUL_SnepServer_t *ctx, ptx_RUL_SnepServer_ResponseCode_t code, uint8_t *information, uint32_t informationLength, uint32_t totalLength)
 {
     ctx->TxBufferLen = 0;
+    PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_SetMessage");
 
     if (ServerResponseCode_Null != code)
     {
@@ -750,7 +779,9 @@ void ptx_RUL_SnepServer_SetMessage(ptx_RUL_SnepServer_t *ctx, ptx_RUL_SnepServer
 }
 
 void ptx_RUL_SnepServer_SetControlMessage(ptx_RUL_SnepServer_t *ctx, ptx_RUL_SnepServer_ResponseCode_t code)
-{
+{    
+    PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_SetControlMessage");
+
     /* Just a wrappper for ptx_RUL_SnepClient_SetMessage() since everything other than the request code is NULL / zero. */
     ptx_RUL_SnepServer_SetMessage(ctx, code, NULL, 0, 0);
 }
@@ -760,6 +791,7 @@ uint32_t ptx_RUL_SnepServer_GetBytesToProcess(ptx_RUL_SnepServer_t *ctx, uint32_
     uint32_t new_nr_bytes_to_process = (ctx->Link->Remote.Miu < ctx->Link->Local.Miu ? ctx->Link->Remote.Miu : ctx->Link->Local.Miu);
 
     uint32_t snep_header_length = 0;
+    PTX_LOG_I(ctx->Log, "ptx_RUL_SnepServer_GetBytesToProcess");
 
     if (!ctx->TxContinuationMode)
     {

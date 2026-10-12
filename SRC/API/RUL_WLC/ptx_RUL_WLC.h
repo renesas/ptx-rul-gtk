@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -240,6 +240,7 @@ typedef struct ptx_RUL_WLC_InitParams
 
     /** WLC Sleep Parameters. */
     uint32_t                                SleepInterval;                  /**< Interval, after which the Poller runs the presence check during sleep state. */
+    ptx_Log_t                               *Log;                           /**< Logger Component */
 
 } ptx_RUL_WLC_InitParams_t;
 
@@ -278,6 +279,8 @@ typedef struct ptx_RUL_WLC
     uint32_t                                SleepInterval;                                          /**< The interval of the presence check. */
     uint32_t                                SleepTotalDuration;                                     /**< Total duration of the current sleep state. */
     uint32_t                                SleepRemainingDuration;                                 /**< Remaining duration of the current sleep state. */
+    ptx_Log_t                               *Log;                                                   /**< Logger Component */
+
 } ptx_RUL_WLC_t;
 
 /*

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -37,7 +37,7 @@
     Module      : RUL
     File        : ptx_RUL_Int.h
 
-    Description : Reader Universal Library (RUL) internal function definition header file
+    Description : Reader Universal Library (RUL) internal function definition header file.
                   Contains internal functions that the RUL module uses internally.
 */
 

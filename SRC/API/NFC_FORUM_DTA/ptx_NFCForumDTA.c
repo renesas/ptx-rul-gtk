@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -154,6 +154,7 @@ ptx_Status_t ptx_NFCForumDTA_Init(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_InitPa
             hce_init_params.Rul = dta->rul;
             hce_init_params.AppRxBuffer = initParams->HCEMessageBuffer;
             hce_init_params.AppRxBufferSize = initParams->HCEMessageBufferSize;
+            hce_init_params.Log = &initParams->rul->Log;
             status = ptx_RUL_HCE_Init(&dta->hce, &hce_init_params);
 #else // PTX_DISABLE_LISTEN_MODE
             status = PTX_STATUS_SUCCESS;

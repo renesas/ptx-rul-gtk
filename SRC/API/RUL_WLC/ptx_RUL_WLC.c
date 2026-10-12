@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -134,8 +134,10 @@ ptx_Status_t ptx_RUL_WLC_Init(ptx_RUL_WLC_t *ctx, ptx_RUL_WLC_InitParams_t *init
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams) && PTX_COMP_CHECK(initParams->Rul, Comp_RUL))
+    if ((NULL != ctx) && (NULL != initParams) && PTX_COMP_CHECK(initParams->Rul, Comp_RUL) && (NULL != initParams->Log))
     {
+        PTX_LOG_I(initParams->Log, "ptx_RUL_WLC_Init");
+
         /**
          * The user can set WptPostPowerLevel/WptPowerLevelInitial to 0. In that case the WLC-Poller will
          * take the default power level, that is also used for the initial polling.
@@ -181,6 +183,9 @@ ptx_Status_t ptx_RUL_WLC_Init(ptx_RUL_WLC_t *ctx, ptx_RUL_WLC_InitParams_t *init
             ctx->State = State_NFCLE_StartPollListener;
             ctx->CompId = Comp_WLC;
             memcpy(&ctx->InitParams, initParams, sizeof(ptx_RUL_WLC_InitParams_t));
+
+            ctx->Log = initParams->Log;
+
         }
         else
         {
@@ -200,6 +205,8 @@ ptx_Status_t ptx_RUL_WLC_DeInit(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_DeInit");
+
         status = ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -224,6 +231,8 @@ ptx_Status_t ptx_RUL_WLC_GetListenerType(ptx_RUL_WLC_t *ctx, ptx_RUL_WLC_Listene
 
     if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_GetListenerType");
+
         status = PTX_STATUS_SUCCESS;
         *type = ListenerType_Generic;
 
@@ -249,8 +258,10 @@ ptx_Status_t ptx_RUL_WLC_StartPowerTransfer(ptx_RUL_WLC_t *ctx, ptx_NSC_WLC_WptO
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != wptOptions) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != wptOptions))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_StartPowerTransfer");
+
         /* 
          * Manually activate the WLC extension endpoint once a Power Transfer starts to ensure that the NSC_WLC_WPT_STOP_NTF 
          * is routed correctly to the callback ptx_RUL_WLC_ProcessWptStopNtf.
@@ -281,6 +292,8 @@ ptx_Status_t ptx_RUL_WLC_StopPowerTransfer(ptx_RUL_WLC_t *ctx, uint8_t postPower
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_StopPowerTransfer");
+
         if (WptState_Ongoing == ctx->WptState)
         {
             status = ptx_NSC_WLC_WptStop(&(ctx->InitParams.Rul->Nsc), postPowerLevel);
@@ -319,6 +332,8 @@ ptx_Status_t ptx_RUL_WLC_GetPowerTransferState(ptx_RUL_WLC_t *ctx, ptx_RUL_WLC_W
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != state))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_GetPowerTransferState");
+
         *state = ctx->WptState;
         status = PTX_STATUS_SUCCESS;
     }
@@ -332,6 +347,8 @@ ptx_Status_t ptx_RUL_WLC_RunPollerStateMachine(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_RunPollerStateMachine");
+
         if (0u == ctx->StateMachineActive)
         {
             ctx->StateMachineActive = 1u;
@@ -452,6 +469,8 @@ ptx_Status_t ptx_RUL_WLC_StateNFCLE_StartPollListener(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateNFCLE_StartPollListener");
+
         if ((State_NFCLE_StartPollListener == ctx->State) && (1u == ctx->StateMachineActive))
         {
             /* Wakeup Poller from potential Standby/Sleep state and start a discovery. */
@@ -497,6 +516,8 @@ ptx_Status_t ptx_RUL_WLC_StateNFCLE_PollListener(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateNFCLE_PollListener");
+
         if ((State_NFCLE_PollListener == ctx->State) && (1u == ctx->StateMachineActive))
         {
             /* Retrieve discovery information from system. */
@@ -512,30 +533,18 @@ ptx_Status_t ptx_RUL_WLC_StateNFCLE_PollListener(ptx_RUL_WLC_t *ctx)
 
                 case ptx_RUL_StatusInfoDiscover_Active:
                 {
-                    /* A card was activated during discovery but there are potentially more in the registry. */
+                    /* A card was activated during discovery with only one card in the registry, directly proceed to read out the WLC_CAP record. */
                     ptx_RUL_CardRegistry_t *card_registry;
                     status = ptx_RUL_GetCardRegistry(ctx->InitParams.Rul, &card_registry);
 
                     if (PTX_STATUS_SUCCESS == status)
                     {
-                        /* If there are more than one card in the registry, but we activated one of these cards
-                         * (e.g. through Type A Anti Collision Resolution), we still need to perform the WLC activation procedure.
-                         * With a single Card it is possible to directly read out the WLCCAP record.
-                         */
-                        if (1 < card_registry->CardsCnt)
+                        status = ptx_RUL_WLC_ResetListenerParameter(ctx);
+                        if (PTX_STATUS_SUCCESS == status)
                         {
-                            ctx->State = State_NFCLE_ActivateListener;
+                            ctx->State = State_WCCA_ReadCapabilityRecord;
                             ptx_RUL_WLC_NtfCallback(ctx, Notification_ListenerDetected, &(card_registry->CardsCnt), sizeof(uint32_t));
-                        }
-                        else
-                        {
-                            status = ptx_RUL_WLC_ResetListenerParameter(ctx);
-                            if (PTX_STATUS_SUCCESS == status)
-                            {
-                                ctx->State = State_WCCA_ReadCapabilityRecord;
-                                ptx_RUL_WLC_NtfCallback(ctx, Notification_ListenerDetected, &(card_registry->CardsCnt), sizeof(uint32_t));
-                                ptx_RUL_WLC_NtfCallback(ctx, Notification_ListenerActivated, &(card_registry->ActiveCard), sizeof(ptx_RUL_CardParams_t));
-                            }
+                            ptx_RUL_WLC_NtfCallback(ctx, Notification_ListenerActivated, &(card_registry->ActiveCard), sizeof(ptx_RUL_CardParams_t));
                         }
                     }
 
@@ -585,6 +594,8 @@ ptx_Status_t ptx_RUL_WLC_StateNFCLE_ActivateListener(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateNFCLE_ActivateListener");
+
         if ((State_NFCLE_ActivateListener == ctx->State) && (1u == ctx->StateMachineActive))
         {
             ptx_RUL_CardRegistry_t *card_registry;
@@ -666,6 +677,8 @@ ptx_Status_t ptx_RUL_WLC_StateWCCA_ReadCapabilityRecord(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWCCA_ReadCapabilityRecord");
+
         if ((State_WCCA_ReadCapabilityRecord == ctx->State) && (1u == ctx->StateMachineActive))
         {
             ptx_RUL_CardRegistry_t *card_registry;
@@ -718,6 +731,8 @@ ptx_Status_t ptx_RUL_WLC_StateWCCA_StartPollListenerReady(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWCCA_StartPollListenerReady");
+
         if ((State_WCCA_StartPollListenerReady == ctx->State) && (1u == ctx->StateMachineActive))
         {
             uint32_t waiting_time_ms;
@@ -753,6 +768,8 @@ ptx_Status_t ptx_RUL_WLC_StateWCCA_PollListenerReady(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWCCA_PollListenerReady");
+
         if ((State_WCCA_PollListenerReady == ctx->State) && (1u == ctx->StateMachineActive))
         {
             uint8_t is_elapsed = 0;
@@ -787,6 +804,8 @@ ptx_Status_t ptx_RUL_WLC_StateWCC_WriteInfoRecord(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWCC_WriteInfoRecord");
+
         if ((State_WCC_WriteInfoRecord == ctx->State) && (1u == ctx->StateMachineActive))
         {
             ptx_NDEFRecord_t records[1];
@@ -878,8 +897,10 @@ ptx_Status_t ptx_RUL_WLC_StateWCC_ReadControlRecord(ptx_RUL_WLC_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWCC_ReadControlRecord");
+
         if ((State_WCC_ReadControlRecord == ctx->State) && (1u == ctx->StateMachineActive))
         {
             status = ptx_RUL_WLC_ReadWLCCTLMessage(ctx);
@@ -907,8 +928,10 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_StartStaticCharging(ptx_RUL_WLC_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWPT_StartStaticCharging");
+
         if ((State_WPT_StartStaticCharging == ctx->State) && (1u == ctx->StateMachineActive))
         {
             /* Query cap_wt field */
@@ -974,6 +997,8 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_StartNegotiatedCharging(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWPT_StartNegotiatedCharging");
+
         if ((State_WPT_StartNegotiatedCharging == ctx->State) && (1u == ctx->StateMachineActive))
         {
             uint32_t wpt_duration_ms;
@@ -1078,6 +1103,8 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_PollCharging(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateWPT_PollCharging");
+
         if ((State_WPT_PollCharging == ctx->State) && (1u == ctx->StateMachineActive))
         {
             ptx_RUL_Status_Params_t status_params;
@@ -1182,6 +1209,8 @@ ptx_Status_t ptx_RUL_WLC_StateSleep_StartSleep(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateSleep_StartSleep");
+
         if ((State_Sleep_StartSleep == ctx->State) && (1u == ctx->StateMachineActive))
         {
             ptx_NDEFRecord_WLCCAP_Mode_t mode;
@@ -1250,6 +1279,8 @@ ptx_Status_t ptx_RUL_WLC_StateSleep_PollSleep(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateSleep_PollSleep");
+
         if ((State_Sleep_PollSleep == ctx->State) && (1u == ctx->StateMachineActive))
         {
             uint8_t is_elapsed = 0;
@@ -1308,6 +1339,8 @@ ptx_Status_t ptx_RUL_WLC_StateOff_DeactivateListener(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateOff_DeactivateListener");
+
         if ((State_Off_DeactivateListener == ctx->State) && (1u == ctx->StateMachineActive))
         {
             status = ptx_RUL_WLC_DeactivateListener(ctx);
@@ -1337,6 +1370,8 @@ ptx_Status_t ptx_RUL_WLC_StateError_ProcessError(ptx_RUL_WLC_t *ctx, ptx_Status_
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_StateError_ProcessError");
+
         status = wlcStatus;
 
         if ((State_Error == ctx->State) && (1u == ctx->StateMachineActive))
@@ -1513,6 +1548,8 @@ static ptx_Status_t ptx_RUL_WLC_CheckInitParamsCoherence(ptx_RUL_WLC_InitParams_
         (initParams->WptPowerLevelMin <= initParams->WptPowerLevelInitial) &&
         (WptPostPwrOption_A == initParams->WptPostPwrOption || WptPostPwrOption_B == initParams->WptPostPwrOption))
     {
+        PTX_LOG_V(initParams->Log, "ptx_RUL_WLC_CheckInitParamsCoherence");
+
         status = PTX_STATUS_SUCCESS;
     }
     return status;
@@ -1524,6 +1561,8 @@ static ptx_Status_t ptx_RUL_WLC_ResetListenerParameter(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ResetListenerParameter");
+
         ctx->WptState = WptState_Idle;
         ctx->CntrWlcCtlNwcc = 0u;
         ctx->CntrWlcCapNwt = 0u;
@@ -1544,6 +1583,8 @@ static ptx_Status_t ptx_RUL_WLC_ResetListenerParameter(ptx_RUL_WLC_t *ctx)
         ctx->TxMultiplier = ctx->InitParams.WptPowerLevelInitial;
             
         status = ptx_NDEF_Open(&ctx->NdefComp, &ctx->NdefInitParams);
+
+
     }
 
     return status;
@@ -1594,8 +1635,10 @@ static ptx_Status_t ptx_RUL_WLC_ReadNdefMessage(ptx_RUL_WLC_t *ctx, ptx_NDEFReco
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != records)  && (NULL != recordsLen) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != records) && (NULL != recordsLen))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ReadNdefMessage");
+
         uint32_t len = PTX_WLC_MAX_NDEF_MESSAGE_BUFFER_SIZE;
         status = ptx_NDEF_ReadMessage(&ctx->NdefComp, ctx->NdefMsgBuffer, &len);
 
@@ -1612,8 +1655,10 @@ static ptx_Status_t ptx_RUL_WLC_WriteNdefMessage(ptx_RUL_WLC_t *ctx, ptx_NDEFRec
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != records) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != records))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_WriteNdefMessage");
+
         uint32_t len = ctx->NdefComp.txSize;
 
         /* Create one contiguous NDEF message from individual records and store it in the NDEF message working buffer. */
@@ -1634,6 +1679,8 @@ static ptx_Status_t ptx_RUL_WLC_ReadWLCCAPMessage(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ReadWLCCAPMessage");
+
         status = ptx_NDEF_CheckMessage(&ctx->NdefComp);
 
         ptx_NDEFRecord_t record_buffer[PTX_WLC_MAX_POLLER_NDEF_RECORD_BUFFER_SIZE];
@@ -1715,6 +1762,8 @@ static ptx_Status_t ptx_RUL_WLC_ParseWLCCAPRecord(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ParseWLCCAPRecord");
+
         /* If there is a WLCCAP record, the Poller is connected to a valid WLC-L device. */
         ptx_RUL_CardRegistry_t *card_registry;
         status = ptx_RUL_GetCardRegistry(ctx->InitParams.Rul, &card_registry);
@@ -1752,6 +1801,8 @@ static ptx_Status_t ptx_RUL_WLC_ParseWLCCAPRecordWlcMode(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ParseWLCCAPRecordWlcMode");
+
         ptx_NDEFRecord_WLCCAP_Mode_t mode;
         status = ptx_NDEFRecord_WLCCAP_GetMode(&ctx->RecordWlcCap, &mode);
 
@@ -1794,6 +1845,8 @@ static ptx_Status_t ptx_RUL_WLC_ParseWLCCAPRecordNegotiatedWlcMode(ptx_RUL_WLC_t
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ParseWLCCAPRecordNegotiatedWlcMode");
+
         ptx_RUL_CardRegistry_t *card_registry;
         status = ptx_RUL_GetCardRegistry(ctx->InitParams.Rul, &card_registry);
 
@@ -1865,8 +1918,10 @@ static ptx_Status_t ptx_RUL_WLC_ReadWLCCTLMessage(ptx_RUL_WLC_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ReadWLCCTLMessage");
+
         ptx_NDEFRecord_t record_buffer[PTX_WLC_MAX_POLLER_NDEF_RECORD_BUFFER_SIZE];
         uint32_t records_len = PTX_WLC_MAX_POLLER_NDEF_RECORD_BUFFER_SIZE;
 
@@ -1962,8 +2017,10 @@ static ptx_Status_t ptx_RUL_WLC_ParseWLCCTLRecord(ptx_RUL_WLC_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ParseWLCCTLRecord");
+
         /* Start interpreting WLCCTL record. */
         uint8_t error;
         status = ptx_NDEFRecord_WLCCTL_GetErrorFlag(&ctx->RecordWlcCtl, &error);
@@ -2070,6 +2127,7 @@ static ptx_Status_t ptx_RUL_WLC_ParseWLCCTLRecord(ptx_RUL_WLC_t *ctx)
 
 static uint8_t ptx_RUL_WLC_TxMultiplierToPercent(uint8_t reg)
 {
+
     uint32_t res = reg * ((PTX_WLC_PERCENT_FRACTION << PTX_WLC_PRECISION_SHIFT) / PTX_WLC_TX_MULTIPLIER_MAX);
     return (uint8_t) (res >> PTX_WLC_PRECISION_SHIFT);
 }
@@ -2080,6 +2138,8 @@ static ptx_Status_t ptx_RUL_WLC_ComputeRequiredTxMultiplier(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_ComputeRequiredTxMultiplier");
+
         int8_t power_adj;
         /* Query the desired power adjust level. */
         status = ptx_NDEFRecord_WLCCTL_GetPowerAdjReq(&ctx->RecordWlcCtl, &power_adj);
@@ -2189,6 +2249,8 @@ static ptx_Status_t ptx_RUL_WLC_ProcessWptStopNtf(void *ctx, ptx_NSC_WLC_WptStop
 
     if (PTX_COMP_CHECK(wlc, Comp_WLC) && PTX_COMP_CHECK(wlc->InitParams.Rul, Comp_RUL) && (NULL != ntf) && (NULL != ntf_used))
     {
+        PTX_LOG_V(wlc->Log, "ptx_RUL_WLC_ProcessWptStopNtf");
+
         switch (ntf->Reason)
         {
             case WptStopReason_Expired:
@@ -2217,8 +2279,10 @@ static ptx_Status_t ptx_RUL_WLC_PresenceCheck(ptx_RUL_WLC_t *ctx, uint8_t *isAva
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != isAvailable) )
+    if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != isAvailable))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_PresenceCheck");
+
         *isAvailable = 0u;
 
         ptx_RUL_DiscoverConfig_t disc_config;
@@ -2340,8 +2404,10 @@ static ptx_Status_t ptx_RUL_WLC_CheckListenerPresence(ptx_RUL_WLC_t *ctx, ptx_RU
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != isAvailable) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != isAvailable))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_CheckListenerPresence");
+
         *isAvailable = 0;
 
         ptx_RUL_CardRegistry_t *card_registry;
@@ -2374,6 +2440,8 @@ static ptx_Status_t ptx_RUL_WLC_DeactivateListener(ptx_RUL_WLC_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_DeactivateListener");
+
         status = ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -2414,8 +2482,10 @@ static ptx_Status_t ptx_RUL_WLC_DeactivateListener(ptx_RUL_WLC_t *ctx)
 
 static void ptx_RUL_WLC_NtfCallback(ptx_RUL_WLC_t *ctx, ptx_RUL_WLC_Notification_t Notification, void *data, uint32_t dataLen)
 {
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != ctx->InitParams.NtfCb) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && PTX_COMP_CHECK(ctx->InitParams.Rul, Comp_RUL) && (NULL != ctx->InitParams.NtfCb))
     {
+        PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_NtfCallback");
+
         ctx->InitParams.NtfCb(ctx, Notification, data, dataLen);
     }
 }

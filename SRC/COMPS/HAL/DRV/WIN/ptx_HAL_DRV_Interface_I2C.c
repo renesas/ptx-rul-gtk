@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -91,15 +91,17 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_I2C_Init");
+
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I2C_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_I2C_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
         {
             if ((gDrvI2CPortConfigs[config].Type == initParams->PortType) && (gDrvI2CPortConfigs[config].ID == initParams->PortID))
             {
-                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvI2CPortConfigs[config].ModuleDescriptor, NULL);
+                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvI2CPortConfigs[config].ModuleDescriptor, NULL, initParams->Log);
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
@@ -111,8 +113,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
                     ctx->WaitForInterrupt = INTERRUPT_FALSE;
 
                     ctx->Ftd2xx_ctx->Log = initParams->Log;
-                    ctx->Ftd2xx_ctx->IRQPin_Low = FT_IRQ_LINE_GPIO_BIT_LO;
-                    ctx->Ftd2xx_ctx->IRQPin_High = FT_IRQ_LINE_GPIO_BIT;
+                    ctx->Ftd2xx_ctx->IRQPin_Low = ctx->Port->IRQPin_Low;
+                    ctx->Ftd2xx_ctx->IRQPin_High = ctx->Port->IRQPin_High;
                     ctx->CompId = Comp_HAL;
                 }
             }
@@ -128,6 +130,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_DeInit");
+
         status = ptx_HAL_FTD2XX_LibClose(ctx->Ftd2xx_ctx);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -146,16 +150,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Open");
+
         status = ptx_HAL_FTD2XX_I2C_Open(ctx->Ftd2xx_ctx, ctx->Speed);
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "I2C Open OK on FTDI: %s", ctx->Port->ModuleDescriptor);
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Open FAILED");
-        }
     }
 
     return status;
@@ -167,28 +165,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Close(ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Close");
+
         status = ptx_HAL_FTD2XX_I2C_Close(ctx->Ftd2xx_ctx);
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "I2C Close OK on FTDI: %s", ctx->Port->ModuleDescriptor);
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Close FAILED");
-        }
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_TRx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *tx, uint32_t *txLen, uint8_t *rxBuf, uint32_t *rxLen)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xx_ctx, ctx->BusAddr, tx, txLen, rxBuf, rxLen, TRUE); /* send restart by default */
     }
 
     return status;
@@ -200,18 +180,17 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xx_ctx, ctx->BusAddr, txBuf, &txLen, NULL, 0, restart);
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Tx");
 
+        status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xx_ctx, ctx->BusAddr, txBuf, &txLen, NULL, 0, restart);
+        
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
         {
-            PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "I2C Write: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Write ERROR Status: %u", status);
+            PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "TX: ");
         }
 #endif
+        
     }
 
     return status;
@@ -223,16 +202,14 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Rx");
+
         status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xx_ctx, ctx->BusAddr, NULL, 0, rxBuf, &rxLen, restart);
 
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
         {
-            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "I2C Read: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Read ERROR Status: %u", status);
+            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "RX: ");
         }
 #endif
     }
@@ -240,49 +217,17 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
     return status;
 }
 
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_ActivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeactivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
-    }
-    return status;
-}
-
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_RxIrqLevel(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *level)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint16_t level_16 = 0;
+
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_RxIrqLevel");
+
         status = ptx_HAL_FTD2XX_GetIRQLine(ctx->Ftd2xx_ctx, &level_16);
         *level = (0 == level_16) ? 0 : 1;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_WaitForIRQ(ptx_HAL_DRV_Interface_I2C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
     }
 
     return status;
@@ -292,8 +237,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetParameter(ptx_HAL_DRV_Interface_I2C_t 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -318,8 +265,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_GetParameter(ptx_HAL_DRV_Interface_I2C_t 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -351,6 +300,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetSlaveAddress(ptx_HAL_DRV_Interface_I2C
 
     if ((NULL != ctx))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetSlaveAddress");
+
         ctx->BusAddr = address;
         status = PTX_STATUS_SUCCESS;
     }
@@ -364,6 +315,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed(ptx_HAL_DRV_Interfac
 
     if ((NULL != ctx) && (0 != speed))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed");
+
         uint32_t oldSpeed = ctx->Speed;
         ctx->Speed = speed;
 

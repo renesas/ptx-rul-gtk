@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -48,6 +48,7 @@
  */
 
 #include "ptx_RUL.h"
+#include "ptx_Log.h"
 
 #include "ptx_NSC_RfActivate.h"
 #include "ptx_NSC_RfPresenceCheck.h"
@@ -68,7 +69,8 @@
  * ####################################################################################################################
  */
 static void ptx_RUL_UpdateActiveProtocolParams(ptx_RUL_CardRegistry_t *cardRegistry, ptx_NSC_RfAct_ProtParam_t *data);
-
+static uint8_t ptx_RUL_IsSameCard(ptx_RUL_CardParams_t *cardA, ptx_RUL_CardParams_t *cardB);
+static uint8_t ptx_RUL_IsCardAlreadyInRegistry(ptx_RUL_CardRegistry_t *cardRegistry, ptx_RUL_CardParams_t *card, uint32_t *cardIndex);
 
 /*
  * ####################################################################################################################
@@ -79,13 +81,30 @@ ptx_Status_t ptx_RUL_AddToCardRegistry(ptx_RUL_t* rul, ptx_RUL_CardParams_t *dis
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != discoveredCard) )
+    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != discoveredCard))
     {
-        if (PTX_RUL_MAX_SUPPORTED_DEVICES > rul->CardRegistry.CardsCnt)
-        {
-            memcpy(&rul->CardRegistry.Cards[rul->CardRegistry.CardsCnt], discoveredCard, sizeof(ptx_RUL_CardParams_t));
-            rul->CardRegistry.CardsCnt++;
+        PTX_LOG_I(&rul->Log, "ptx_RUL_AddToCardRegistry");
 
+        uint32_t existing_card_index = 0u;
+        uint8_t card_already_in_registry = ptx_RUL_IsCardAlreadyInRegistry(&rul->CardRegistry, discoveredCard, &existing_card_index);
+
+        if (0u != card_already_in_registry)
+        {
+            /* Card already exists in registry.
+             * Update the stored parameters with the latest discovered values.
+             */
+            memcpy(&rul->CardRegistry.Cards[existing_card_index],
+                   discoveredCard,
+                   sizeof(ptx_RUL_CardParams_t));
+
+            status = PTX_STATUS_SUCCESS;
+        }
+        else if (PTX_RUL_MAX_SUPPORTED_DEVICES > rul->CardRegistry.CardsCnt)
+        {
+            memcpy(&rul->CardRegistry.Cards[rul->CardRegistry.CardsCnt],
+                   discoveredCard,
+                   sizeof(ptx_RUL_CardParams_t));
+            rul->CardRegistry.CardsCnt++;
             status = PTX_STATUS_SUCCESS;
         }
         else
@@ -103,6 +122,9 @@ ptx_Status_t ptx_RUL_ClearCardRegistry(ptx_RUL_t* rul)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ClearCardRegistry");
+
+
         rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_NoCard;
         rul->DeactivateStatus = ptx_RUL_StatusInfoDeactivate_Undefined;
         rul->EmvRemovalStatus = ptx_RUL_StatusInfoEmvRemoval_Undefined;
@@ -120,8 +142,11 @@ ptx_Status_t ptx_RUL_DetermineProtocol(ptx_RUL_t* rul, ptx_RUL_CardParams_t* car
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != card) )
+    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != card))
     {
+
+        PTX_LOG_I(&rul->Log, "ptx_RUL_DetermineProtocol");
+
         card->Protocols = ptx_RUL_SupportedProtocols_Undefined;
 
         status = PTX_STATUS_SUCCESS;
@@ -200,6 +225,8 @@ ptx_Status_t ptx_RUL_GetCardRegistry(ptx_RUL_t* rul, ptx_RUL_CardRegistry_t** re
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != registry))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_GetCardRegistry");
+
         *registry = &rul->CardRegistry;
         status = PTX_STATUS_SUCCESS;
     }
@@ -213,6 +240,9 @@ ptx_Status_t ptx_RUL_CheckCardPresence(ptx_RUL_t* rul, ptx_RUL_CheckPresType_t t
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_CheckCardPresence");
+
+
         switch (type)
         {
             case ptx_RUL_CheckPresType_NFCDEP:
@@ -303,8 +333,12 @@ ptx_Status_t ptx_RUL_SelectCard(ptx_RUL_t *rul, uint32_t cardRegistryId, ptx_RUL
     if ( PTX_COMP_CHECK(rul, Comp_RUL) &&
          (rul->CardRegistry.CardsCnt >= (cardRegistryId + 1)) &&
          (ptx_RUL_CardProtocolType_Undefined < protocol.Type) &&
-         (ptx_RUL_CardProtocolType_Max > protocol.Type) )
+         (ptx_RUL_CardProtocolType_Max > protocol.Type))
     {
+
+        PTX_LOG_I(&rul->Log, "ptx_RUL_SelectCard");
+
+
         ptx_RUL_CardParams_t card_entry = rul->CardRegistry.Cards[cardRegistryId];
 
         ptx_NSC_RfAct_Param_t activate_parameters;
@@ -431,6 +465,10 @@ ptx_Status_t ptx_RUL_GetCardParameters(ptx_RUL_t* rul, ptx_RUL_CardParams_t** ca
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != cardParams))
     {
+
+        PTX_LOG_I(&rul->Log, "ptx_RUL_GetCardParameters");
+
+
         if (NULL != rul->CardRegistry.ActiveCard)
         {
             *cardParams = rul->CardRegistry.ActiveCard;
@@ -456,6 +494,7 @@ static void ptx_RUL_UpdateActiveProtocolParams(ptx_RUL_CardRegistry_t *cardRegis
 {
     if ((NULL != cardRegistry) && (NULL != cardRegistry->ActiveCard) && (NULL != data))
     {
+
         /* Parameters are provided only for IsoDep and NfcDep protocols in poll mode. */
 
         if (ptx_RUL_CardProtocolType_T4T == cardRegistry->ActiveProtocol)
@@ -489,3 +528,102 @@ static void ptx_RUL_UpdateActiveProtocolParams(ptx_RUL_CardRegistry_t *cardRegis
     }
 }
 
+static uint8_t ptx_RUL_IsSameCard(ptx_RUL_CardParams_t *cardA, ptx_RUL_CardParams_t *cardB)
+{
+    uint8_t is_same_card = 0u;
+
+    if ((NULL != cardA) && (NULL != cardB))
+    {
+        if (cardA->TechType == cardB->TechType)
+        {
+            switch (cardA->TechType)
+            {
+                case ptx_RUL_CardRfTechType_A:
+                {
+                    if ((cardA->TechParam.TypeA.NfcId1Len == cardB->TechParam.TypeA.NfcId1Len) &&
+                        (0u != cardA->TechParam.TypeA.NfcId1Len) &&
+                        (0 == memcmp(cardA->TechParam.TypeA.NfcId1,
+                                     cardB->TechParam.TypeA.NfcId1,
+                                     cardA->TechParam.TypeA.NfcId1Len)))
+                    {
+                        is_same_card = 1u;
+                    }
+                    break;
+                }
+
+                case ptx_RUL_CardRfTechType_B:
+                {
+                    if (0 == memcmp(cardA->TechParam.TypeB.SensBRes,
+                                    cardB->TechParam.TypeB.SensBRes,
+                                    PTX_RUL_SENSBRES_LEN))
+                    {
+                        is_same_card = 1u;
+                    }
+                    break;
+                }
+
+                case ptx_RUL_CardRfTechType_F:
+                {
+                    if (0 == memcmp(&cardA->TechParam.TypeF.SensFRes[PTX_RUL_SENSF_RES_NFCID2_OFFSET],
+                                    &cardB->TechParam.TypeF.SensFRes[PTX_RUL_SENSF_RES_NFCID2_OFFSET],
+                                    PTX_RUL_NFCID2_LEN))
+                    {
+                        is_same_card = 1u;
+                    }
+                    break;
+                }
+
+                case ptx_RUL_CardRfTechType_V:
+                {
+                    if (0 == memcmp(&cardA->TechParam.TypeV.InventoryRes[PTX_RUL_INVENTORYRES_UID_OFFSET],
+                                    &cardB->TechParam.TypeV.InventoryRes[PTX_RUL_INVENTORYRES_UID_OFFSET],
+                                    PTX_RUL_UID_LEN))
+                    {
+                        is_same_card = 1u;
+                    }
+                    break;
+                }
+
+#if defined(ENABLE_EXTENDED_CARD_REGISTER)
+                case ptx_RUL_CardRfTechType_ACM:
+                {
+                    if (0 == memcmp(cardA->TechParam.TypeP2PACM.Nfcid3,
+                                    cardB->TechParam.TypeP2PACM.Nfcid3,
+                                    PTX_RUL_ATR_RES_NFCID3_LEN))
+                    {
+                        is_same_card = 1u;
+                    }
+                    break;
+                }
+#endif
+
+                default:
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    return is_same_card;
+}
+
+static uint8_t ptx_RUL_IsCardAlreadyInRegistry(ptx_RUL_CardRegistry_t *cardRegistry, ptx_RUL_CardParams_t *card, uint32_t *cardIndex)
+{
+    uint8_t card_already_in_registry = 0u;
+
+    if ((NULL != cardRegistry) && (NULL != card) && (NULL != cardIndex))
+    {
+        for (uint32_t i = 0u; i < cardRegistry->CardsCnt; i++)
+        {
+            if (0u != ptx_RUL_IsSameCard(&cardRegistry->Cards[i], card))
+            {
+                *cardIndex = i;
+                card_already_in_registry = 1u;
+                break;
+            }
+        }
+    }
+
+    return card_already_in_registry;
+}

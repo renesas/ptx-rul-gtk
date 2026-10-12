@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -54,6 +54,7 @@
 #include "ptx_Status.h"
 #include "ptx_Components.h"
 #include "ptx_OSAL_Int.h"
+#include <stdint.h>
 
 
 #if defined(__cplusplus)
@@ -78,6 +79,11 @@ extern "C"
  */
 #define PTX_TIMER_SINGLE_SHOT       0           /**< Single shot timer */
 #define PTX_TIMER_PERIODIC          1U          /**< Continuously running, periodic timer */
+
+
+#define PTX_OSAL_FILE_MAX_DIR_PATH_LEN  256U    /**< Maximum size of a directory path. */
+#define PTX_OSAL_FILE_MAX_FILE_NAME_LEN 64U     /**< Maximum size of a file name. */
+#define PTX_OSAL_FILE_MAX_PATH_LEN      (PTX_OSAL_FILE_MAX_DIR_PATH_LEN + PTX_OSAL_FILE_MAX_FILE_NAME_LEN)     /**< Maximum size of a complete path to a file. */
 
 /**
  * \brief Time difference type.
@@ -160,15 +166,15 @@ typedef struct ptx_OSAL
  */
 typedef struct ptx_Thread
 {
-    pptx_OSAL_ThreadProc_t   ThdFn;              /**< Pointer to thread procedure function. */
+    pptx_OSAL_ThreadProc_t  ThdFn;              /**< Pointer to thread procedure function. */
     void                   *ThdParam;           /**< Pointer to a parameter passed to \ref ptx_OSAL_ThreadCreate. */
-    void                   *Thread;             /**< Thread handle, assigned in \ref ptx_OSAL_ThreadCreate. */
+    void                   *Thread;             /**< Platform specific Thread handle, assigned in \ref ptx_OSAL_ThreadCreate. */
     void                   *ThdName;            /**< Thread name. Reserved for future use. */
     ptx_OSAL_t             *OS;                 /**< Pointer to an initialized OSAL component structure. */
     void                   *ThdEventGroup;      /**< Reserved for future use. */
+    ptx_Thread_State_t      ThdState;           /**< Track state of thread, see \ref ptx_Thread_State_t */
     uint32_t                ThdPriority;        /**< Reserved for future use. */
     uint32_t                ThdEventBit;        /**< Reserved for future use. */
-    uint16_t                ThdState;           /**< Reserved for future use. */
     uint16_t                ThdStackDepth;      /**< Reserved for future use. */
 } ptx_Thread_t;
 
@@ -190,6 +196,35 @@ typedef struct ptx_Timer
     uint8_t                  Valid;              /**< Member variable signals if timer is created and timer thread has been successfully started (1), or not (0). */
 } ptx_Timer_t;
 
+/**
+ * \brief File access mode values used for file handling functions.
+ */
+typedef enum ptx_File_Mode
+{
+    ptx_File_Mode_Read,                     /**< Open an existing file for input operations. */
+    ptx_File_Mode_Write,                    /**< Create an empty file for output operations. Overwrite (discard) an existing file. */
+    ptx_File_Mode_Append,                   /**< Open an existing file to append output to its end or create an empty file if no such file exists yet. */
+    ptx_File_Mode_ReadUpdate,               /**< Open an existing file for input and output operations.*/
+    ptx_File_Mode_WriteUpdate,              /**< Like \ref ptx_File_Mode_Write, but the file is open for output and input. */
+    ptx_File_Mode_AppendUpdate,             /**< Like \ref ptx_File_Mode_Append, but the file is open for output and input.*/
+    ptx_File_Mode_BinaryRead,               /**< Open an existing file for input operations in binary mode. */
+    ptx_File_Mode_BinaryWrite,              /**< Create an empty file for output operations in binary mode. Overwrite (discard) an existing file. */
+    ptx_File_Mode_BinaryAppend,             /**< Open an existing file to append output to its end or create an empty file if no such file exists yet in binary mode. */
+    ptx_File_Mode_BinaryReadUpdate,         /**< Open an existing file for input and output operations in binary mode.*/
+    ptx_File_Mode_BinaryWriteUpdate,        /**< Like \ref ptx_File_Mode_BinaryWrite, but the file is open for output and input. */
+    ptx_File_Mode_BinaryAppendUpdate,       /**< Like \ref ptx_File_Mode_BinaryAppend, but the file is open for output and input.*/
+    ptx_File_Mode_MAX,                      /**< RFU. */
+} ptx_File_Mode_t;
+
+/**
+ * \brief File access configuration.
+ */
+typedef struct ptx_File_Config
+{
+    const char               *Path;     /**< Path to the directory of the file. */
+    const char               *Name;     /**< Name of file. */
+    ptx_File_Mode_t           Mode;     /**< Operation mode for the file. */
+} ptx_File_Config_t;
 
 /*
  * ####################################################################################################################
@@ -348,7 +383,8 @@ ptx_Status_t ptx_OSAL_MutexUnlock(ptx_OSAL_t *osalCtx, ptx_Mutex_t *hMutex);
  * \brief Create a thread.
  *
  * \param[in]   osalCtx         Pointer to an initialized OSAL component structure.
- * \param[out]  hThd            Pointer to a platform-specific thread descriptor/structure/handle.
+ * \param[out]  hThd            Pointer to a specific thread descriptor/structure/handle with member
+ *                              ThdState set to ptx_Thread_State_INITIAL.
  * \param[in]   thdFn           Pointer to the thread procedure.
  * \param[in]   thdParam        Parameter that the thread function will receive when it is started. May be NULL
  *                              if there is no data to share with or to hand over to the thread respectively.
@@ -477,6 +513,38 @@ ptx_Status_t ptx_OSAL_TimerCancel(ptx_OSAL_t *osalCtx, ptx_Timer_t *hTimer);
  */
 ptx_Status_t ptx_OSAL_TimerClose(ptx_OSAL_t *osalCtx, ptx_Timer_t *hTimer);
 
+/*
+ * ####################################################################################################################
+ * API FUNCTIONS / FILE HANDLING
+ * ####################################################################################################################
+ */
+
+/**
+ * \brief Read a file and load the data into provided buffer.
+ *
+ * \param[in]        osalCtx         Pointer to an initialized OSAL component structure.
+ * \param[in]        config          File access configuration.
+ * \param[out]       buffer          Buffer containing data read out from the file.
+ * \param[in, out]   bufferLen       Buffer size, i.e. maximum number of bytes to be written into the buffer as input ands
+ *                                   the actual number of bytes read as output.
+ *
+ * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ *
+ */
+ptx_Status_t ptx_OSAL_FileRead (ptx_OSAL_t *osalCtx, ptx_File_Config_t config, uint8_t *buffer, uint32_t *bufferLen);
+
+/**
+ * \brief Write a file with the data from the provided buffer.
+ *
+ * \param[in]   osalCtx         Pointer to an initialized OSAL component structure.
+ * \param[in]   config          File access configuration.
+ * \param[in]   buffer          Buffer containing data to be written to the file.
+ * \param[in]   bufferLen       The length of the data to be written.
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ *
+ */
+ptx_Status_t ptx_OSAL_FileWrite (ptx_OSAL_t *osalCtx, ptx_File_Config_t config, uint8_t *buffer, uint32_t bufferLen);
 
 /*
  * ####################################################################################################################

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -100,21 +100,15 @@ ptx_Status_t ptx_NSC_Init (ptx_NSC_t *nscCtx, ptx_NSC_InitParams_t *initParams)
     ptx_NSC_t *nsc = nscCtx;
     /* Expect valid initialisation parameters. Otherwise, no initialisation can take place. */
 
-    if ( (NULL != nsc) && (NULL != initParams) && (NULL != initParams->Hal) && (NULL != initParams->Hip) )
+    if ( (NULL != nsc) && (NULL != initParams) && (NULL != initParams->Hal) && (NULL != initParams->Hip) && (NULL != initParams->Log))
     {
+        PTX_LOG_I(initParams->Log, "ptx_NSC_Init");
+
         memset(nsc, 0, sizeof(ptx_NSC_t));
 
         nsc->ResidualRxBits = PTX_NSC_DEFAULT_NUMOF_RESIDUAL_BITS;
         nsc->ResidualTxBits = PTX_NSC_DEFAULT_NUMOF_RESIDUAL_BITS;
         nsc->MtU = PTX_NSC_MAX_TRANSFER_UNIT_SIZE;
-
-        /*
-         * RFU
-         */
-        #if 0
-        nsc->FWI = PTX_NSC_FWI_UNSET;
-        #endif
-
         nsc->HAL = initParams->Hal;
         nsc->HIP = initParams->Hip;
 
@@ -124,7 +118,11 @@ ptx_Status_t ptx_NSC_Init (ptx_NSC_t *nscCtx, ptx_NSC_InitParams_t *initParams)
         ptx_NSC_Interface_InitParams_t nsc_intf_init_params;
         (void)memset(&nsc_intf_init_params, 0, sizeof(ptx_NSC_Interface_InitParams_t));
         nsc_intf_init_params.Param = initParams->ExtParams;
+        nsc->Log = initParams->Log;
+
         status = ptx_NSC_Interface_Init(nsc, &nsc_intf_init_params);
+
+
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)
         if (PTX_STATUS_SUCCESS == status)
@@ -158,6 +156,8 @@ ptx_Status_t ptx_NSC_DeInit (ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_DeInit");
+
         /* Interface specific DeInitialization. */
         status = ptx_NSC_Interface_Deinit(nsc);
 
@@ -179,6 +179,7 @@ ptx_Status_t ptx_NSC_Reset(ptx_NSC_t *nsc, ptx_NSC_Reset_Types_t resetType)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_Reset");
         uint8_t retries = PTX_NSC_RESET_RETRIES;
         do
         {
@@ -249,8 +250,10 @@ ptx_Status_t ptx_NSC_GetResetNtf(ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
-        uint8_t rst_ntf[PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN];
-        uint32_t rst_ntf_len = PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN;
+        PTX_LOG_V(nsc->Log, "ptx_NSC_GetResetNtf");
+
+        uint8_t rst_ntf[PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN_MAX];
+        uint32_t rst_ntf_len = PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN_MAX;
 
         status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rst_ntf, &rst_ntf_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RESET_NTF);
         if (PTX_STATUS_SUCCESS == status)
@@ -294,6 +297,8 @@ static ptx_Status_t ptx_NSC_ToggleResetPin(ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_ToggleResetPin");
+
         /*  Assert reset pin
          *  Set Reset pin direction Output, low state
          */

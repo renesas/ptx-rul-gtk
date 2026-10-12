@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -131,7 +131,7 @@ typedef enum ptx_HAL_Interrupt_Flag
 } ptx_HAL_Interrupt_Flag_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_DRV_Interface_I2C
 {
@@ -168,155 +168,238 @@ typedef struct ptx_HAL_DRV_Interface_I2C_InitParams
  */
 
 /**
- * \brief Component Initialization.
+ * @brief Initialize the Windows I2C interface driver (FTDI-backed).
  *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       initParams      Pointer to initialization parameters.
+ * This function prepares the driver context for use on the Windows reference platform
+ * using an FTDI device as I2C master. It selects a matching internal port configuration
+ * based on @p initParams->PortType and @p initParams->PortID, opens the underlying FTDI
+ * library context, and stores runtime configuration (I2C speed and 7-bit slave address)
+ * into the driver context.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @details
+ * - The function clears the provided @p ctx and then populates it on success.
+ * - If @p initParams->Speed is 0, the driver uses @ref PTX_HAL_DRV_INTERFACE_I2C_SPEED_DEFAULT.
+ * - If @p initParams->Address is 0, the driver uses @ref PTX_HAL_DRV_INTERFACE_I2C_ADDRESS_4C.
+ * - The FTDI library context is opened during Init; the I2C channel itself is not opened
+ *   here. Call @ref ptx_HAL_DRV_Interface_I2C_Open afterwards to open/configure the I2C block.
+ *
+ * @param[in,out] ctx
+ *   Pointer to the driver context to initialize. On success, the context is marked as a valid
+ *   HAL component and can be used with the other API functions.
+ *
+ * @param[in] initParams
+ *   Initialization parameters:
+ *   - PortType / PortID: select which internal port configuration to use.
+ *   - Speed: I2C bus speed in Hz (0 => default).
+ *   - Address: 7-bit I2C slave address (0 => default 0x4C).
+ *   - Log: must be non-NULL (used for diagnostics).
+ *   - OS: stored as OSAL context pointer.
+ *   - Gpio: not used by this implementation.
+ *
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx, @p initParams, or @p initParams->Log is NULL,
+ *     or if no matching port configuration exists.
+ *   - Any error propagated from the underlying FTDI library open call.
+ *
+ * @pre
+ * - @p initParams->Log must be initialized.
+ *
+ * @post
+ * - On success, @p ctx contains a valid FTDI context and stored configuration (speed/address).
+ * - To start I2C transfers, @ref ptx_HAL_DRV_Interface_I2C_Open must be called.
+ *
  */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, ptx_HAL_DRV_Interface_I2C_InitParams_t *initParams);
+ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init(ptx_HAL_DRV_Interface_I2C_t *ctx, ptx_HAL_DRV_Interface_I2C_InitParams_t *initParams);
 
 /**
- * \brief Component De-Initialization.
+ * @brief De-initialize the Windows I2C interface driver (FTDI-backed).
  *
- * \param[in]       ctx             Pointer to component.
+ * De-initializes the driver context and releases the underlying FTDI library context
+ * that was opened during @ref ptx_HAL_DRV_Interface_I2C_Init.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @details
+ * - This function is the counterpart to @ref ptx_HAL_DRV_Interface_I2C_Init and is intended
+ *   to free resources and invalidate the driver context.
+ * - The implementation closes the FTDI library context via ptx_HAL_FTD2XX_LibClose().
+ * - On success, the complete @p ctx memory is cleared and the component ID is reset.
+ * - If closing the FTDI context fails, the function returns the error and leaves @p ctx
+ *   unchanged (still valid/initialized).
+ *
+ * @param[in,out] ctx
+ *   Pointer to an initialized @ref ptx_HAL_DRV_Interface_I2C_t context.
+ *
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is NULL or not a valid HAL component
+ *     (i.e., not initialized / component check fails).
+ *   - Any error propagated from the underlying FTDI library close call.
+ *
+ * @pre
+ * - @p ctx must have been successfully initialized with @ref ptx_HAL_DRV_Interface_I2C_Init.
+ *
+ * @post
+ * - On success, @p ctx is cleared and must not be used again unless re-initialized.
  */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx);
+ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C Open
+ * @brief Open and configure the I2C hardware interface.
  *
- * Opens the FTDI I2C hardware block and configures it according to the given configuration.
+ * Opens the FTDI-based I2C controller and configures it with the transmission speed
+ * stored in the driver context during initialization or via SetParameter.
  *
- * \param[in]       ctx             Pointer to component.
+ * @details
+ * - This function enables logical access to the I2C bus.
+ * - It must be called after @ref ptx_HAL_DRV_Interface_I2C_Init and before any
+ *   Tx/Rx/TRx operations.
+ * - The I2C slave address is not configured here; it is applied per transfer.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @param[in] ctx
+ *   Pointer to an initialized HAL I2C driver context.
+ *
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is NULL or not a valid HAL component.
+ *   - Any error propagated from the underlying FTDI I2C open call.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C Close
+ * @brief Close the I2C hardware interface.
  *
- * Closes the FTDI I2C hardware block.
+ * Closes the FTDI-based I2C controller and releases logical access to the I2C bus.
  *
- * \param[in]       ctx             Pointer to component.
+ * @details
+ * - This function disables I2C communication on the underlying FTDI device.
+ * - It does not de-initialize or clear the driver context.
+ * - After calling Close(), the driver context remains valid and may be
+ *   re-opened using @ref ptx_HAL_DRV_Interface_I2C_Open.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @param[in] ctx
+ *   Pointer to an initialized HAL I2C driver context.
+ *
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is NULL or not a valid HAL component.
+ *   - Any error propagated from the underlying FTDI I2C close call.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Close(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 /**
- * \brief Driver I2C TRx
+ * @brief Transmit bytes to the configured I2C slave.
  *
- * Sends data to the I2C hardware block, to communicate with a slave endpoint.
+ * Sends @p txLen bytes from @p txBuf to the 7-bit slave address stored in @c ctx->BusAddr.
  *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       tx              Array of bytes to be transmitted.
- * \param[in]       txLen           Length of \see tx.
- * \param[in]       rxBuf           Array to save response
- * \param[in]       rxLen           Length of \see rxBuf.
+ * @details
+ * - The effective slave address is taken from the driver context (Init default or SetParameter).
+ * - The @p restart parameter is forwarded to the underlying transfer routine to control
+ *   whether a (re-)START condition is issued as part of the operation.
+ * - This function performs transmit-only; use TRx for combined write-then-read transactions.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_TRx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *tx, uint32_t *txLen, uint8_t *rxBuf, uint32_t *rxLen);
-
-/**
- * \brief Driver I2C Tx
+ * @param[in] ctx     Pointer to an initialized HAL I2C driver context.
+ * @param[in] txBuf   Buffer containing bytes to transmit.
+ * @param[in] txLen   Number of bytes to transmit.
+ * @param[in] restart Restart/repeated-start control forwarded to the lower layer.
  *
- * Sends data to the I2C hardware block, to communicate with a slave endpoint.
- *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       txBuf           Array of bytes to be transmitted.
- * \param[in]       txLen           Length of \see txBuf.
- * \param[in]       restart         Restart required flag, unused here.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is NULL / invalid component.
+ *   - Any error propagated from the underlying FTDI I2C transfer call.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *txBuf, uint32_t txLen, uint8_t restart);
 
 /**
- * \brief Driver I2C Rx
+ * @brief Receive bytes from the configured I2C slave.
  *
- * Read data to the I2C hardware block, to communicate with a slave endpoint.
+ * Reads @p rxLen bytes from the 7-bit slave address stored in @c ctx->BusAddr and writes
+ * the received data into @p rxBuf.
  *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       rxBuf           Array of bytes to be transmitted.
- * \param[in]       rxLen           Length of \see rxBuf.
- * \param[in]       restart         Restart required flag, unused here.
+ * @details
+ * - The effective slave address is taken from the driver context (Init default or SetParameter).
+ * - The @p restart parameter is forwarded to the underlying transfer routine to control
+ *   whether a (re-)START condition is issued as part of the operation.
+ * - This function performs receive-only; use TRx for combined write-then-read transactions.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @param[in] ctx     Pointer to an initialized HAL I2C driver context.
+ * @param[out] rxBuf  Receive buffer to store incoming bytes.
+ * @param[in] rxLen   Number of bytes to read.
+ * @param[in] restart Restart/repeated-start control forwarded to the lower layer.
+ *
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is NULL / invalid component.
+ *   - Any error propagated from the underlying FTDI I2C transfer call.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *rxBuf, uint32_t rxLen, uint8_t restart);
 
 /**
- * \brief Driver I2C Activate Rx IRQ.
+ * @brief Read the current RX IRQ pin level.
  *
- * Activates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_I2C_t.Port.
+ * Reads the current logic level of the IRQ line associated with the interface and returns it
+ * as a boolean-like value (0 or 1) via @p level. This is typically used by upper layers to
+ * detect whether the device signals pending data to be read.
  *
- * \param[in]       ctx             Pointer to component.
+ * @details
+ * - The implementation queries the IRQ line via the FTDI layer and converts the returned
+ *   raw value to 0/1.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_ActivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx);
-
-/**
- * \brief Driver I2C Deactivate Rx IRQ.
+ * @param[in]  ctx   Pointer to an initialized HAL I2C driver context.
+ * @param[out] level Output pointer receiving the current IRQ level (0 = low, 1 = high).
  *
- * Deactivates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_I2C_t.Port.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeactivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx);
-
-/**
- * \brief Driver I2C Rx IRQ Level
- *
- * Reads the Rx IRQ Level from the configured pin. The pin must be configured in \ref ptx_HAL_DRV_Interface_I2C_t.Port.
- *
- * \param[in]       ctx             Pointer to component.
- * \param[out]      level           Pointer to the current value of the IRQ pin
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is NULL / invalid component.
+ *   - Any error propagated from the underlying IRQ read call.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_RxIrqLevel(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *level);
 
 /**
- * \brief Driver I2C Wait for IRQ to be triggered
+ * @brief Set a runtime parameter of the I2C interface driver.
  *
- * \param[in]       ctx             Pointer to component.
+ * Updates a driver parameter selected by @p parameter->type using the corresponding value
+ * in @p parameter->value.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_WaitForIRQ(ptx_HAL_DRV_Interface_I2C_t *ctx);
-
-/**
- * \brief Driver I2C Set Parameter function.
+ * @details
+ * Supported parameter types in this implementation:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
+ *   Updates @c ctx->Speed and re-opens the I2C controller with the new speed.
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address:
+ *   Updates @c ctx->BusAddr (used for subsequent transfers).
  *
- * Sets a HAL I2C Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Unsupported / not available:
+ * - HAL_DRV_Interface_Parameter_Type_UART_Enable_Fast_Mode returns NOT_AVAILABLE.
+ * - Any other type is ignored and results in an error return.
  *
- * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      parameter (type, value) struct.
+ * @param[in]     ctx       Pointer to an initialized HAL I2C driver context.
+ * @param[in,out] parameter Pointer to parameter selector/value container.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is invalid or @p parameter is NULL.
+ *   - @ref PTX_STATUS_E_GEN_NOT_AVAILABLE for unsupported parameter types (e.g. UART fast mode).
+ *   - Any error propagated from re-opening the I2C controller when changing speed.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetParameter(ptx_HAL_DRV_Interface_I2C_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 
 /**
- * \brief Driver I2C Get Parameter function.
+ * @brief Get the current runtime parameter value of the I2C interface driver.
  *
- * Gets a HAL I2C Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Reads back a driver parameter selected by @p parameter->type and writes the corresponding
+ * value into @p parameter->value.
  *
- * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * @details
+ * Supported parameter types in this implementation:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: returns @c ctx->Speed
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address: returns @c ctx->BusAddr
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * @param[in]     ctx       Pointer to an initialized HAL I2C driver context.
+ * @param[in,out] parameter Pointer to parameter selector/value container.
+ *
+ * @return
+ *   - @ref PTX_STATUS_SUCCESS on success.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER if @p ctx is invalid or @p parameter is NULL.
+ *   - @ref PTX_STATUS_E_GEN_INVALID_PARAMETER for unsupported/unknown parameter types.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_GetParameter(ptx_HAL_DRV_Interface_I2C_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 

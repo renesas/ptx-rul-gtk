@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -117,6 +117,7 @@ typedef struct ptx_NDEF_T2T_NDEF_TLV
     uint16_t                        Length;                                     /**< Length in byte */
     uint8_t                         LengthBlock[PTX_T2T_BLOCKSIZE * 2u];        /**< Length blocks cache of NDEF TLV, can be up to two blocks if split. */
     uint8_t                         LengthByteOffset;                           /**< Offset in length-block. */
+    uint16_t                        ValueStartByteAddress;                      /**< Byte address of first V byte */
 
 } ptx_NDEF_T2T_NDEF_TLV_t;
 

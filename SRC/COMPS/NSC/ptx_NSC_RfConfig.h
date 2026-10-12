@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -74,7 +74,7 @@ extern "C" {
  * \name Length definitions.
  * @{
  */
-#define PTX_NSC_RFCONFIG_PARAMID_MAX_PARAMID                   (22u)         /**< NSC RF Config sets of parameters currently implemented */
+#define PTX_NSC_RFCONFIG_PARAMID_MAX_PARAMID                   (20u)         /**< NSC RF Config sets of parameters currently implemented */
 /** @} */
 
 /**
@@ -116,8 +116,6 @@ typedef enum ptx_NSC_RfConfig_ParamListId
     NSC_RfConfig_ParamId_PollF212     = 0x0B, /**< PollF212. */
     NSC_RfConfig_ParamId_PollF424     = 0x0C, /**< PollF424. */
     NSC_RfConfig_ParamId_PollV_26K5   = 0x0D, /**< PollV_26K5. */
-    NSC_RfConfig_ParamId_PollV53      = 0x0E, /**< PollV53. */
-    NSC_RfConfig_ParamId_PollV106     = 0x0F, /**< PollV106. */
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)
     /* Listen Mode. */

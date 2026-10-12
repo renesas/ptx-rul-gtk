@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -88,8 +88,10 @@ ptx_Status_t ptx_NSC_RfConfig (ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_t *rfConfi
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfConfig");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_RfConfig, NULL);
     }
 
@@ -158,7 +160,7 @@ static uint8_t ptx_NSC_RfConfig_CheckId(ptx_NSC_RfConfig_ParamListId_t paramId)
 #endif /* PTX_DISABLE_LISTEN_MODE */
 
     min_poll_id = NSC_RfConfig_ParamId_Poll;
-    max_poll_id = NSC_RfConfig_ParamId_PollV106;
+    max_poll_id = NSC_RfConfig_ParamId_PollV_26K5;
 #if !defined(PTX_DISABLE_LISTEN_MODE)
     min_listen_id = NSC_RfConfig_ParamId_ListenA212;
     max_listen_id = NSC_RfConfig_ParamId_Listen;
@@ -261,6 +263,8 @@ static ptx_Status_t ptx_NSC_RfConfig_Send(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != params) && (0 != paramCnt))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfConfig_Send");
+
         for (uint8_t i = 0; i < paramCnt; i++)
         {
             ready_to_send = 0;
@@ -334,43 +338,47 @@ static ptx_Status_t ptx_NSC_RfConfig_Send(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param
 static ptx_Status_t ptx_NSC_RfConfig_Dispatch(ptx_NSC_t *nsc, uint8_t *buffer, uint32_t *bufferOffset)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    uint32_t buffer_offset = *bufferOffset;
-
-    if (0 != buffer_offset)
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != buffer) && (0 != bufferOffset))
     {
-        /* We shall only send a non-empty buffer. */
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfConfig_Dispatch");
 
-        /* Mark EndOfCommand. */
-        buffer[buffer_offset] = PTX_NSC_RFCONFIG_CMD_PARAM_LAST;
-        ++buffer_offset;
+        uint32_t buffer_offset = *bufferOffset;
 
-        /* Send the command. */
-        status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, buffer, buffer_offset);
-        if (PTX_STATUS_SUCCESS == status)
+        if (0 != buffer_offset)
         {
-            /* Now get the response. */
-            uint8_t rsp_data[PTX_NSC_CMD_PROCESSOR_RFCONFIG_RSPLEN];
-            uint32_t rsp_data_len = PTX_NSC_CMD_PROCESSOR_RFCONFIG_RSPLEN;
-            uint8_t ntf_to_follow = 0;
 
-            status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp_data, &rsp_data_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFCONFIG_RSP);
+            /* We shall only send a non-empty buffer. */
+
+            /* Mark EndOfCommand. */
+            buffer[buffer_offset] = PTX_NSC_RFCONFIG_CMD_PARAM_LAST;
+            ++buffer_offset;
+
+            /* Send the command. */
+            status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, buffer, buffer_offset);
             if (PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_NSC_CmdProcessor_ProcessRsp(nsc, ptx_NSC_CmdProcessor_RspId_RfConfig, rsp_data, rsp_data_len, &ntf_to_follow);
-            }
-            else
-            {
-                status = PTX_STATUS_E_NSC_PROTOCOL;
-            }
-        }
+                /* Now get the response. */
+                uint8_t rsp_data[PTX_NSC_CMD_PROCESSOR_RFCONFIG_RSPLEN];
+                uint32_t rsp_data_len = PTX_NSC_CMD_PROCESSOR_RFCONFIG_RSPLEN;
+                uint8_t ntf_to_follow = 0;
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            *bufferOffset = buffer_offset;
+                status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp_data, &rsp_data_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFCONFIG_RSP);
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    status = ptx_NSC_CmdProcessor_ProcessRsp(nsc, ptx_NSC_CmdProcessor_RspId_RfConfig, rsp_data, rsp_data_len, &ntf_to_follow);
+                }
+                else
+                {
+                    status = PTX_STATUS_E_NSC_PROTOCOL;
+                }
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                *bufferOffset = buffer_offset;
+            }
         }
     }
-
     return status;
 }
 

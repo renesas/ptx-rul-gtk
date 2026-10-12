@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -49,9 +49,9 @@
 #include "ptx_NSC_Int.h"
 #include "ptx_NSC_StateMachine.h"
 #include "ptx_NSC_RfSetRoutingTable.h"
-#include <string.h>
-#include <stdlib.h>
 #include "ptx_NSC_RfSetRoutingTable_Int.h"
+#include <string.h>
+
 
 /*
  * ####################################################################################################################
@@ -59,52 +59,40 @@
  * ####################################################################################################################
  */
 
-/* Define the ordering of RoutingType */
-typedef enum ptx_NSC_RoutingTypeOrder
-{
-    PTX_NSC_ROUTING_TYPE_ORDER_AID = 0,
-    PTX_NSC_ROUTING_TYPE_ORDER_PROTOCOL,
-    PTX_NSC_ROUTING_TYPE_ORDER_TECHNOLOGY,
-    PTX_NSC_ROUTING_TYPE_ORDER_MAX
-} ptx_NSC_RoutingTypeOrder_t;
-
-/* Mapping of RoutingTypes to their order */
-static const ptx_NSC_RoutingTypeOrder_t sRoutingTypeOrderMap[] =
-{
-    [Aid_Based] = PTX_NSC_ROUTING_TYPE_ORDER_AID,
-    [Protocol_Based] = PTX_NSC_ROUTING_TYPE_ORDER_PROTOCOL,
-    [Technology_Based] = PTX_NSC_ROUTING_TYPE_ORDER_TECHNOLOGY,
-};
-
 /*
  * Definitions for NSC_RFSETROUTINGTABLE_CMD.
  */
 #define PTX_NSC_RFSETROUTINGTABLE_CMD_OPCODE_LENGTH         (0x01u)     /* NSC RF Set Routing Table Opcode length */
-#define PTX_NSC_RFSETROUTINGTABLE_CMD_RT_LENGTH             (0x01u)     /* NSC RF Set Routing Table pID length */
-#define PTX_NSC_RFSETROUTINGTABLE_CMD_PID_LENGTH            (0x01u)     /* NSC RF Set Routing Table pID length */
+#define PTX_NSC_RFSETROUTINGTABLE_CMD_RT_LENGTH_PARAMLEN    (0x01u)     /* NSC RF Set Routing Table RT_LENGTH parameter length */
+#define PTX_NSC_RFSETROUTINGTABLE_CMD_PID_PARAMLEN          (0x01u)     /* NSC RF Set Routing Table pID length */
+#define PTX_NSC_RFSETROUTINGTABLE_CMD_PID_VALUE             (0x01u)     /* NSC RF Set Routing Table pID value */
+#define PTX_NSC_RFSETROUTINGTABLE_CMD_RT_LENGTH_INDEX       PTX_NSC_RFSETROUTINGTABLE_CMD_OPCODE_LENGTH /* Offset of RT_LENGTH parameter in the buffer */
 
 #define PTX_NSC_RFSETROUTINGTABLE_CMD_OVH_LENGTH            PTX_NSC_RFSETROUTINGTABLE_CMD_OPCODE_LENGTH + \
-    PTX_NSC_RFSETROUTINGTABLE_CMD_PID_LENGTH + \
-    PTX_NSC_RFSETROUTINGTABLE_CMD_RT_LENGTH
+    PTX_NSC_RFSETROUTINGTABLE_CMD_PID_PARAMLEN + \
+    PTX_NSC_RFSETROUTINGTABLE_CMD_RT_LENGTH_PARAMLEN
 
 #define PTX_NSC_RFSETROUTINGTABLE_BUFFER_MAX_LEN            PTX_NSC_LENGTH_MAX      /* RF Config Buffer maximum size */
 
-/* Variables to define the maximum capacity of the routing table and reserve the memory */
-static ptx_NSC_RoutingList_t sRtListCapacity[PTX_NSC_RT_USER_ENTRIES_CAPACITY];
-static uint8_t sAidData[PTX_NSC_RT_USER_ENTRIES_CAPACITY][PTX_NSC_RT_AID_MAX_LEN];
+#define PTX_NSC_RFSETROUTINGTABLE_ENTRYTYPE_MASK            (0x0Fu)     /* Lower nibble is relevant for detecting the type */
+#define PTX_NSC_RFSETROUTINGTABLE_AID_MATCH_BITS            (0x30u)     /* SELECT AID relevant bits */
+
+#define PTX_NSC_ROUTINGENTRY_SIZE_TECH                      (3u)        /* Technology routing entry size 3By: Type + Technology + Target */
+#define PTX_NSC_ROUTINGENTRY_SIZE_PROT                      (3u)        /* Protocol routing entry size 3By: Type + Protocol + Target */
+#define PTX_NSC_ROUTINGENTRY_SIZE_AID_FIXED                 (3u)        /* AID routing entry size -fixed part 3By: Type + Aid length + Target */
+
 
 /*
  * ####################################################################################################################
  * INTERNAL FUNCTIONS DECLARATIONS / HELPERS
  * ####################################################################################################################
  */
-
-static ptx_Status_t ptx_NSC_RfSetRoutingTable_Add_NewEntry (ptx_NSC_t *nscCtx, ptx_NSC_RoutingList_t *rtNew);
-static ptx_Status_t ptx_NSC_RfSetRoutingTable_Get_Memory(ptx_NSC_t *nscCtx, ptx_NSC_RoutingList_t **rtNew);
 static void ptx_NSC_RfSetRoutingTable_DeinitList(ptx_NSC_t *nscCtx);
+static ptx_NSC_RoutingList_t *ptx_NSC_RfSetRoutingTable_GetUnusedEntry (ptx_NSC_RoutingList_t *rtList, uint8_t *usedEntriesCount);
+static void ptx_NSC_RfSetRoutingTable_LoadEntries(ptx_NSC_RoutingList_t *rtList, uint8_t routetPrio, uint8_t *buffer, uint32_t *buffer_offset);
+static ptx_Status_t ptx_NSC_RoutingTable_CheckSize(ptx_NSC_RoutingTable_t *routingTable);
 
-static ptx_Status_t ptx_NSC_RoutingTable_CheckNscLength(ptx_NSC_t *nsc);
-static ptx_Status_t ptx_NSC_RoutingTable_AddToCmd(ptx_NSC_t *nsc, uint8_t *buffer, uint32_t *buffer_offset);
+
 /*
  * ####################################################################################################################
  * API FUNCTIONS
@@ -119,19 +107,16 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_Init(ptx_NSC_t *nscCtx)
 
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
     {
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_Init");
+
         (void)memset(&(nscCtx->RoutingTable), 0, sizeof(ptx_NSC_RoutingTable_t));
-
-        (void)memset(&sRtListCapacity, 0, sizeof(ptx_NSC_RoutingList_t)*PTX_NSC_RT_USER_ENTRIES_CAPACITY);
-        /* initialize start to linked list to NULL*/
-        nscCtx->RoutingTable.RoutingEntries = NULL;
-
-        (void)memset(&sAidData, 0, PTX_NSC_RT_AID_MAX_LEN * PTX_NSC_RT_USER_ENTRIES_CAPACITY);
 
         for (uint32_t idx = 0; idx < PTX_NSC_RT_USER_ENTRIES_CAPACITY; idx++)
         {
-            sRtListCapacity[idx].Entry.AidRouting.Aid = &sAidData[idx][0];
-            sRtListCapacity[idx].EntryType = MaxNumOfTypes;
+            /* Initially set to invalid entry type */
+            nscCtx->RoutingTable.RoutingEntries[idx].EntryType = MaxNumOfTypes;
         }
+
         status = PTX_STATUS_SUCCESS;
     }
 
@@ -144,6 +129,8 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_Deinit(ptx_NSC_t *nscCtx)
 
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
     {
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_Deinit");
+
         /*
          * De-allocate Routing Table List.
          */
@@ -163,49 +150,34 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_Deinit(ptx_NSC_t *nscCtx)
 ptx_Status_t ptx_NSC_RfSetRoutingTable_AddEntryAid(ptx_NSC_t *nscCtx, uint8_t *aid, uint32_t lengthOfAid,
                                                    ptx_NSC_RoutingTarget_t target, uint8_t qualifier, uint8_t powerState, uint8_t aidMatchType)
 {
-    /* First in search order -> put it first in table */
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    const uint32_t max_lenthOfAid = 256;
-    uint32_t aid_entry_size = 2 + lengthOfAid;
 
-    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != aid) && (lengthOfAid <= max_lenthOfAid ))
+    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != aid) && (lengthOfAid <= PTX_NSC_RT_AID_MAX_LEN))
     {
-        if ((nscCtx->RoutingTable.BytesUsed  + aid_entry_size) <= (uint32_t)PTX_NSC_RT_CAPACITY)
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_AddEntryAid");
+
+        /* Get the first unused entry from the list. If all are used, NULL is returned. */
+        ptx_NSC_RoutingList_t *rt_new = ptx_NSC_RfSetRoutingTable_GetUnusedEntry(&nscCtx->RoutingTable.RoutingEntries[0], NULL);
+
+        if (NULL != rt_new)
         {
-            ptx_NSC_RoutingList_t *rt_new = NULL;
-            if (PTX_NSC_RT_USER_ENTRIES_CAPACITY > nscCtx->RoutingTable.NumOfEntries)
-            {
-                /* there is room left in the table */
-                status = PTX_STATUS_SUCCESS;
-            }
-            else
-            {
-                /* Specified Routing Size is too small, see PTX_NSC_RT_USER_ENTRIES_CAPACITY */
-                status = PTX_STATUS_E_NSC_INSUFFICIENT_RESOURCES;
-            }
+            rt_new->EntryType = Aid_Based;
 
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* at this point we know that there is still room for an entry */
-                status = ptx_NSC_RfSetRoutingTable_Get_Memory(nscCtx, &rt_new);
+            /* Copy AID data. */
+            (void)memcpy(rt_new->Entry.AidRouting.Aid, aid, lengthOfAid);
+            rt_new->Entry.AidRouting.LengthOfAid = lengthOfAid;
+            rt_new->Entry.AidRouting.Target = target;
+            rt_new->Entry.AidRouting.Qualifier = qualifier;
+            rt_new->Entry.AidRouting.PowerState = powerState;
+            
+            /* Adjust matching bits */
+            rt_new->Entry.AidRouting.MatchingType = (uint8_t)(aidMatchType & PTX_NSC_RFSETROUTINGTABLE_AID_MATCH_BITS);
 
-                if (PTX_STATUS_SUCCESS == status && NULL != rt_new)
-                {
-                    rt_new->EntryType = (ptx_NSC_RoutingType_t) (Aid_Based | aidMatchType);
-                    (void)memcpy(rt_new->Entry.AidRouting.Aid, aid, lengthOfAid);
-                    rt_new->Entry.AidRouting.LengthOfAid = lengthOfAid;
-                    rt_new->Entry.AidRouting.Target = target;
-                    rt_new->Entry.AidRouting.Qualifier = qualifier;
-                    rt_new->Entry.AidRouting.PowerState = powerState;
-
-                    /* add it to the linked list */
-                    status = ptx_NSC_RfSetRoutingTable_Add_NewEntry (nscCtx, rt_new);
-                    nscCtx->RoutingTable.BytesUsed += aid_entry_size;
-                }
-            }
+            status = PTX_STATUS_SUCCESS;
         }
         else
         {
+            /* Routing table size limit has been reached. */
             status = PTX_STATUS_E_NSC_INSUFFICIENT_RESOURCES;
         }
     }
@@ -220,41 +192,24 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_AddEntryTech(ptx_NSC_t *nscCtx, ptx_NSC_R
 
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
     {
-        if (nscCtx->RoutingTable.BytesUsed + PTX_NSC_RT_TECH_ENTRY_SIZE <= (uint32_t)PTX_NSC_RT_CAPACITY)
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_AddEntryTech");
+
+        /* Get the first unused entry from the list. If all are used, NULL is returned. */
+        ptx_NSC_RoutingList_t *rt_new = ptx_NSC_RfSetRoutingTable_GetUnusedEntry(&nscCtx->RoutingTable.RoutingEntries[0], NULL);
+
+        if (NULL != rt_new)
         {
-            ptx_NSC_RoutingList_t *rt_new = NULL;
-            if (PTX_NSC_RT_USER_ENTRIES_CAPACITY > nscCtx->RoutingTable.NumOfEntries)
-            {
-                /* there is room left in the table */
-                status = PTX_STATUS_SUCCESS;
-            }
-            else
-            {
-                /* Specified Routing Size is too small, see PTX_NSC_RT_USER_ENTRIES_CAPACITY */
-                status = PTX_STATUS_E_NSC_INSUFFICIENT_RESOURCES;
-            }
+            rt_new->EntryType = Technology_Based;
+            rt_new->Entry.TechRouting.Tech = tech;
+            rt_new->Entry.TechRouting.Target = target;
+            rt_new->Entry.TechRouting.Qualifier = qualifier;
+            rt_new->Entry.TechRouting.PowerState = powerState;
 
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* at this point we know that there is still room for an entry */
-                status = ptx_NSC_RfSetRoutingTable_Get_Memory(nscCtx, &rt_new);
-
-                if (PTX_STATUS_SUCCESS == status && NULL != rt_new)
-                {
-                    rt_new->EntryType = Technology_Based;
-                    rt_new->Entry.TechRouting.Tech = tech;
-                    rt_new->Entry.TechRouting.Target = target;
-                    rt_new->Entry.TechRouting.Qualifier = qualifier;
-                    rt_new->Entry.TechRouting.PowerState = powerState;
-
-                    /* add it to the linked list */
-                    status = ptx_NSC_RfSetRoutingTable_Add_NewEntry (nscCtx, rt_new);
-                    nscCtx->RoutingTable.BytesUsed += PTX_NSC_RT_TECH_ENTRY_SIZE;
-                }
-            }
+            status = PTX_STATUS_SUCCESS;
         }
         else
         {
+            /* Routing table size limit has been reached. */
             status = PTX_STATUS_E_NSC_INSUFFICIENT_RESOURCES;
         }
     }
@@ -269,43 +224,25 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_AddEntryProtocol(ptx_NSC_t *nscCtx,  ptx_
 
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
     {
-        if (nscCtx->RoutingTable.BytesUsed + PTX_NSC_RT_PROT_ENTRY_SIZE <= (uint32_t)PTX_NSC_RT_CAPACITY)
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_AddEntryProtocol");
+
+        /* Get the first unused entry from the list. If all are used, NULL is returned. */
+        ptx_NSC_RoutingList_t *rt_new = ptx_NSC_RfSetRoutingTable_GetUnusedEntry(&nscCtx->RoutingTable.RoutingEntries[0], NULL);
+
+        if (NULL != rt_new)
         {
-            ptx_NSC_RoutingList_t *rt_new = NULL;
-            if (PTX_NSC_RT_USER_ENTRIES_CAPACITY > nscCtx->RoutingTable.NumOfEntries)
-            {
-                /* there is room left in the table */
-                status = PTX_STATUS_SUCCESS;
-            }
-            else
-            {
-                /* Specified Routing Size is too small, see PTX_NSC_RT_USER_ENTRIES_CAPACITY */
-                status = PTX_STATUS_E_NSC_INSUFFICIENT_RESOURCES;
-            }
+            rt_new->EntryType = Protocol_Based;
+            rt_new->Entry.ProtocolRouting.Target = target;
+            rt_new->Entry.ProtocolRouting.Protocol = protocol;
+            rt_new->Entry.ProtocolRouting.Qualifier = qualifier;
+            rt_new->Entry.ProtocolRouting.PowerState = powerState;
 
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* at this point we know that there is still room for an entry */
-                status = ptx_NSC_RfSetRoutingTable_Get_Memory(nscCtx, &rt_new);
-
-
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    rt_new->EntryType = Protocol_Based;
-                    rt_new->Entry.ProtocolRouting.Target = target;
-                    rt_new->Entry.ProtocolRouting.Protocol = protocol;
-                    rt_new->Entry.ProtocolRouting.Qualifier = qualifier;
-                    rt_new->Entry.ProtocolRouting.PowerState = powerState;
-
-                    /* add it to the linked list */
-                    status = ptx_NSC_RfSetRoutingTable_Add_NewEntry (nscCtx, rt_new);
-                    nscCtx->RoutingTable.BytesUsed += PTX_NSC_RT_PROT_ENTRY_SIZE;
-                }
-            }
+            status = PTX_STATUS_SUCCESS;
         }
         else
         {
-            status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
+            /* Routing table size limit has been reached. */
+            status = PTX_STATUS_E_NSC_INSUFFICIENT_RESOURCES;
         }
     }
 
@@ -350,6 +287,8 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_ClearEntries(ptx_NSC_t *nscCtx)
 
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
     {
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_ClearEntries");
+
         ptx_NSC_RfSetRoutingTable_DeinitList(nscCtx);
         status = PTX_STATUS_SUCCESS;
     }
@@ -357,64 +296,66 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_ClearEntries(ptx_NSC_t *nscCtx)
     return status;
 }
 
-ptx_Status_t ptx_NSC_RfSetRoutingTable_GetEntryStart(ptx_NSC_t *nscCtx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
-    {
-        nscCtx->RoutingTable.ReadNumOfEntries = 0;
-        status = PTX_STATUS_SUCCESS;
-    }
-    return status;
-}
-
-ptx_Status_t ptx_NSC_RfSetRoutingTable_GetEntry(ptx_NSC_t *nscCtx, ptx_NSC_RoutingEntry_t *entry, ptx_NSC_RoutingType_t *entryType)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != nscCtx->RoutingTable.RoutingEntries) && (NULL != entry) && (NULL != entryType))
-    {
-        status = PTX_STATUS_SUCCESS;
-
-        if (0 == nscCtx->RoutingTable.ReadNumOfEntries)
-        {
-            /* First item to read */
-            nscCtx->RoutingTable.ReadRoutingEntry = nscCtx->RoutingTable.RoutingEntries;
-        }
-        else
-        {
-            if (NULL == nscCtx->RoutingTable.ReadRoutingEntry )
-            {
-                /* Last entry reached in the previous loop. Not current entry available. */
-                status = PTX_STATUS_E_GEN_NOT_FOUND;
-            }
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* Copy values to the provided buffers by the caller. */
-            (void)memcpy(entry, &nscCtx->RoutingTable.ReadRoutingEntry->Entry, sizeof(ptx_NSC_RoutingEntry_t));
-            *entryType = nscCtx->RoutingTable.ReadRoutingEntry->EntryType;
-
-            nscCtx->RoutingTable.ReadNumOfEntries++;
-
-            /* Jump to following entry in the list. This will be used by the following request. */
-            nscCtx->RoutingTable.ReadRoutingEntry = nscCtx->RoutingTable.ReadRoutingEntry->NextEntry;
-        }
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_NSC_RfSetRoutingTable_GetNumOfEntries(ptx_NSC_t *nscCtx, uint32_t *numOfItems)
+ptx_Status_t ptx_NSC_RfSetRoutingTable_GetNumOfEntries(ptx_NSC_t *nscCtx, uint8_t *numOfItems)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != numOfItems))
     {
-        *numOfItems = nscCtx->RoutingTable.NumOfEntries;
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_GetEntryStart");
+
+        /* To get the number of used entry we need to provide valid numOfItems argument. Returned value is irrelevant. */
+        (void) ptx_NSC_RfSetRoutingTable_GetUnusedEntry (nscCtx->RoutingTable.RoutingEntries, numOfItems);
         st = PTX_STATUS_SUCCESS;
+    }
+
+    return st;
+}
+
+ptx_Status_t ptx_NSC_RfSetRoutingTable_GetEntry(ptx_NSC_t *nscCtx, uint8_t entryType, ptx_NSC_RoutingList_t *rtEntry, uint8_t *itemIdx)
+{
+    ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != rtEntry) && (NULL != itemIdx))
+    {
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_GetEntry");
+
+        uint8_t item_found = 0;
+
+        /* Iterate starting from the given index and find the first entry with the provided type. */
+        for (uint8_t i = *itemIdx; i < PTX_NSC_RT_USER_ENTRIES_CAPACITY; i++)
+        {
+            item_found = 0;
+            if (MaxNumOfTypes == nscCtx->RoutingTable.RoutingEntries[i].EntryType)
+            {
+                /* Unused entry. Skip. */
+                continue;
+            }
+
+            if (PTX_NSC_ROUTINGENTRY_ALL_TYPES == entryType)
+            {
+                /* Just take the first used entry. The type does not matter. */
+                item_found = 1;
+            }
+            else if (entryType == (uint8_t)nscCtx->RoutingTable.RoutingEntries[i].EntryType)
+            {
+                /* Exact entry type found. */
+                item_found = 1;
+            }
+            else
+            {
+                /* Just continue searching for a used entry. */
+            }
+
+            if(1 == item_found)
+            {
+                /* Entry type found. */
+                memcpy(rtEntry, &nscCtx->RoutingTable.RoutingEntries[i], sizeof(ptx_NSC_RoutingList_t));
+                *itemIdx = i;
+                st = PTX_STATUS_SUCCESS;
+                break;
+            }
+        }
     }
 
     return st;
@@ -426,6 +367,8 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_EnableForcedRouting(ptx_NSC_t *nscCtx, ui
 
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
     {
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_EnableForcedRouting");
+
         nscCtx->RoutingTable.ForcedRoutingInfo.ForcedRoutingEnabled = mode;
         nscCtx->RoutingTable.ForcedRoutingInfo.Target = target;
         nscCtx->RoutingTable.ForcedRoutingInfo.PowerState = powerState;
@@ -439,39 +382,45 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable(ptx_NSC_t *nsc)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) )
+    if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfSetRoutingTable");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_RfSetRoutingTable, NULL);
 
         if (PTX_STATUS_SUCCESS == status)
         {
+            status = ptx_NSC_RoutingTable_CheckSize(&nsc->RoutingTable);
+        }
 
-            status = ptx_NSC_RoutingTable_CheckNscLength(nsc);
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            uint8_t nsc_bufer[PTX_NSC_RFSETROUTINGTABLE_BUFFER_MAX_LEN];
+            memset(nsc_bufer, 0, PTX_NSC_RFSETROUTINGTABLE_BUFFER_MAX_LEN);
+            uint32_t nsc_buffer_pos = 0;
+
+            /* Add command opcode. */
+            nsc_bufer[nsc_buffer_pos] = PTX_NSC_RF_SET_ROUTING_TABLE_CMD_OPCODE;
+            nsc_buffer_pos++;
+
+            /* Skip RT Length: it will be added after all entries are added. Here just account 1 byte for RT_LENGTH. */
+            nsc_buffer_pos++;
+
+            /* Add pID value */
+            nsc_bufer[nsc_buffer_pos] = PTX_NSC_RFSETROUTINGTABLE_CMD_PID_VALUE;
+            nsc_buffer_pos++;
+
+            for(uint8_t route_priority = (uint8_t) NSC_RTPriority_Aid; route_priority < (uint8_t) NSC_RTPriority_SIZE; route_priority++)
+            {
+                /* Load all entries with the given priority into the command buffer. */
+                ptx_NSC_RfSetRoutingTable_LoadEntries(nsc->RoutingTable.RoutingEntries, route_priority, nsc_bufer, &nsc_buffer_pos);
+            }
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                uint8_t nsc_bufer[PTX_NSC_RFSETROUTINGTABLE_BUFFER_MAX_LEN];
-                memset(nsc_bufer, 0, PTX_NSC_RFSETROUTINGTABLE_BUFFER_MAX_LEN);
-                uint32_t nsc_buffer_pos = 0;
-
-                /* Append RF-Set Routing Table command opcode. */
-                nsc_bufer[nsc_buffer_pos] = (uint8_t)PTX_NSC_RF_SET_ROUTING_TABLE_CMD_OPCODE;
-                nsc_buffer_pos++;
-
-                /* Append RT Length */
-                nsc_bufer[nsc_buffer_pos] = (uint8_t)nsc->RoutingTable.NumOfEntries;
-                nsc_buffer_pos++;
-
-                /* Append pID value */
-                nsc_bufer[nsc_buffer_pos] = 0x01u;
-                nsc_buffer_pos++;
-
-                status = ptx_NSC_RoutingTable_AddToCmd(nsc, nsc_bufer, &nsc_buffer_pos);
-
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, nsc_bufer, nsc_buffer_pos);
-                }
+                /* Append RT Length: total number of bytes - (opcode length + RT_LENGTH parameter length) */
+                nsc_bufer[PTX_NSC_RFSETROUTINGTABLE_CMD_RT_LENGTH_INDEX] = (uint8_t)(nsc_buffer_pos-2);
+                status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, nsc_bufer, nsc_buffer_pos);
             }
         }
 
@@ -493,188 +442,176 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable(ptx_NSC_t *nsc)
     return status;
 }
 
+
 /*
  * ####################################################################################################################
  * INTERNAL FUNCTIONS / CALLBACK
  * ####################################################################################################################
  */
 
-static ptx_Status_t ptx_NSC_RfSetRoutingTable_Add_NewEntry (ptx_NSC_t *nscCtx, ptx_NSC_RoutingList_t *rtNew)
+static ptx_NSC_RoutingList_t *ptx_NSC_RfSetRoutingTable_GetUnusedEntry (ptx_NSC_RoutingList_t *rtList, uint8_t *usedEntriesCount)
 {
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    /**
+     * There are few options to use this function:
+     * 1) To get the first unused entry. Parameter usedEntriesCount can be NULL.
+     * 2) To get the number of used entries in the list. Parameter usedEntriesCount must not be NULL.
+     * Or a mix of the 2 options: all parameters must be valid then.
+     */
+    
+    ptx_NSC_RoutingList_t *free_entry = NULL;
+    uint8_t used_entries_cnt = 0;
 
-    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != rtNew))
+    if (NULL != rtList)
     {
-        /* Determine the order rank of the new entry's RoutingType */
-        ptx_NSC_RoutingTypeOrder_t rt_new_order_rank = sRoutingTypeOrderMap[rtNew->EntryType];
-        ptx_NSC_RoutingList_t *rt_head = nscCtx->RoutingTable.RoutingEntries;
-        ptx_NSC_RoutingTypeOrder_t rt_head_rank = NULL != rt_head ? sRoutingTypeOrderMap[rt_head->EntryType] : PTX_NSC_ROUTING_TYPE_ORDER_MAX;
-
-        /* If the list is empty or the new entry should be the new head, update the head */
-        if ((rt_head == NULL) || (rt_head_rank > rt_new_order_rank))
+        /* Iterate and find a space the first unused entry. */
+        for (uint8_t idx = 0; idx < PTX_NSC_RT_USER_ENTRIES_CAPACITY; idx++)
         {
-            rtNew->NextEntry = rt_head;
-            nscCtx->RoutingTable.RoutingEntries = rtNew;
-            nscCtx->RoutingTable.NumOfEntries++;
-            status = PTX_STATUS_SUCCESS;
-        }
-        else if ((rt_head != NULL) && (rt_head_rank <= rt_new_order_rank))
-        {
-            /* Traverse the list to find the correct position for the new entry */
-            ptx_NSC_RoutingList_t *current = rt_head;
-            while (current->NextEntry != NULL && sRoutingTypeOrderMap[current->NextEntry->EntryType] <= rt_new_order_rank)
+            if (MaxNumOfTypes == rtList[idx].EntryType)
             {
-                current = current->NextEntry;
-            }
-
-            /* Insert the new entry at the correct position */
-            rtNew->NextEntry = current->NextEntry;
-            current->NextEntry = rtNew;
-            nscCtx->RoutingTable.NumOfEntries++;
-            status = PTX_STATUS_SUCCESS;
-        }
-        else
-        {
-            status = PTX_STATUS_E_NSC_INTERNAL;
-        }
-    }
-    return status;
-}
-
-static ptx_Status_t ptx_NSC_RfSetRoutingTable_Get_Memory(ptx_NSC_t *nscCtx, ptx_NSC_RoutingList_t **rtNew)
-{
-    ptx_Status_t status = PTX_STATUS_E_NSC_INSUFFICIENT_RESOURCES;
-
-    if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
-    {
-        // Iterate and find a space to place the new RT entry
-        for (uint32_t idx = 0; idx < PTX_NSC_RT_USER_ENTRIES_CAPACITY; idx++)
-        {
-            if (sRtListCapacity[idx].EntryType == MaxNumOfTypes)
-            {
-                // Check for unused entries
-                *rtNew = &sRtListCapacity[idx];
-                status = PTX_STATUS_SUCCESS;
+                free_entry = &rtList[idx];
                 break;
             }
+            
+            used_entries_cnt++;
         }
     }
 
-    return status;
+    if(NULL != usedEntriesCount)
+    {
+        /* Update the argument if provided. */
+        *usedEntriesCount = used_entries_cnt;
+    }
+
+    return free_entry;
 }
 
 static void ptx_NSC_RfSetRoutingTable_DeinitList(ptx_NSC_t *nscCtx)
 {
     if (PTX_COMP_CHECK(nscCtx, Comp_NSC))
     {
-        nscCtx->RoutingTable.NumOfEntries = 0;
-        nscCtx->RoutingTable.ReadNumOfEntries = 0;
-        nscCtx->RoutingTable.RoutingEntries = NULL;
-        nscCtx->RoutingTable.BytesUsed = 0;
+        PTX_LOG_V(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_DeinitList");
 
-        /* reset internal buffers */
-        (void)memset(&sRtListCapacity, 0, sizeof(ptx_NSC_RoutingList_t)*PTX_NSC_RT_USER_ENTRIES_CAPACITY);
-        (void)memset(&sAidData, 0, PTX_NSC_RT_AID_MAX_LEN * PTX_NSC_RT_USER_ENTRIES_CAPACITY);
+        /* Reset the entry list */
+        (void)memset(&nscCtx->RoutingTable.RoutingEntries[0], 0, PTX_NSC_RT_USER_ENTRIES_CAPACITY * sizeof(ptx_NSC_RoutingList_t));
 
         for (uint32_t idx = 0; idx < PTX_NSC_RT_USER_ENTRIES_CAPACITY; idx++)
         {
-            sRtListCapacity[idx].Entry.AidRouting.Aid = &sAidData[idx][0];
-            sRtListCapacity[idx].EntryType = MaxNumOfTypes;
+            /* Set to invalid entry type */
+            nscCtx->RoutingTable.RoutingEntries[idx].EntryType = MaxNumOfTypes;
         }
     }
 }
 
-static ptx_Status_t ptx_NSC_RoutingTable_CheckNscLength(ptx_NSC_t *nsc)
+static ptx_Status_t ptx_NSC_RoutingTable_CheckSize(ptx_NSC_RoutingTable_t *routingTable)
 {
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    ptx_Status_t status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
 
-    uint32_t nscRtCmdLength = PTX_NSC_RFSETROUTINGTABLE_CMD_OVH_LENGTH + nsc->RoutingTable.BytesUsed;
+    /* Check if all the entries can fit into the command buffer. If yes, return SUCCESS.
+     * Otherwise, keep the error.
+     */
 
-    if ( PTX_NSC_RFSETROUTINGTABLE_BUFFER_MAX_LEN >= nscRtCmdLength)
+    uint32_t cmd_length = PTX_NSC_RFSETROUTINGTABLE_CMD_OVH_LENGTH;
+
+    /* Iterate and find a space the first unused entry. */
+    for (uint32_t idx = 0; idx < PTX_NSC_RT_USER_ENTRIES_CAPACITY; idx++)
     {
+        if (Technology_Based == routingTable->RoutingEntries[idx].EntryType)
+        {
+            cmd_length = (uint32_t)(cmd_length + PTX_NSC_ROUTINGENTRY_SIZE_TECH);
+        }
+        else if (Protocol_Based == routingTable->RoutingEntries[idx].EntryType)
+        {
+            cmd_length = (uint32_t)(cmd_length + PTX_NSC_ROUTINGENTRY_SIZE_PROT);
+        }
+        else if (Aid_Based == routingTable->RoutingEntries[idx].EntryType)
+        {
+            cmd_length = (uint32_t)(cmd_length + PTX_NSC_ROUTINGENTRY_SIZE_AID_FIXED);
+            /* Add variable part: AID length */
+            cmd_length = (uint32_t)(cmd_length + routingTable->RoutingEntries[idx].Entry.AidRouting.LengthOfAid);
+        }
+        else
+        {
+            /* Just continue */
+        }
+    }
+
+    if ( PTX_NSC_RFSETROUTINGTABLE_BUFFER_MAX_LEN >= cmd_length)
+    {
+        
         status = PTX_STATUS_SUCCESS;
     }
-    else
-    {
-        status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
-    }
 
     return status;
 }
 
-static ptx_Status_t ptx_NSC_RoutingTable_AddToCmd(ptx_NSC_t *nsc, uint8_t *buffer, uint32_t *buffer_offset)
+static void ptx_NSC_RfSetRoutingTable_LoadEntries(ptx_NSC_RoutingList_t *rtList, uint8_t routetPrio, uint8_t *buffer, uint32_t *buffer_offset)
 {
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    /*
+     * Load all the entries of the given priority from the list into the buffer.
+     */
 
-    uint32_t idx = *buffer_offset;
+    uint32_t pos = *buffer_offset;
 
-    uint32_t tableEntries;
-    uint32_t fetchedEntries = 0;
-    uint32_t parsedTableEntries = 0;
-
-    status = ptx_NSC_RfSetRoutingTable_GetNumOfEntries(nsc, &tableEntries);
-
-    if (PTX_STATUS_SUCCESS == status)
+    /* Map priority to the entry type. */
+    ptx_NSC_RoutingType_t entry_type = MaxNumOfTypes;
+    switch((ptx_NSC_RTPriority_t)routetPrio)
     {
-        status = ptx_NSC_RfSetRoutingTable_GetEntryStart(nsc);
+        case NSC_RTPriority_Aid:
+            entry_type = Aid_Based;
+            break;
+        case NSC_RTPriority_Prot:
+            entry_type = Protocol_Based;
+            break;
+        case NSC_RTPriority_Tech:
+            entry_type = Technology_Based;
+            break;
+        default:
+            /* All others are not supported. */
+            break;
+    }
 
-        ptx_NSC_RoutingEntry_t  rt_entry;
-        ptx_NSC_RoutingType_t   rt_entry_type;
-
-        while ((PTX_STATUS_SUCCESS == status) && (fetchedEntries < tableEntries))
+    for (uint8_t idx = 0; (MaxNumOfTypes != entry_type) && (idx < PTX_NSC_RT_USER_ENTRIES_CAPACITY); idx++)
+    {
+        if (entry_type == rtList[idx].EntryType)
         {
-            status = ptx_NSC_RfSetRoutingTable_GetEntry(nsc, &rt_entry, &rt_entry_type);
+            /* Load the entry into the buffer. */
+            buffer[pos] = (uint8_t)entry_type;
+            pos++;
 
-            fetchedEntries++;
-
-            if (PTX_STATUS_SUCCESS == status)
+            switch (entry_type)
             {
-                buffer[idx] = (uint8_t)rt_entry_type;
-                idx++;
+                case Technology_Based:
+                    buffer[pos] = (uint8_t)rtList[idx].Entry.TechRouting.Tech;
+                    pos++;
+                    buffer[pos] = (uint8_t)rtList[idx].Entry.TechRouting.Target;
+                    pos++;
+                    break;
 
-                switch (rt_entry_type)
-                {
-                    case Technology_Based:
-                        buffer[idx] = (uint8_t)rt_entry.TechRouting.Tech;
-                        idx++;
-                        buffer[idx] = (uint8_t)rt_entry.TechRouting.Target;
-                        idx++;
-                        break;
+                case Protocol_Based:
+                    buffer[pos] = (uint8_t)rtList[idx].Entry.ProtocolRouting.Protocol;
+                    pos++;
+                    buffer[pos] = (uint8_t)rtList[idx].Entry.ProtocolRouting.Target;
+                    pos++;
+                    break;
 
-                    case Protocol_Based:
-                        buffer[idx] = (uint8_t)rt_entry.ProtocolRouting.Protocol;
-                        idx++;
-                        buffer[idx] = (uint8_t)rt_entry.ProtocolRouting.Target;
-                        idx++;
-                        break;
+                case Aid_Based:
+                    /* For AID entry type, we need to add the matching. */
+                    buffer[pos-1] = (uint8_t)(buffer[pos-1] | rtList[idx].Entry.AidRouting.MatchingType);
+                    buffer[pos] = (uint8_t)rtList[idx].Entry.AidRouting.LengthOfAid;
+                    pos++;
+                    (void)memcpy(&buffer[pos], rtList[idx].Entry.AidRouting.Aid, rtList[idx].Entry.AidRouting.LengthOfAid);
+                    pos += (uint8_t)rtList[idx].Entry.AidRouting.LengthOfAid;
+                    buffer[pos] = (uint8_t)rtList[idx].Entry.AidRouting.Target;
+                    pos++;
+                    break;
 
-                    case Aid_Based:
-                        buffer[idx] = (uint8_t)rt_entry.AidRouting.LengthOfAid;
-                        idx++;
-
-                        (void)memcpy(&buffer[idx], rt_entry.AidRouting.Aid, rt_entry.AidRouting.LengthOfAid);
-                        idx += (uint8_t)rt_entry.AidRouting.LengthOfAid;
-                        break;
-
-                    case Apdu_Based:
-                    /* FALL THROUGH */
-                    case System_Code_Based:
-                    /* FALL THROUGH */
-                    default:
-                        break;
-                }
-                parsedTableEntries++;
+                default:
+                    /* Skip unused entry. */
+                    break;
             }
         }
-
-        if (tableEntries == parsedTableEntries)
-        {
-            /* Return the correct status when all entries have been parsed */
-            status = PTX_STATUS_SUCCESS;
-
-            *buffer_offset = idx;
-        }
     }
 
-    return status;
+    *buffer_offset = pos;
 }
+

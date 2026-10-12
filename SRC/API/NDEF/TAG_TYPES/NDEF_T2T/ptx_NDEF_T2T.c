@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -122,7 +122,7 @@
 #define PTX_T2T_MIN_SIZE_FOR_DLA            (uint8_t)0x30    /* Minimum memory size for dynamic lock areas to be present. */
 #define PTX_T2T_MAX_NBR_NDEF_TLV            (uint8_t)1u      /* Internal maximum of NDEF TLVs to be handled. */
 #define PTX_T2T_SECTORSIZE                  (uint16_t)256u   /* T2T sector size. */
-#define PTX_T2T_LENGTHTHRESHOLD             (uint8_t)0xFF    /* Max Length for 1 L-Byte, above 3 L-Bytes are used. */
+#define PTX_T2T_LENGTHTHRESHOLD             (uint8_t)0xFF    /* Length too large for 1 L-Byte, starting from this, 3 L-Bytes are used. */
 #define PTX_T2T_SECTORTHRESHOLD             (uint8_t)0xFF    /* Block Address threshold within a block where a new Sector will be needed. */
 /*  */
 
@@ -185,9 +185,9 @@ static ptx_Status_t ptx_NDEF_T2T_HandleCCInfo(ptx_NDEF_T2T_t *ndefT2T);
  *  Read Data Blocks.
  *
  *  ndefT2T         Pointer to component.
- *  blockNumber       Block Number to start at.
- *  rx            Rx Buffer to write Data into.
- *  rxLen         Rx Buffer Length, maximum on input, Data length on output.
+ *  blockNumber     Block Number to start at.
+ *  rx              Rx Buffer to write Data into.
+ *  rxLen           Rx Buffer Length, maximum on input, Data length on output.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -196,12 +196,12 @@ static ptx_Status_t ptx_NDEF_T2T_ReadBlocks  (ptx_NDEF_T2T_t *ndefT2T, uint8_t b
 /*
  *  Write Data Block.
  *
- *  ndefT2T         Pointer to component.
+ *  ndefT2T           Pointer to component.
  *  blockNumber       Block Number to write to.
  *  blockData         Data to write.
  *  blockDataLen      Length of Data to write.
- *  rx            Rx Buffer to write Response into.
- *  rxLen         Rx Buffer Length, maximum on input, Response length on output.
+ *  rx                Rx Buffer to write Response into.
+ *  rxLen             Rx Buffer Length, maximum on input, Response length on output.
  *  msTimeout         Timeout in ms.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -210,11 +210,11 @@ static ptx_Status_t ptx_NDEF_T2T_WriteBlock  (ptx_NDEF_T2T_t *ndefT2T, uint8_t b
 
 /*
  *  Select a Sector.
- *  ndefT2T         Pointer to component.
- *  secNr             Sector Number to select.
- *  rx            Rx Buffer to write Response into.
- *  rxLen         Rx Buffer Length, maximum on input, Response length on output.
- *  msTimeout         Timeout in ms.
+ *  ndefT2T             Pointer to component.
+ *  secNr               Sector Number to select.
+ *  rx                  Rx Buffer to write Response into.
+ *  rxLen               Rx Buffer Length, maximum on input, Response length on output.
+ *  msTimeout           Timeout in ms.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -223,8 +223,8 @@ static ptx_Status_t ptx_NDEF_T2T_SectorSelect(ptx_NDEF_T2T_t *ndefT2T, uint8_t s
  *  Read all available NDEF TLVs.
  *
  *  ndefT2T             Pointer to component.
- *  msgBuffer         Buffer to store Messages.
- *  msgBufferOffset   Offset of Buffer to start filling on input, Buffer length at output.
+ *  msgBuffer           Buffer to store Messages.
+ *  msgBufferOffset     Offset of Buffer to start filling on input, Buffer length at output.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -233,11 +233,11 @@ static ptx_Status_t ptx_NDEF_T2T_ReadNDEFTLVs (ptx_NDEF_T2T_t *ndefT2T, uint32_t
 /*
  *  Read Loop for a single NDEF TLV.
  *
- *            ndefT2T       Pointer to component.
- *            msgLen          Message length to read.
- *        msgBuffer       Buffer to store Messages.
- *        bytesRead       Number of bytes read.
- *        msgBufferOffset Offset within message buffer for data read.
+ *  ndefT2T           Pointer to component.
+ *  msgLen            Message length to read.
+ *  msgBuffer         Buffer to store Messages.
+ *  bytesRead         Number of bytes read.
+ *  msgBufferOffset   Offset within message buffer for data read.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -246,10 +246,10 @@ static ptx_Status_t ptx_NDEF_T2T_ReadLoop(ptx_NDEF_T2T_t *ndefT2T, uint32_t msgL
 /*
  *  Specific TLV to be overwritten.
  *
- *            ndefT2T       Pointer to component.
- *            tx              Message data to be written.
- *            txLen           Length of Message.
- *            ndefTLVIndex    Index of TLV to be overwritten. If greater that existing number, new TLV is added.
+ *  ndefT2T         Pointer to component.
+ *  tx              Message data to be written.
+ *  txLen           Length of Message.
+ *  ndefTLVIndex    Index of TLV to be overwritten. If greater that existing number, new TLV is added.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -288,64 +288,35 @@ static ptx_Status_t ptx_NDEF_T2T_NDEFTLV_Handler(ptx_NDEF_T2T_t *ndefT2T, uint32
 /*
  *  Update NDEF Length TLV L field.
  *
- *  ndefT2T         Pointer to component.
+ *  ndefT2T           Pointer to component.
  *  msgLen            Length to be set.
  *  lengthSize        Number of Length Bytes to be set.
  *  ndefTLVIndex      Index of NDEF TLV which is to be updated.
+ *  dataStartAddress  Output parameter, is set to the address of the first value byte after the length bytes.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T2T_UpdateLength  (ptx_NDEF_T2T_t *ndefT2T, uint16_t msgLen, uint8_t lengthSize, uint8_t ndefTLVIndex);
-
-/*
- *  Process LockControl TLVs.
- *
- *  ndefT2T             Pointer to component.
- *
- * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-static ptx_Status_t ptx_NDEF_T2T_DLAProcessor  (ptx_NDEF_T2T_t *ndefT2T);
-
-/*
- *  Process MemoryControl TLVs.
- *
- *  ndefT2T             Pointer to component.
- *
- * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-static ptx_Status_t ptx_NDEF_T2T_RAProcessor   (ptx_NDEF_T2T_t *ndefT2T);
+static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t msgLen, uint8_t lengthSize, uint8_t ndefTLVIndex, uint16_t *dataStartAddress);
 
 /*
  *  Check if Area that is to be written to contains a DLA or RA.
  *
  *  ndefT2T             Pointer to component.
  *
- *  bytesToProcess    Number of Bytes to be written on input, Number of Bytes that can be written on output.
- *  preserveBytes        Byte Addresses which need to be preserved.
+ *  bytesToProcess      Number of Bytes to be written on input, Number of Bytes that can be written on output.
+ *  preserveBytes       Byte Addresses which need to be preserved.
+ *  startByte           Byte Address to start checking from
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T2T_AreaChecker   (ptx_NDEF_T2T_t *ndefT2T, uint16_t *bytesToProcess, uint16_t *preserveBytes);
-
-/*
- *  DLA and RA handling during Write.
- *
- *  ndefT2T             Pointer to component.
- *  bytesToWrite      Number of Bytes to be written.
- *  bytesWritten      Number of Bytes written after preservation of DLA and RA.
- *  endOffset             Offset at the end of the last Block to be written.
- *  preserveAddresses     List of Byte Addresses to be preserved.
- *
- * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-static ptx_Status_t ptx_NDEF_T2T_DataPreservation(ptx_NDEF_T2T_t *ndefT2T, uint16_t bytesToWrite, uint16_t *bytesWritten, uint8_t endOffset, uint16_t preserveAddresses[]);
+static ptx_Status_t ptx_NDEF_T2T_AreaChecker   (ptx_NDEF_T2T_t *ndefT2T, uint16_t *bytesToProcess, uint16_t *preserveBytes, uint16_t startByte);
 
 /*
  *  Function to check whether writing Data would overlap with other TLVs.
  *
- *  ndefT2T             Pointer to component.
- *  overwriteByteAddress  Either start address of TLV to be overwritten, or start address of new memory space.
- *  overwriteLength       Length of new TLV oject.
+ *  ndefT2T                 Pointer to component.
+ *  overwriteByteAddress    Either start address of TLV to be overwritten, or start address of new memory space.
+ *  overwriteLength         Length of new TLV oject.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -355,9 +326,9 @@ static ptx_Status_t ptx_NDEF_T2T_TLVProtection (ptx_NDEF_T2T_t *ndefT2T, uint16_
  *  Generate a NDEF TLV.
  *
  *  ndefT2T             Pointer to component.
- *  tlvLen                Length of the TLV. Dependent on this, either 1 or 3 L-bytes are set.
- * [in.out] buff              Buffer receiving the TLV, contains the V data on input.
- *  buffLen           Buffer length. Contains maximum length on input.
+ *  tlvLen              Length of the TLV. Dependent on this, either 1 or 3 L-bytes are set.
+ * [in.out] buff        Buffer receiving the TLV, contains the V data on input.
+ *  buffLen             Buffer length. Contains maximum length on input.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -366,7 +337,7 @@ static ptx_Status_t ptx_NDEF_T2T_TLVGenerator(ptx_NDEF_T2T_t *ndefT2T, uint32_t 
 /*
  *  Loop over a DLA to lock it.
  *
- *  ndefT2T               Pointer to component.
+ *  ndefT2T                 Pointer to component.
  *  nbrLockBytes            Number of Bytes to be locked.
  *  nbrReservedBits         Number of reserved, non-lock bits.
  *  firstOffset             Offset of first Byte within the block.
@@ -484,34 +455,26 @@ ptx_Status_t ptx_NDEF_T2T_CheckMessage (ptx_NDEF_T2T_t *ndefT2T)
             /* find NDEF available space */
             if (PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_NDEF_T2T_DLAProcessor(ndefT2T);
-                if (PTX_STATUS_SUCCESS == status)
+                non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.NumberOfLockTLVs * (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 2))); /* X (fixed) value bytes, 1 T and 1 L byte per TLV */
+                for (uint8_t i = 0; i < ndefT2T->TLVs.NumberOfLockTLVs; i++)
                 {
-                    non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.NumberOfLockTLVs * (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 2))); /* X (fixed) value bytes, 1 T and 1 L byte per TLV */
-                    for (uint8_t i = 0; i < ndefT2T->TLVs.NumberOfLockTLVs; i++)
-                    {
-                        non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.LockControlTLVs[i].LockArea[1] - ndefT2T->TLVs.LockControlTLVs[i].LockArea[0]));
-                    }
-
-                    status = ptx_NDEF_T2T_RAProcessor(ndefT2T);
-                    if (PTX_STATUS_SUCCESS == status)
-                    {
-                        non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.NumberOfMemoryTLVs * (PTX_T2T_MEMORY_CONTROL_TLV_LENGTH + 2))); // X (fixed) value bytes, 1 T and 1 L byte per TLV
-                        for (uint8_t i = 0; i < ndefT2T->TLVs.NumberOfMemoryTLVs; i++)
-                        {
-                            non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.MemoryControlTLVs[i].RsvdArea[1] - ndefT2T->TLVs.MemoryControlTLVs[i].RsvdArea[0]));
-                        }
-
-                        if (    (PTX_T2T_NO_TERMINATOR_TLV != ndefT2T->TLVs.TerminatorTLV.TerminatorTLVFound)
-                             && (0U != ndefT2T->TLVs.NumberOfNdefTLVs)  )
-                        {
-                            /* Only update the non_ndef_bytes if there is at least one TLV found, otherwise might be a leftover 0xFE byte */
-                            non_ndef_bytes++;
-                        }
-
-                        ndefT2T->TLVs.AvailableNdefLength = (uint16_t)(ndefT2T->CCParams.Size - non_ndef_bytes);
-                    }
+                    non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.LockControlTLVs[i].LockArea[1] - ndefT2T->TLVs.LockControlTLVs[i].LockArea[0]));
                 }
+
+                non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.NumberOfMemoryTLVs * (PTX_T2T_MEMORY_CONTROL_TLV_LENGTH + 2))); // X (fixed) value bytes, 1 T and 1 L byte per TLV
+                for (uint8_t i = 0; i < ndefT2T->TLVs.NumberOfMemoryTLVs; i++)
+                {
+                    non_ndef_bytes = (uint16_t)(non_ndef_bytes + (ndefT2T->TLVs.MemoryControlTLVs[i].RsvdArea[1] - ndefT2T->TLVs.MemoryControlTLVs[i].RsvdArea[0]));
+                }
+
+                if (    (PTX_T2T_NO_TERMINATOR_TLV != ndefT2T->TLVs.TerminatorTLV.TerminatorTLVFound)
+                        && (0U != ndefT2T->TLVs.NumberOfNdefTLVs)  )
+                {
+                    /* Only update the non_ndef_bytes if there is at least one TLV found, otherwise might be a leftover 0xFE byte */
+                    non_ndef_bytes++;
+                }
+
+                ndefT2T->TLVs.AvailableNdefLength = (uint16_t)(ndefT2T->CCParams.Size - non_ndef_bytes);
             }
         }
 
@@ -534,7 +497,7 @@ ptx_Status_t ptx_NDEF_T2T_ReadMessage (ptx_NDEF_T2T_t *ndefT2T, uint8_t *msgBuff
 
 
 
-    if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != msgBuffer) && (NULL != msgLen))
+    if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
         msg_buffer_size = *msgLen;
         if (0 != msg_buffer_size)
@@ -700,35 +663,38 @@ static ptx_Status_t ptx_NDEF_T2T_GetCCInfo (ptx_NDEF_T2T_t *ndefT2T)
 
         /* read CC-block and 3 following */
         status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, PTX_T2T_CC_BLOCK_NUMBER, &ndefT2T->RxBuffer[0], &rx_len);
-    }
 
-    if (PTX_STATUS_SUCCESS == status)
-    {
-        (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], PTX_T2T_BLOCKSIZE);
-
-        ndefT2T->CCParams.MagicNumber = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_MAGIC_NUMBER];
-        ndefT2T->CCParams.Version = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_VERSION_INFO];
-        ndefT2T->CCParams.MLEN = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_TAG_SIZE];
-        ndefT2T->CCParams.Access = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_ACCESS_COND];
-
-        ndefT2T->CCParams.ReadAccess = (ndefT2T->CCParams.Access >> PTX_T2T_MASK_4);
-        ndefT2T->CCParams.WriteAccess = (uint8_t)((PTX_T2T_CC_ACCESS_BITS != (ndefT2T->CCParams.Access & PTX_T2T_MASK_15)) ? (PTX_T2T_ACCESS_GRANTED) : (PTX_T2T_ACCESS_DENIED));
-
-        ndefT2T->CCParams.VersionMajor = (ndefT2T->CCParams.Version >> PTX_T2T_MASK_4);
-        ndefT2T->CCParams.VersionMinor = (ndefT2T->CCParams.Version & PTX_T2T_MASK_15);
-
-        ndefT2T->CCParams.Size = (uint16_t)((uint16_t)ndefT2T->CCParams.MLEN * PTX_T2T_CC_MLEN_FACTOR); /* MLEN in Bytes */
-        ndefT2T->CCParams.NumberOfBlocks = (uint16_t)((uint16_t)ndefT2T->CCParams.Size / (uint16_t)PTX_T2T_BLOCKSIZE);
-
-        ndefT2T->SectorParams.NumberOfSectors = (uint8_t)((ndefT2T->CCParams.NumberOfBlocks / PTX_T2T_SECTORSIZE) + 1);
-        if (0 == (ndefT2T->CCParams.NumberOfBlocks % PTX_T2T_SECTORSIZE))
+        if (PTX_STATUS_SUCCESS == status)
         {
-            ndefT2T->SectorParams.NumberOfSectors--;
+            if (PTX_T2T_BLOCKSIZE <= ndefT2T->WorkBufferSize)
+            {
+                (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], PTX_T2T_BLOCKSIZE);
+
+                ndefT2T->CCParams.MagicNumber = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_MAGIC_NUMBER];
+                ndefT2T->CCParams.Version = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_VERSION_INFO];
+                ndefT2T->CCParams.MLEN = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_TAG_SIZE];
+                ndefT2T->CCParams.Access = ndefT2T->WorkBuffer[PTX_T2T_CC_OFFSET_ACCESS_COND];
+
+                ndefT2T->CCParams.ReadAccess = (ndefT2T->CCParams.Access >> PTX_T2T_MASK_4);
+                ndefT2T->CCParams.WriteAccess = (uint8_t)((PTX_T2T_CC_ACCESS_BITS != (ndefT2T->CCParams.Access & PTX_T2T_MASK_15)) ? (PTX_T2T_ACCESS_GRANTED) : (PTX_T2T_ACCESS_DENIED));
+
+                ndefT2T->CCParams.VersionMajor = (ndefT2T->CCParams.Version >> PTX_T2T_MASK_4);
+                ndefT2T->CCParams.VersionMinor = (ndefT2T->CCParams.Version & PTX_T2T_MASK_15);
+
+                ndefT2T->CCParams.Size = (uint16_t)((uint16_t)ndefT2T->CCParams.MLEN * PTX_T2T_CC_MLEN_FACTOR); /* MLEN in Bytes */
+                ndefT2T->CCParams.NumberOfBlocks = (uint16_t)((uint16_t)ndefT2T->CCParams.Size / (uint16_t)PTX_T2T_BLOCKSIZE);
+
+                ndefT2T->SectorParams.NumberOfSectors = (uint8_t)((ndefT2T->CCParams.NumberOfBlocks / PTX_T2T_SECTORSIZE) + 1);
+                if (0 == (ndefT2T->CCParams.NumberOfBlocks % PTX_T2T_SECTORSIZE))
+                {
+                    ndefT2T->SectorParams.NumberOfSectors--;
+                }
+            }
+            else
+            {
+                status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
+            }
         }
-    }
-    else
-    {
-        /* nothing to do, return error status */
     }
 
     return status;
@@ -878,20 +844,28 @@ static ptx_Status_t ptx_NDEF_T2T_ReadNDEFTLVs (ptx_NDEF_T2T_t *ndefT2T, uint32_t
 
     uint8_t current_sector = 0;
     uint16_t msg_length = 0;
-    uint8_t length_field_len = 0;
-    uint8_t length_field_offset = 0;
     uint8_t ndef_bytes_to_jump;
     uint16_t msg_buffer_offset = 0;
     uint32_t msg_buffer_size;
     uint16_t bytes_read = 0;
-    uint8_t len_block_offset = 0;
 
     if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != msgBuffer) && (NULL != msgBufferOffset))
     {
+        /* If the last thing we did was not a CheckMsg, do a CheckMsg. */
+        if (!ndefT2T->LastOperationCheck)
+        {
+            status = ptx_NDEF_T2T_CheckMessage(ndefT2T);
+        }
+        else
+        {
+            status = PTX_STATUS_SUCCESS;
+        }
+
         msg_buffer_offset = *msgBufferOffset;
         msg_buffer_size = msgBufferSize;
 
-        for (uint8_t idx = 0; idx < ndefT2T->TLVs.NumberOfNdefTLVs; idx++)
+        uint8_t idx = 0;
+        while ((PTX_STATUS_SUCCESS == status) && (idx < ndefT2T->TLVs.NumberOfNdefTLVs))
         {
             ndefT2T->CurrentByteAddress = ndefT2T->TLVs.NDEFTLV[idx].ByteAddress;
             ndefT2T->CurrentBlockAddress = (ndefT2T->CurrentByteAddress / PTX_T2T_BLOCKSIZE);
@@ -908,48 +882,11 @@ static ptx_Status_t ptx_NDEF_T2T_ReadNDEFTLVs (ptx_NDEF_T2T_t *ndefT2T, uint32_t
                 status = PTX_STATUS_SUCCESS;
             }
 
-            /* If the last thing we did was not a CheckMsg, we need to read the L field again. */
-            if ((PTX_STATUS_SUCCESS == status) && (!ndefT2T->LastOperationCheck))
-            {
-                status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->RxBuffer[0], &ndefT2T->RxLen);
-
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    length_field_offset = (uint8_t)((ndefT2T->CurrentByteAddress + 1u) % PTX_T2T_BLOCKSIZE);
-                    length_field_len = (PTX_T2T_LENGTHTHRESHOLD != ndefT2T->RxBuffer[length_field_offset]) ? (PTX_T2T_NDEF_L_FIELD_SHORT) : (PTX_T2T_NDEF_L_FIELD_LONG);
-                }
-
-                ndefT2T->TLVs.NDEFTLV[idx].LengthByteOffset = length_field_offset;
-
-                if (PTX_T2T_NDEF_L_FIELD_SHORT == length_field_len)
-                {
-                    /* copy length block and get new length */
-                    ndefT2T->TLVs.NDEFTLV[idx].Length = (uint16_t)ndefT2T->RxBuffer[length_field_offset];
-                    memcpy(&ndefT2T->TLVs.NDEFTLV[idx].LengthBlock[0], &ndefT2T->RxBuffer[0], PTX_T2T_BLOCKSIZE);
-                }
-                else
-                {
-                    /* copy either one or two blocks of data and get new length */
-                    ndefT2T->TLVs.NDEFTLV[idx].Length = (uint16_t)((((uint16_t)ndefT2T->RxBuffer[length_field_offset + 1] << PTX_T2T_MASK_8) | ndefT2T->RxBuffer[length_field_offset + 2]));
-                    len_block_offset = (1u <= length_field_offset) ? (0x00) : (0x01);
-                    memcpy(&ndefT2T->TLVs.NDEFTLV[idx].LengthBlock[0],
-                           &ndefT2T->RxBuffer[PTX_T2T_BLOCKSIZE * len_block_offset],
-                           (uint32_t)(PTX_T2T_BLOCKSIZE + (PTX_T2T_BLOCKSIZE * len_block_offset)));
-                }
-            }
-
             /* skip L part of TLV and go to first V-byte */
             if (PTX_STATUS_SUCCESS == status)
             {
+                ndef_bytes_to_jump = (uint8_t)(ndefT2T->TLVs.NDEFTLV[idx].ValueStartByteAddress - ndefT2T->TLVs.NDEFTLV[idx].ByteAddress);
                 msg_length = ndefT2T->TLVs.NDEFTLV[idx].Length;
-                if (PTX_T2T_LENGTHTHRESHOLD <= msg_length)
-                {
-                    ndef_bytes_to_jump = 1 + PTX_T2T_NDEF_L_FIELD_LONG;
-                }
-                else
-                {
-                    ndef_bytes_to_jump = 1 + PTX_T2T_NDEF_L_FIELD_SHORT;
-                }
 
                 ndefT2T->CurrentByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + ndef_bytes_to_jump); //position of first NDEF value byte
             }
@@ -977,6 +914,8 @@ static ptx_Status_t ptx_NDEF_T2T_ReadNDEFTLVs (ptx_NDEF_T2T_t *ndefT2T, uint32_t
                     status = PTX_STATUS_E_NDEF_PROTOCOL_ERROR;
                 }
             }
+
+            idx++;
         }
     }
 
@@ -1036,25 +975,20 @@ static ptx_Status_t ptx_NDEF_T2T_ReadLoop(ptx_NDEF_T2T_t *ndefT2T, uint32_t msgL
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_read, &preserve_bytes[0]);
+                status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_read, &preserve_bytes[0], ndefT2T->CurrentByteAddress);
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
                     /* If there are areas to be ignored nearby, read blocks one at a time. */
                     if (0 != preserve_bytes[0])
                     {
-                        bytes_to_read = PTX_T2T_BLOCKSIZE;
+                        bytes_to_read = PTX_T2T_BLOCKSIZE - block_offset;
 
                         /* Areas always start at block offset 0. */
-                        if (ndefT2T->CurrentByteAddress != preserve_bytes[0])
+                        if (ndefT2T->CurrentByteAddress == preserve_bytes[block_offset])
                         {
-                            bytes_to_read = PTX_T2T_BLOCKSIZE;
-                        }
-                        else
-                        {
-                            bytes_to_read--;
                             /* Look if the full block is reserved. */
-                            for (uint8_t i = 1; i < PTX_T2T_BLOCKSIZE; i++)
+                            for (uint8_t i = block_offset; i < PTX_T2T_BLOCKSIZE; i++)
                             {
                                 if (0 != preserve_bytes[i])
                                 {
@@ -1072,7 +1006,7 @@ static ptx_Status_t ptx_NDEF_T2T_ReadLoop(ptx_NDEF_T2T_t *ndefT2T, uint32_t msgL
                         if (PTX_STATUS_SUCCESS == status)
                         {
                             /* Skip the full block. */
-                            ndefT2T->CurrentByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + PTX_T2T_BLOCKSIZE);
+                            ndefT2T->CurrentByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + (PTX_T2T_BLOCKSIZE - block_offset));
                             memcpy(&msgBuffer[msg_buffer_offset + bytes_read], &ndefT2T->RxBuffer[PTX_T2T_BLOCKSIZE - bytes_to_read], (uint32_t)bytes_to_read);
                         }
                     }
@@ -1131,6 +1065,7 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
     uint32_t rx_len;
 
     uint8_t emptyMsg = 0;
+    uint8_t generatedTLV = 0;
     uint8_t EMPTY_NDEF_MSG_T2T[] = {0xD8, 0x00, 0x00, 0x00};
 
     uint8_t previous_sector = 0;
@@ -1138,10 +1073,8 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
 
     uint16_t bytes_written = 0;
     uint16_t bytes_to_write;
-    uint16_t bytes_to_write_checker;
 
     uint16_t preserve_bytes[PTX_T2T_BLOCKS_PER_READ * PTX_T2T_BLOCKSIZE]; // reset every operation, write max of 4 but uses same preserve buffer
-    uint8_t next_preserve = 0;
 
     uint8_t end_offset = 0;
     uint8_t terminator_offset = 0;
@@ -1152,6 +1085,7 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
     uint8_t last_write = 0;
     uint8_t last_block_write = 0;
     uint8_t last_block_tlv_terminator_write = 0;
+    uint8_t current_block[PTX_T2T_BLOCKSIZE] = { 0x00, 0x00, 0x00, 0x00 };
 
     if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP))
     {
@@ -1187,7 +1121,7 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
             }
 
             length_size = (msg_len <= ((uint32_t)(PTX_T2T_LENGTHTHRESHOLD - 1))) ? (uint8_t)PTX_T2T_NDEF_L_FIELD_SHORT : (uint8_t)PTX_T2T_NDEF_L_FIELD_LONG;
-            ndef_tlv_header_size = (uint8_t)(length_size + 1);
+            ndef_tlv_header_size = (uint8_t)(length_size + 1); // Add T size, always 1
 
             /* Need to make new TLV? */
             if (ndefT2T->TLVs.NumberOfNdefTLVs >= ndefTLVIndex + 1)
@@ -1195,7 +1129,7 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
                 /* Will the data fit if we had ALL NDEF space for it? */
                 if (txLen <= (uint32_t)ndefT2T->TLVs.AvailableNdefLength)
                 {
-                    status = ptx_NDEF_T2T_TLVProtection(ndefT2T, ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].ByteAddress, (uint16_t)txLen);
+                    status = ptx_NDEF_T2T_TLVProtection(ndefT2T, ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].ByteAddress, (uint16_t)(txLen + length_size));
                 }
                 else
                 {
@@ -1205,13 +1139,11 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
                 if (PTX_STATUS_SUCCESS == status)
                 {
                     /* reset L-field */
-                    status = ptx_NDEF_T2T_UpdateLength(ndefT2T, 0, length_size, ndefTLVIndex);
+                    status = ptx_NDEF_T2T_UpdateLength(ndefT2T, 0, length_size, ndefTLVIndex, &ndefT2T->CurrentByteAddress);
 
                     if (PTX_STATUS_SUCCESS == status)
                     {
                         /* set internal memory position tracking */
-                        ndefT2T->CurrentByteAddress = ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].ByteAddress;
-                        ndefT2T->CurrentByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + ndef_tlv_header_size);
                         ndefT2T->CurrentBlockAddress = (ndefT2T->CurrentByteAddress / PTX_T2T_BLOCKSIZE);
                         ndefT2T->CurrentBlock = (uint8_t)(ndefT2T->CurrentBlockAddress % PTX_T2T_SECTORSIZE);
 
@@ -1224,62 +1156,83 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
 
                         if (PTX_STATUS_SUCCESS == status)
                         {
-                            previous_sector = current_sector;
-                            first_ndef_byte_offset = ndefT2T->CurrentByteAddress % PTX_T2T_BLOCKSIZE;
-                            bytes_to_write = (uint16_t)(PTX_T2T_BLOCKSIZE - first_ndef_byte_offset);
-                            status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_write, &preserve_bytes[0]);
+                            do {
+                                previous_sector = current_sector;
+                                first_ndef_byte_offset = ndefT2T->CurrentByteAddress % PTX_T2T_BLOCKSIZE;
+                                bytes_to_write = (uint16_t)(PTX_T2T_BLOCKSIZE - first_ndef_byte_offset);
+                                status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_write, &preserve_bytes[0], ndefT2T->CurrentByteAddress);
 
-                            /* preservation read needed? */
-                            if ((PTX_STATUS_SUCCESS == status) &&
-                                ((bytes_to_write != PTX_T2T_BLOCKSIZE - first_ndef_byte_offset) ||
-                                 (0 != first_ndef_byte_offset)) &&
-                                (0 != bytes_to_write))
-                            {
-                                status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->RxBuffer[0], &rx_len);
-                                (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], (uint32_t)PTX_T2T_BLOCKSIZE);
-                            }
-                            (void)memcpy(&ndefT2T->WorkBuffer[first_ndef_byte_offset], &msg_Buffer[0], (uint32_t)bytes_to_write);
-                            if (PTX_STATUS_SUCCESS == status)
-                            {
-                                /* Special case, manually preserve Data. */
-                                (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], (uint32_t)(first_ndef_byte_offset));
-
-                                for (uint8_t i = 0; i < (PTX_T2T_BLOCKSIZE - bytes_to_write - first_ndef_byte_offset); i++)
+                                /* preservation read needed? */
+                                if ((PTX_STATUS_SUCCESS == status) &&
+                                    ((bytes_to_write != PTX_T2T_BLOCKSIZE - first_ndef_byte_offset) ||
+                                    (0 != first_ndef_byte_offset)) &&
+                                    (0 != bytes_to_write))
                                 {
-                                    next_preserve = (uint8_t)(preserve_bytes[i] - ndefT2T->CurrentByteAddress);
+                                    status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->RxBuffer[0], &rx_len);
 
-                                    if ((PTX_T2T_MAX_NDEF_BYTE_OFFSET) >= next_preserve)
+                                    if (PTX_STATUS_SUCCESS == status)
                                     {
-                                        ndefT2T->WorkBuffer[first_ndef_byte_offset + next_preserve] = ndefT2T->RxBuffer[first_ndef_byte_offset + next_preserve];
+                                        (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], PTX_T2T_BLOCKSIZE);
                                     }
                                 }
-                            }
+                                (void)memcpy(&ndefT2T->WorkBuffer[first_ndef_byte_offset], &msg_Buffer[0], (uint32_t)bytes_to_write);
+
+                                if ((PTX_STATUS_SUCCESS == status) && (0 != bytes_to_write))
+                                {
+                                    rx_len = ndefT2T->RxBufferSize;
+                                    status = ptx_NDEF_T2T_WriteBlock(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->WorkBuffer[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+                                }
+                                if (PTX_STATUS_SUCCESS == status)
+                                {
+                                    /* increment counters, reset preservation */
+                                    if (0 != bytes_to_write)
+                                    {
+                                        bytes_written = (uint16_t)(bytes_written + bytes_to_write);
+                                        ndefT2T->CurrentByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + (bytes_to_write - end_offset));
+                                    }
+                                    else
+                                    {
+                                        ndefT2T->CurrentByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + PTX_T2T_BLOCKSIZE);
+                                    }
+
+                                    ndefT2T->CurrentBlockAddress = (ndefT2T->CurrentByteAddress / PTX_T2T_BLOCKSIZE);
+                                    ndefT2T->CurrentBlock = (uint8_t)(ndefT2T->CurrentBlockAddress % PTX_T2T_SECTORSIZE);
+
+                                    (void)memset(&preserve_bytes[0], 0, PTX_T2T_BLOCKSIZE);
+                                }
+                            } while (bytes_to_write != (PTX_T2T_BLOCKSIZE - first_ndef_byte_offset));
                         }
                     }
 
-                    if ((PTX_STATUS_SUCCESS == status) && (0 != bytes_to_write))
+                    if (ndefT2T->WorkBufferSize >= msg_len)
                     {
-                        rx_len = ndefT2T->RxBufferSize;
-                        status = ptx_NDEF_T2T_WriteBlock(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->WorkBuffer[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+                        memcpy(&ndefT2T->WorkBuffer[0], &msg_Buffer[0], (size_t)(msg_len));
                     }
-                    if (PTX_STATUS_SUCCESS == status)
+                    else
                     {
-                        /* increment counters, reset preservation */
-                        bytes_written = (uint16_t)(bytes_written + bytes_to_write);
-                        (void)memset(&preserve_bytes[0], 0, PTX_T2T_BLOCKSIZE);
-                        ndefT2T->CurrentByteAddress = (uint16_t)((ndefT2T->CurrentBlockAddress + 1) * 4);
+                        status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
                     }
                 }
             }
             else
             {
-                /* Try to make new TLV. */
-                status = ptx_NDEF_T2T_TLVGenerator(ndefT2T, txLen, &msg_Buffer[0], &msg_len);
-
-                if (PTX_STATUS_SUCCESS == status)
+                if (ndefT2T->WorkBufferSize >= msg_len)
                 {
-                    /* New TLV was created, stored in msg_Buffer[], at index = 0 (including T and L values which will be written) */
                     memcpy(&ndefT2T->WorkBuffer[0], &msg_Buffer[0], (size_t)(msg_len));
+                    txLen = msg_len;
+                    msg_len = (uint16_t)ndefT2T->WorkBufferSize;
+
+                    /* Try to make new TLV. */
+                    status = ptx_NDEF_T2T_TLVGenerator(ndefT2T, txLen, &ndefT2T->WorkBuffer[0], &msg_len);
+
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        generatedTLV = 1u;
+                    }
+                }
+                else
+                {
+                    status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
                 }
             }
 
@@ -1287,11 +1240,9 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
             while ((PTX_STATUS_SUCCESS == status) && ((msg_len > bytes_written) || (last_block_tlv_terminator_write)))
             {
                 bytes_to_write = PTX_T2T_BLOCKSIZE;
-                bytes_to_write_checker = bytes_to_write;
                 if (msg_len < (bytes_written + PTX_T2T_BLOCKSIZE))
                 {
                     bytes_to_write = (uint16_t)(msg_len - bytes_written);
-                    bytes_to_write_checker = bytes_to_write;
                     end_offset = (uint8_t)(PTX_T2T_BLOCKSIZE - bytes_to_write);
                 }
 
@@ -1308,10 +1259,10 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
                     {
                         /* Last block (1, 2 or 3 bytes of data + PTX_T2TOP_TERMINATOR_TLV_T) */
                         terminator_offset = (uint8_t)(bytes_to_write % PTX_T2T_BLOCKSIZE);
-                        memcpy(&last_block[0], &msg_Buffer[bytes_written], bytes_to_write);
+                        memset(&last_block[0], 0, PTX_T2T_BLOCK_SIZE);
+                        memcpy(&last_block[0], &ndefT2T->WorkBuffer[bytes_written], bytes_to_write);
                         last_block[terminator_offset] = PTX_T2T_TERMINATOR_TLV_T;
                         bytes_to_write++;
-                        bytes_to_write_checker++;
                         last_write = 1;
                     }
                     else
@@ -1333,56 +1284,34 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
 
                 if ((PTX_STATUS_SUCCESS == status) && (!last_block_tlv_terminator_write))
                 {
-                    status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_write, &preserve_bytes[0]);
-	                /* if we have to skip bytes in the middle, we need to read them first */
-	                if ((bytes_to_write_checker != bytes_to_write) && (PTX_STATUS_SUCCESS == status) && (0 != bytes_to_write))
-	                {
-	                    rx_len = ndefT2T->RxBufferSize;
-	                    status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->RxBuffer[0], &rx_len);
+                    status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_write, &preserve_bytes[0], ndefT2T->CurrentByteAddress);
 
-	                    if (PTX_STATUS_SUCCESS == status)
-	                    {
-	                        if (PTX_T2T_BLOCKSIZE <= ndefT2T->WorkBufferSize)
-	                        {
-	                            (void)memcpy(&ndefT2T->WorkBuffer[0], &msg_Buffer[bytes_written], PTX_T2T_BLOCKSIZE);
-	                            status = ptx_NDEF_T2T_DataPreservation(ndefT2T, bytes_to_write, &bytes_written, end_offset, &preserve_bytes[0]);
-	                        }
-	                        else
-	                        {
-	                            status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
-	                        }
-	                    }
-	                }
-	                else
-	                {
-	                    /* uninterrupted write */
-	                    if ((PTX_STATUS_SUCCESS == status) && (0 != bytes_to_write))
-	                    {
-	                        if (bytes_to_write <= ndefT2T->WorkBufferSize)
-	                        {
-	                            if (last_write)
-	                            {
-	                                    /* Last write -> a block which includes data + PTX_T2TOP_TERMINATOR_TLV_T */
-	                                (void)memcpy(&ndefT2T->WorkBuffer[0], &last_block[0], bytes_to_write);
-	                                rx_len = ndefT2T->RxBufferSize;
-	                            }
-	                            else
-	                            {
-	                                (void)memcpy(&ndefT2T->WorkBuffer[0], &msg_Buffer[bytes_written], bytes_to_write);
-	                                rx_len = ndefT2T->RxBufferSize;
-	                            }
-	                        }
-	                        else
-	                        {
-	                            status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
-	                        }
-	                    }
-	                }
+                    if ((PTX_STATUS_SUCCESS == status) && (0 != bytes_to_write))
+                    {
+                        if (bytes_to_write <= PTX_T2T_BLOCK_SIZE)
+                        {
+                            if (last_write)
+                            {
+                                /* Last write -> a block which includes data + PTX_T2TOP_TERMINATOR_TLV_T */
+                                (void)memcpy(&current_block[0], &last_block[0], PTX_T2T_BLOCKSIZE);
+                                rx_len = ndefT2T->RxBufferSize;
+                            }
+                            else
+                            {
+                                (void)memcpy(&current_block[0], &ndefT2T->WorkBuffer[bytes_written], PTX_T2T_BLOCKSIZE);
+                                rx_len = ndefT2T->RxBufferSize;
+                            }
+                        }
+                        else
+                        {
+                            status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
+                        }
+                    }
 
 	                if (0 != bytes_to_write)
 	                {
 	                    /* write data, with possible preservation from above */
-	                    status = ptx_NDEF_T2T_WriteBlock(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->WorkBuffer[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+	                    status = ptx_NDEF_T2T_WriteBlock(ndefT2T, ndefT2T->CurrentBlock, &current_block[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
 	                }
 
 	                if (PTX_STATUS_SUCCESS == status)
@@ -1409,22 +1338,14 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
                     /* Write extra block just for the terminator */
                     if (PTX_STATUS_SUCCESS == status)
                 	{
-                    	status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &last_block_len, &preserve_bytes[0]);
+                    	status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &last_block_len, &preserve_bytes[0], ndefT2T->CurrentByteAddress);
 
                     	/* if we cannot write the last block fully without collision, we won't (terminator is optional) */
                     	if ((PTX_T2T_BLOCK_SIZE == last_block_len) && (PTX_STATUS_SUCCESS == status))
                         {
-
-                            /* Try to fetch the contents of the last block */
-                            status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->RxBuffer[0], &rx_len);
-
-                            if (PTX_STATUS_SUCCESS == status)
-                            {
-                                (void)memcpy(&ndefT2T->WorkBuffer[0],&ndefT2T->RxBuffer[0],PTX_T2T_BLOCK_SIZE);
-                                /* Change only the 1st byte, leaving the rest of the block unchanged */
-                                ndefT2T->WorkBuffer[0] = PTX_T2T_TERMINATOR_TLV_T;
-                                status = ptx_NDEF_T2T_WriteBlock(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->WorkBuffer[0], PTX_T2T_BLOCK_SIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
-                            }
+                            (void)memset(&current_block[0], 0, PTX_T2T_BLOCK_SIZE);
+                            current_block[0] = PTX_T2T_TERMINATOR_TLV_T;
+                            status = ptx_NDEF_T2T_WriteBlock(ndefT2T, ndefT2T->CurrentBlock, &current_block[0], PTX_T2T_BLOCK_SIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
                         }
 
                         last_block_tlv_terminator_write = 0;
@@ -1434,6 +1355,7 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
 
             if (PTX_STATUS_SUCCESS == status)
             {
+                uint8_t offset = generatedTLV ? ndef_tlv_header_size : 0;
                 /*
                  * update internal length block with space allocated for length bytes
                  * and NDEF-message bytes already set
@@ -1441,9 +1363,9 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
                 if (PTX_T2T_NDEF_L_FIELD_SHORT == length_size)
                 {
                     ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset] = 0x00;
-                    memcpy(&ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + 1u],
-                           &msg_Buffer[0],
-                           (uint32_t)(PTX_T2T_BLOCKSIZE - (ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + 1u)));
+                    memcpy(&ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + PTX_T2T_NDEF_L_FIELD_SHORT],
+                           &ndefT2T->WorkBuffer[offset],
+                           (uint32_t)(PTX_T2T_BLOCKSIZE - ((ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + PTX_T2T_NDEF_L_FIELD_SHORT) % PTX_T2T_BLOCK_SIZE)));
                 }
                 else
                 {
@@ -1451,11 +1373,12 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
                            0x00,
                            PTX_T2T_NDEF_L_FIELD_LONG);
 
-                    memcpy(&ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + 1u],
-                           &msg_Buffer[0],
-                           (uint32_t)(PTX_T2T_BLOCKSIZE - (ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + 1u)));
+                    memcpy(&ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + PTX_T2T_NDEF_L_FIELD_LONG],
+                           &ndefT2T->WorkBuffer[offset],
+                           (uint32_t)(PTX_T2T_BLOCKSIZE - ((ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthByteOffset + PTX_T2T_NDEF_L_FIELD_LONG) % PTX_T2T_BLOCK_SIZE)));
                 }
-                status = ptx_NDEF_T2T_UpdateLength(ndefT2T, msg_len, length_size, ndefTLVIndex);
+                uint16_t data_start_address = 0;
+                status = ptx_NDEF_T2T_UpdateLength(ndefT2T, msg_len - offset, length_size, ndefTLVIndex, &data_start_address);
             }
         }
 
@@ -1467,8 +1390,9 @@ static ptx_Status_t ptx_NDEF_T2T_OverwriteMessage (ptx_NDEF_T2T_t *ndefT2T, uint
             }
             else
             {
+                uint16_t data_start_address = 0;
                 ndefT2T->LifeCycle = TagLC_Initialised;
-                status = ptx_NDEF_T2T_UpdateLength(ndefT2T, 0, length_size, ndefTLVIndex);
+                status = ptx_NDEF_T2T_UpdateLength(ndefT2T, 0, length_size, ndefTLVIndex, &data_start_address);
             }
         }
     }
@@ -1523,8 +1447,6 @@ static ptx_Status_t ptx_NDEF_T2T_TLVAreaCrawler (ptx_NDEF_T2T_t *ndefT2T)
                 status = ptx_NDEF_T2T_IdentifyTLV(ndefT2T, &bytes_to_skip);
             }
 
-            bytes_to_skip = (PTX_T2T_BLOCKSIZE * PTX_T2T_BLOCKS_PER_READ > bytes_to_skip) ? (PTX_T2T_BLOCKSIZE * PTX_T2T_BLOCKS_PER_READ) : (bytes_to_skip);
-
             ndefT2T->CurrentByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + bytes_to_skip);
             ndefT2T->CurrentBlockAddress = ndefT2T->CurrentByteAddress / PTX_T2T_BLOCKSIZE;
         }
@@ -1554,50 +1476,128 @@ static ptx_Status_t ptx_NDEF_T2T_IdentifyTLV(ptx_NDEF_T2T_t *ndefT2T, uint16_t *
 
     if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != bytesToSkip))
     {
-        memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], ndefT2T->RxLen);
-        for (uint32_t idx = 0; idx < ndefT2T->RxLen; idx++)
+        uint32_t idx = 0;
+
+        if (ndefT2T->WorkBufferSize >= ndefT2T->RxLen)
+        {
+            memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], ndefT2T->RxLen);
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
+        }
+        
+        while ((PTX_STATUS_SUCCESS == status) && (idx < ndefT2T->RxLen))
         {
             switch (ndefT2T->WorkBuffer[idx])
             {
                 /* Remember Lock- and Memory-TLV positions to handle them in the processor functions. */
                 case PTX_T2T_LOCK_CONTROL_TLV_T:
-                    /* if L != PTX_T2T_LOCK_CONTROL_TLV_LENGTH skip, not a TLV. */
-                    if (PTX_T2T_LOCK_CONTROL_TLV_LENGTH == ndefT2T->WorkBuffer[idx + 1])
+                    if ((idx + PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 1) < ndefT2T->RxLen)
                     {
-                        if (PTX_T2T_MAX_NUMBER_LOCK_CONTROL > ndefT2T->TLVs.NumberOfLockTLVs)
+                        /* if L != PTX_T2T_LOCK_CONTROL_TLV_LENGTH skip, not a TLV. */
+                        if (PTX_T2T_LOCK_CONTROL_TLV_LENGTH == ndefT2T->WorkBuffer[idx + 1])
                         {
-                            ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].ByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + idx);
-                            ndefT2T->TLVs.NumberOfLockTLVs++;
-                            status = PTX_STATUS_SUCCESS;
+                            if (PTX_T2T_MAX_NUMBER_LOCK_CONTROL > ndefT2T->TLVs.NumberOfLockTLVs)
+                            {
+                                uint8_t DLAPosition = ndefT2T->WorkBuffer[idx + 2];
+                                uint16_t DLA_NbrLockBits = ndefT2T->WorkBuffer[idx + 3];
+                                if (0 == DLA_NbrLockBits)
+                                {
+                                    DLA_NbrLockBits = PTX_T2T_SECTORSIZE;
+                                }
+                                uint8_t DLAControl = ndefT2T->WorkBuffer[idx + 4];
+
+                                uint8_t NbrMajorOffsets = (DLAPosition >> PTX_T2T_MASK_4);
+                                uint8_t NbrMinorOffsets = (DLAPosition & 0x0F);
+
+                                uint16_t DLA_NbrBytes = (uint16_t)(DLA_NbrLockBits / 8);
+                                if (0 != (DLA_NbrLockBits % 8))
+                                {
+                                    DLA_NbrBytes++;
+                                }
+
+                                uint8_t BLPLB_Index = (DLAControl >> PTX_T2T_MASK_4);
+                                uint8_t MOS_DLA = (DLAControl & 0x0F);
+
+                                ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].BytesLockedPerLockBit = (uint8_t)(1 << BLPLB_Index);
+
+                                uint16_t MajorOffset_Size_DLA = (uint16_t)(1 << MOS_DLA);
+                                uint16_t DLA_FirstByteAddress = (uint16_t)((NbrMajorOffsets * MajorOffset_Size_DLA) + NbrMinorOffsets);
+
+                                ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].NbrReservedBits = (uint8_t)(ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].BytesLockedPerLockBit -
+                                                                                                (DLA_NbrLockBits % ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].BytesLockedPerLockBit));
+                                ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].LockArea[0] = (uint16_t)DLA_FirstByteAddress;
+                                ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].LockArea[1] = (uint16_t)(DLA_FirstByteAddress + DLA_NbrBytes);
+                                ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].InternalArea[0] = ((uint16_t)(PTX_T2T_BLOCKSIZE - 1 != ((DLA_FirstByteAddress + DLA_NbrBytes) -1) % PTX_T2T_BLOCKSIZE)) ?
+                                                                                        ((uint16_t)(ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].LockArea[1] + 1)) :
+                                                                                        (0u);
+                                if (0 != ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].InternalArea[0])
+                                {
+                                    ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].InternalArea[1] = (uint16_t)(ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].InternalArea[0] +
+                                                                                                        (PTX_T2T_BLOCKSIZE - (ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].InternalArea[0] % PTX_T2T_BLOCKSIZE)));
+                                }
+                                else
+                                {
+                                    /* assign InternalArea End for easier checking. */
+                                    ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].InternalArea[1] = ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].LockArea[1];
+                                }
+
+                                ndefT2T->TLVs.LockControlTLVs[ndefT2T->TLVs.NumberOfLockTLVs].ByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + idx);
+                                ndefT2T->TLVs.NumberOfLockTLVs++;
+                                status = PTX_STATUS_SUCCESS;
+                            }
+                            else
+                            {
+                                status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
+                            }
+                            /* step over TLV, T+L+L*ValueBytes. */
+                            bytes_to_skip = (uint16_t)(bytes_to_skip + (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 2));
                         }
-                        else
-                        {
-                            status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
-                        }
-                        /* step over TLV, T+L+L*ValueBytes. */
-                        idx = (uint32_t)(idx + (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 1));
-                        bytes_to_skip = (uint16_t)(bytes_to_skip + (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 2));
                     }
+                    idx = (uint32_t)(idx + (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 1));
                     break;
 
                 case PTX_T2T_MEMORY_CONTROL_TLV_T:
-                    /* if L != PTX_T2T_MEMORY_CONTROL_TLV_LENGTH skip, not a TLV. */
-                    if (PTX_T2T_MEMORY_CONTROL_TLV_LENGTH == ndefT2T->WorkBuffer[idx + 1])
+                    if ((idx + PTX_T2T_MEMORY_CONTROL_TLV_LENGTH + 1) < ndefT2T->RxLen)
                     {
-                        if (PTX_T2T_MAX_NUMBER_MEMORY_CONTROL > ndefT2T->TLVs.NumberOfMemoryTLVs)
+                        /* if L != PTX_T2T_MEMORY_CONTROL_TLV_LENGTH skip, not a TLV. */
+                        if (PTX_T2T_MEMORY_CONTROL_TLV_LENGTH == ndefT2T->WorkBuffer[idx + 1])
                         {
-                            ndefT2T->TLVs.MemoryControlTLVs[ndefT2T->TLVs.NumberOfMemoryTLVs].ByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + idx);
-                            ndefT2T->TLVs.NumberOfMemoryTLVs++;
-                            status = PTX_STATUS_SUCCESS;
+                            if (PTX_T2T_MAX_NUMBER_MEMORY_CONTROL > ndefT2T->TLVs.NumberOfMemoryTLVs)
+                            {
+                                uint8_t RAPosition = ndefT2T->WorkBuffer[idx + 2];
+                                uint16_t Reserved_Area_Size = ndefT2T->WorkBuffer[idx + 3];
+                                if (0 == Reserved_Area_Size)
+                                {
+                                    Reserved_Area_Size = PTX_T2T_SECTORSIZE;
+                                }
+                                uint8_t RAControl = ndefT2T->WorkBuffer[idx + 4];
+                                
+                                uint8_t NbrMajorOffsets = (RAPosition >> PTX_T2T_MASK_4);
+                                uint8_t NbrMinorOffsets = (RAPosition & 0x0F);
+                                
+                                uint8_t MOS_RA = (RAControl & 0x0F);
+                                
+                                uint16_t MajorOffset_Size_RA = (uint16_t)(1 << MOS_RA);
+                                uint16_t RA_FirstByteAddress = (uint16_t)((NbrMajorOffsets * MajorOffset_Size_RA) + NbrMinorOffsets);
+                                
+                                ndefT2T->TLVs.MemoryControlTLVs[ndefT2T->TLVs.NumberOfMemoryTLVs].ByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + idx);
+                                ndefT2T->TLVs.MemoryControlTLVs[ndefT2T->TLVs.NumberOfMemoryTLVs].RsvdArea[0] = (uint16_t)RA_FirstByteAddress;
+                                ndefT2T->TLVs.MemoryControlTLVs[ndefT2T->TLVs.NumberOfMemoryTLVs].RsvdArea[1] = (uint16_t)(RA_FirstByteAddress + Reserved_Area_Size);
+                                ndefT2T->TLVs.NumberOfMemoryTLVs++;
+                                status = PTX_STATUS_SUCCESS;
+                            }
+                            else
+                            {
+                                status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
+                            }
+                            /* step over TLV, T+L+L*ValueBytes. */
+                            bytes_to_skip = (uint16_t)(bytes_to_skip + (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 2));
                         }
-                        else
-                        {
-                            status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
-                        }
-                        /* step over TLV, T+L+L*ValueBytes. */
-                        idx = (uint32_t)(idx + (PTX_T2T_MEMORY_CONTROL_TLV_LENGTH + 1));
-                        bytes_to_skip = (uint16_t)(bytes_to_skip + (PTX_T2T_LOCK_CONTROL_TLV_LENGTH + 2));
                     }
+                    idx = (uint32_t)(idx + (PTX_T2T_MEMORY_CONTROL_TLV_LENGTH + 1));
                     break;
 
                 case PTX_T2T_NDEF_TLV_T:
@@ -1611,12 +1611,15 @@ static ptx_Status_t ptx_NDEF_T2T_IdentifyTLV(ptx_NDEF_T2T_t *ndefT2T, uint16_t *
 
                     /* exit loop */
                     idx = (uint32_t)ndefT2T->RxLen;
+                    bytes_to_skip = (uint16_t)(bytes_to_skip + 1);
                     break;
 
                 case PTX_T2T_NULL_TLV_T:
                 default:
+                    bytes_to_skip = (uint16_t)(bytes_to_skip + 1);
                     break;
             }
+            idx++;
         }
 
         if (PTX_STATUS_SUCCESS == status)
@@ -1634,73 +1637,157 @@ static ptx_Status_t ptx_NDEF_T2T_NDEFTLV_Handler(ptx_NDEF_T2T_t *ndefT2T, uint32
 
     uint16_t length_byte_combined;
     uint16_t bytes_to_skip = 0;
+    uint16_t preserve_bytes[PTX_T2T_BLOCKS_PER_READ * PTX_T2T_BLOCKSIZE];
+    uint8_t read_block[PTX_T2T_BLOCK_SIZE] = {0};
+    uint8_t length_bytes[PTX_T2T_NDEF_L_FIELD_LONG] = { 0x00 };
 
     if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (offset != NULL) && (NULL != bytesToSkip))
     {
         uint32_t idx = *offset;
-        uint32_t len_block_idx = 0;
-        uint32_t tlv_idx = 0;
+        uint32_t idx_short_length = *offset;
 
         if (PTX_T2T_MAX_NUMBER_NDEFTLVS > ndefT2T->TLVs.NumberOfNdefTLVs)
         {
             status = PTX_STATUS_SUCCESS;
             ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + idx);
-            tlv_idx = idx;
+            /* Will later be incremented to the correct offset */
+            ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset = (uint8_t)((ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ByteAddress) % PTX_T2T_BLOCK_SIZE);
+            
+            uint16_t bytes_to_process = 0;
+            uint8_t bytes_read = 1;
+            do {
+                idx += 1;
+                bytes_to_skip += 1;
 
-            /* cache offset within block containing length byte(s), which is directly after T-byte */
-            ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset = (uint8_t)((ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ByteAddress + 1u) % PTX_T2T_BLOCK_SIZE);
+                bytes_to_process = PTX_T2T_NDEF_L_FIELD_SHORT;
+                status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_process, &preserve_bytes[0], ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ByteAddress + bytes_to_skip);
 
-            /* check if the length byte/s is/are out of bounds of current work buffer content */
-            if ((PTX_T2T_BLOCKSIZE * PTX_T2T_BLOCKS_PER_READ - PTX_T2T_BLOCKSIZE) < idx)
+                ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset = (uint8_t)(ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset + 1) % PTX_T2T_BLOCK_SIZE;
+            } while ((PTX_STATUS_SUCCESS == status) && (bytes_to_process != PTX_T2T_NDEF_L_FIELD_SHORT));
+
+            if ((PTX_STATUS_SUCCESS == status) && (ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset != (PTX_T2T_BLOCK_SIZE - 1)))
             {
-                /* length byte(s) out of bounds, check sector and add another block */
-                if (((ndefT2T->CurrentBlock + PTX_T2T_BLOCKS_PER_READ) / PTX_T2T_SECTORSIZE) != (ndefT2T->CurrentBlock / PTX_T2T_SECTORSIZE))
+                bytes_to_process = PTX_T2T_NDEF_L_FIELD_LONG - PTX_T2T_NDEF_L_FIELD_SHORT;
+                status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_process, &preserve_bytes[0], ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ByteAddress + bytes_to_skip);
+                
+                if ((PTX_T2T_NDEF_L_FIELD_LONG - PTX_T2T_NDEF_L_FIELD_SHORT) == bytes_to_process)
                 {
-                    status = ptx_NDEF_T2T_SectorSelect(ndefT2T, (uint8_t)((ndefT2T->CurrentBlock + (PTX_T2T_BLOCKS_PER_READ - 1)) / PTX_T2T_SECTORSIZE), &ndefT2T->RxBuffer[0], &ndefT2T->RxLen, PTX_T2T_PAT_MS);
+                    idx += 1;
+                    bytes_to_skip += 1;
+                    bytes_read = (uint8_t)bytes_to_process;
+                }
+            }
+
+            /* check if the length byte is out of bounds of current work buffer content */
+            if (idx >= ndefT2T->RxLen)
+            {
+                uint16_t target_block = (uint16_t)(ndefT2T->CurrentByteAddress + idx) / PTX_T2T_BLOCK_SIZE;
+                uint8_t target_block_address = (uint8_t)(target_block % PTX_T2T_SECTORSIZE);
+                uint16_t target_sector = target_block / PTX_T2T_SECTORSIZE;
+                /* length byte(s) out of bounds, check sector and add another block */
+                if (ndefT2T->SectorParams.CurrentSector != target_sector)
+                {
+                    status = ptx_NDEF_T2T_SectorSelect(ndefT2T, (uint8_t)(target_sector), &ndefT2T->RxBuffer[0], &ndefT2T->RxLen, PTX_T2T_PAT_MS);
                 }
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, (uint8_t)(ndefT2T->CurrentBlock + PTX_T2T_BLOCKS_PER_READ), &ndefT2T->RxBuffer[0], &ndefT2T->RxLen);
+                    status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, target_block_address, &ndefT2T->RxBuffer[0], &ndefT2T->RxLen);
                     if (PTX_STATUS_SUCCESS == status)
                     {
-                        /* add the fifth block to the work buffer */
-                        (void)memcpy(&ndefT2T->WorkBuffer[PTX_T2T_BLOCKSIZE * PTX_T2T_BLOCKS_PER_READ], &ndefT2T->RxBuffer[0], (uint32_t)(PTX_T2T_BLOCKSIZE));
+                        /* add the new block to the work buffer */
+                        (void)memcpy(&read_block[0], &ndefT2T->RxBuffer[0], (uint32_t)(PTX_T2T_BLOCKSIZE));
                     }
                 }
+            }
+            else
+            {
+                uint8_t target_block = (uint8_t)(idx / PTX_T2T_BLOCK_SIZE);
+                (void)memcpy(&read_block[0], &ndefT2T->WorkBuffer[target_block * PTX_T2T_BLOCK_SIZE], (uint32_t)(PTX_T2T_BLOCKSIZE));
             }
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                /* proceed with length byte(s) */
-                idx++;
-                /* cache 2 blocks that could both contain parts of the TLV length */
-                len_block_idx = tlv_idx - (tlv_idx % PTX_T2T_BLOCKSIZE);
-                memcpy(&ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[0], &ndefT2T->WorkBuffer[len_block_idx], PTX_T2T_BLOCKSIZE * 2u);
+                /* cache first block of the ndef TLV length */
+                memcpy(&ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[0], &read_block[0], PTX_T2T_BLOCKSIZE);
+                for (uint8_t i = 0; i < bytes_read; i++)
+                {
+                    length_bytes[i] = ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset + i];
+                }
 
-                if (PTX_T2T_LENGTHTHRESHOLD == ndefT2T->WorkBuffer[idx])
+                if (bytes_read == PTX_T2T_NDEF_L_FIELD_SHORT)
+                {
+                    idx_short_length = idx + 1;
+                }
+                else
+                {
+                    idx_short_length = idx;
+                }
+                bytes_to_process = 0;
+                do {
+                    idx += 1;
+                    bytes_to_skip += 1;
+
+                    bytes_to_process = PTX_T2T_NDEF_L_FIELD_LONG - bytes_read;
+                    status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_process, &preserve_bytes[0], ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ByteAddress + bytes_to_skip);
+                } while ((PTX_STATUS_SUCCESS == status) && (bytes_to_process != PTX_T2T_NDEF_L_FIELD_LONG - bytes_read));
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* check if the length byte/s is/are out of bounds of current work buffer content */
+                if (idx >= ndefT2T->RxLen)
+                {
+                    uint16_t target_block = (uint16_t)(ndefT2T->CurrentByteAddress + idx) / PTX_T2T_BLOCK_SIZE;
+                    uint8_t target_block_address = (uint8_t)(target_block % PTX_T2T_SECTORSIZE);
+                    uint16_t target_sector = target_block / PTX_T2T_SECTORSIZE;
+                    /* length byte(s) out of bounds, check sector and add another block */
+                    if (ndefT2T->SectorParams.CurrentSector != target_sector)
+                    {
+                        status = ptx_NDEF_T2T_SectorSelect(ndefT2T, (uint8_t)(target_sector), &ndefT2T->RxBuffer[0], &ndefT2T->RxLen, PTX_T2T_PAT_MS);
+                    }
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, target_block_address, &ndefT2T->RxBuffer[0], &ndefT2T->RxLen);
+                        if (PTX_STATUS_SUCCESS == status)
+                        {
+                            /* add the new block to the work buffer */
+                            (void)memcpy(&read_block[0], &ndefT2T->RxBuffer[0], (uint32_t)(PTX_T2T_BLOCKSIZE));
+                        }
+                    }
+                }
+                else
+                {
+                    uint8_t target_block = (uint8_t)(idx / PTX_T2T_BLOCK_SIZE);
+                    (void)memcpy(&read_block[0], &ndefT2T->WorkBuffer[target_block * PTX_T2T_BLOCK_SIZE], (uint32_t)(PTX_T2T_BLOCKSIZE));
+                }
+            }
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* cache second block of the ndef TLV length */
+                memcpy(&ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[PTX_T2T_BLOCKSIZE], &read_block[0], PTX_T2T_BLOCKSIZE);
+                
+                if (PTX_T2T_LENGTHTHRESHOLD == length_bytes[0])
                 {
                     /* 3 byte L */
-                    length_byte_combined = (uint16_t)(((uint16_t)ndefT2T->WorkBuffer[idx + 1] << PTX_T2T_MASK_8) | ndefT2T->WorkBuffer[idx + 2]);
+                    for (uint8_t i = bytes_read; i < PTX_T2T_NDEF_L_FIELD_LONG; i++)
+                    {
+                        length_bytes[i] = ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset + i];
+                    }
+                    length_byte_combined = (uint16_t)(((uint16_t)length_bytes[1] << PTX_T2T_MASK_8) | length_bytes[2]);
                     ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].Length = length_byte_combined;
                     idx = (uint32_t)(idx + 2); /* Skip leftover L bytes. */
-                    bytes_to_skip = (uint16_t)(bytes_to_skip + 3); /* Skip all L bytes. */
-
-                    /* are the length bytes in the first, second, or both cached blocks? */
-                    if (1 < len_block_idx)
+                    bytes_to_skip = (uint16_t)(bytes_to_skip + 2); /* Skip all L bytes. */
+                    ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ValueStartByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + idx);
+                    if ((PTX_T2T_NDEF_L_FIELD_LONG - PTX_T2T_NDEF_L_FIELD_SHORT) == bytes_read)
                     {
-                        /* first or both */
-                    }
-                    else
-                    {
-                        /* second, push it into first */
-                        memcpy(&ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[0], &ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[PTX_T2T_BLOCKSIZE], PTX_T2T_BLOCKSIZE);
+                        ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ValueStartByteAddress -= 1;
                     }
                 }
                 else
                 {
                     /* 1 byte L */
-                    ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].Length = ndefT2T->WorkBuffer[idx];
-                    bytes_to_skip++; /* Skip L byte. */
+                    ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].Length = length_bytes[0];
+                    ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ValueStartByteAddress = (uint16_t)(ndefT2T->CurrentByteAddress + idx_short_length);
                 }
 
                 /* Skip data bytes of this TLV. */
@@ -1716,14 +1803,14 @@ static ptx_Status_t ptx_NDEF_T2T_NDEFTLV_Handler(ptx_NDEF_T2T_t *ndefT2T, uint32
         }
 
         *offset = idx;
-        *bytesToSkip = bytes_to_skip;
+        *bytesToSkip += bytes_to_skip;
     }
 
     return status;
 }
 
 /* update L of NDEF TLV */
-static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t msgLen, uint8_t lengthSize, uint8_t ndefTLVIndex)
+static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t msgLen, uint8_t lengthSize, uint8_t ndefTLVIndex, uint16_t *dataStartAddress)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint32_t rx_len;
@@ -1734,9 +1821,12 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
     uint16_t new_len = msgLen;
     uint8_t lengthBytes[3];
     uint8_t three_len_prefix = 0x00;
+    uint8_t current_block[PTX_T2T_BLOCK_SIZE] = { 0x00, 0x00, 0x00, 0x00 };
+    uint16_t bytes_to_write = 0;
 
+    uint16_t preserve_bytes[PTX_T2T_BLOCKS_PER_READ * PTX_T2T_BLOCKSIZE];
 
-    if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP))
+    if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != dataStartAddress))
     {
         switch (ndefT2T->LifeCycle)
         {
@@ -1759,7 +1849,12 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
         /* L is 1 byte */
         if ((PTX_STATUS_SUCCESS == status) && (PTX_T2T_NDEF_L_FIELD_SHORT == lengthSize))
         {
-            length_byte_address = (uint16_t)(ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].ByteAddress + PTX_T2T_NDEF_L_FIELD_SHORT);
+            length_byte_address = (uint16_t)(ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].ByteAddress);
+            do {
+                bytes_to_write = PTX_T2T_NDEF_L_FIELD_SHORT;
+                length_byte_address += 1;
+                status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_write, &preserve_bytes[0], length_byte_address);
+            } while (PTX_T2T_NDEF_L_FIELD_SHORT != bytes_to_write);
 
             block_address_ndef_len = (length_byte_address / PTX_T2T_BLOCKSIZE);
             block_number_ndef_len = (uint8_t)(block_address_ndef_len % PTX_T2T_SECTORSIZE);
@@ -1772,10 +1867,9 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
             if (PTX_STATUS_SUCCESS == status)
             {
                 ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[(length_byte_address % PTX_T2T_BLOCKSIZE)] = (uint8_t)new_len;
-                (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[0], PTX_T2T_BLOCKSIZE);
 
                 rx_len = ndefT2T->RxBufferSize;
-                status = ptx_NDEF_T2T_WriteBlock(ndefT2T, block_number_ndef_len, &ndefT2T->WorkBuffer[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+                status = ptx_NDEF_T2T_WriteBlock(ndefT2T, block_number_ndef_len, &ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
             }
             if (PTX_STATUS_SUCCESS == status)
             {
@@ -1789,13 +1883,21 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
                 {
                     ndefT2T->LifeCycle = TagLC_ReadWrite;
                 }
+
+                *dataStartAddress = length_byte_address + 1;
             }
         }
 
         /* L is 3 bytes */
         if ((PTX_STATUS_SUCCESS == status) && (PTX_T2T_NDEF_L_FIELD_LONG == lengthSize))
         {
-            length_byte_address = (uint16_t)(ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].ByteAddress + 1);
+            length_byte_address = (uint16_t)(ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].ByteAddress);
+            do {
+                bytes_to_write = 1;
+                length_byte_address += 1;
+                status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_write, &preserve_bytes[0], length_byte_address);
+            } while (1 != bytes_to_write);
+
             block_address_ndef_len = (length_byte_address / PTX_T2T_BLOCKSIZE);
             block_number_ndef_len = (uint8_t)(block_address_ndef_len % PTX_T2T_SECTORSIZE);
             length_byte_sector = (uint8_t)(block_address_ndef_len / PTX_T2T_SECTORSIZE);
@@ -1805,6 +1907,7 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
             lengthBytes[1] = (uint8_t)((new_len & 0xFF00) >> PTX_T2T_MASK_8);
             lengthBytes[2] = (uint8_t)(new_len & 0x00FF);
 
+            *dataStartAddress = 0;
 
             if (ndefT2T->SectorParams.CurrentSector != length_byte_sector)
             {
@@ -1816,6 +1919,8 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
                 (void)memcpy(&ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[(length_byte_address % PTX_T2T_BLOCKSIZE)], &lengthBytes[0], sizeof(lengthBytes));
                 rx_len = ndefT2T->RxBufferSize;
                 status = ptx_NDEF_T2T_WriteBlock(ndefT2T, block_number_ndef_len, &ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+                bytes_to_write = (uint8_t)(length_byte_address % PTX_T2T_BLOCKSIZE) + PTX_T2T_NDEF_L_FIELD_LONG;
+                *dataStartAddress += bytes_to_write;
             }
             else
             {
@@ -1828,20 +1933,46 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
                     /* check sector length */
                     if (PTX_STATUS_SUCCESS == status)
                     {
-                        if (PTX_T2T_SECTORTHRESHOLD > block_number_ndef_len)
+                        if (PTX_STATUS_SUCCESS == status)
                         {
-                            /* second write is in new sector */
-                            status = ptx_NDEF_T2T_SectorSelect(ndefT2T, (uint8_t)(ndefT2T->SectorParams.CurrentSector + 1), &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_PAT_MS);
-                            if (PTX_STATUS_SUCCESS == status)
+                            uint8_t length_bytes_written = (PTX_T2T_BLOCK_SIZE - (length_byte_address % PTX_T2T_BLOCK_SIZE));
+                            uint16_t remaining_bytes = 0;
+                            if (PTX_T2T_NDEF_L_FIELD_LONG > length_bytes_written)
                             {
-                                /* write to block 0 of next sector */
-                                status = ptx_NDEF_T2T_WriteBlock(ndefT2T, 0, &ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[PTX_T2T_BLOCKSIZE], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+                                remaining_bytes = (uint16_t)(PTX_T2T_NDEF_L_FIELD_LONG - length_bytes_written);
                             }
-                        }
-                        else
-                        {
-                            /* second write is in same sector */
-                            status = ptx_NDEF_T2T_WriteBlock(ndefT2T, (uint8_t)(block_number_ndef_len + 1), &ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[PTX_T2T_BLOCKSIZE], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+                            while ((PTX_STATUS_SUCCESS == status) && (remaining_bytes > 0))
+                            {
+                                bytes_to_write = remaining_bytes;
+
+                                if (PTX_T2T_SECTORTHRESHOLD <= block_number_ndef_len)
+                                {
+                                    /* second write is in new sector */
+                                    status = ptx_NDEF_T2T_SectorSelect(ndefT2T, (uint8_t)(ndefT2T->SectorParams.CurrentSector + 1), &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_PAT_MS);
+                                    /* write to block 0 of next sector */
+                                    block_number_ndef_len = 0;
+                                }
+                                else
+                                {
+                                    /* second write is in same sector, next block */
+                                    block_number_ndef_len += 1;
+                                }
+                                block_address_ndef_len += 1;
+                                
+                                if (PTX_STATUS_SUCCESS == status)
+                                {
+                                    status = ptx_NDEF_T2T_AreaChecker(ndefT2T, &bytes_to_write, &preserve_bytes[0], (uint16_t)((block_address_ndef_len) * PTX_T2T_BLOCK_SIZE));
+                                }
+
+                                (void)memcpy(&current_block[0], &ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].LengthBlock[PTX_T2T_BLOCKSIZE], PTX_T2T_BLOCKSIZE);
+                                if ((PTX_STATUS_SUCCESS == status) && (0 != bytes_to_write))
+                                {
+                                    /* write data, with possible preservation from above */                            
+                                    status = ptx_NDEF_T2T_WriteBlock(ndefT2T, (uint8_t)block_number_ndef_len, &current_block[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
+                                }
+                                remaining_bytes -= bytes_to_write;
+                                *dataStartAddress += bytes_to_write;
+                            }
                         }
                     }
                 }
@@ -1851,155 +1982,7 @@ static ptx_Status_t ptx_NDEF_T2T_UpdateLength(ptx_NDEF_T2T_t *ndefT2T, uint16_t 
             {
                 ndefT2T->TLVs.NDEFTLV[ndefTLVIndex].Length = new_len;
                 ndefT2T->LifeCycle = TagLC_ReadWrite;
-            }
-        }
-    }
-
-    return status;
-}
-
-/* looks through LockControlTLVs and saves the DLAs */
-static ptx_Status_t ptx_NDEF_T2T_DLAProcessor (ptx_NDEF_T2T_t *ndefT2T)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    uint16_t lock_byte_address;
-
-    uint8_t DLAPosition;
-    /* contains: */
-    uint8_t NbrMajorOffsets;
-    uint8_t NbrMinorOffsets;
-
-    uint16_t DLA_NbrLockBits;
-    uint16_t DLA_NbrBytes;
-
-    uint8_t DLAControl;
-    /* contains: */
-    uint8_t BLPLB_Index;
-    uint8_t MOS_DLA;
-
-    uint16_t DLA_FirstByteAddress;
-    uint16_t MajorOffset_Size_DLA;
-
-
-    if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP))
-    {
-        status = PTX_STATUS_SUCCESS;
-        for (uint8_t LockTLV = 0; LockTLV < ndefT2T->TLVs.NumberOfLockTLVs; LockTLV++)
-        {
-            lock_byte_address = ndefT2T->TLVs.LockControlTLVs[LockTLV].ByteAddress;
-
-            if (ndefT2T->SectorParams.CurrentSector != lock_byte_address / PTX_T2T_SECTORSIZE)
-            {
-                status = ptx_NDEF_T2T_SectorSelect(ndefT2T, (uint8_t)(lock_byte_address / PTX_T2T_SECTORSIZE), &ndefT2T->RxBuffer[0], &ndefT2T->RxLen, PTX_T2T_PAT_MS);
-            }
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, (uint8_t)(lock_byte_address / PTX_T2T_BLOCKSIZE), &ndefT2T->RxBuffer[0], &ndefT2T->RxLen);
-            }
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], PTX_T2T_BLOCKSIZE * 2);
-                DLAPosition = ndefT2T->WorkBuffer[(lock_byte_address % PTX_T2T_BLOCKSIZE) + 2];
-                DLA_NbrLockBits = (uint16_t)ndefT2T->WorkBuffer[(lock_byte_address % PTX_T2T_BLOCKSIZE) + 3];
-                if (0 == DLA_NbrLockBits)
-                {
-                    DLA_NbrLockBits = PTX_T2T_SECTORSIZE;
-                }
-                DLAControl = ndefT2T->WorkBuffer[(lock_byte_address % PTX_T2T_BLOCKSIZE) + 4];
-
-                NbrMajorOffsets = (DLAPosition >> PTX_T2T_MASK_4);
-                NbrMinorOffsets = (DLAPosition & 0x0F);
-
-                DLA_NbrBytes = (uint16_t)(DLA_NbrLockBits / 8);
-                if (0 != (DLA_NbrLockBits % 8))
-                {
-                    DLA_NbrBytes++;
-                }
-
-                BLPLB_Index = (DLAControl >> PTX_T2T_MASK_4);
-                MOS_DLA = (DLAControl & 0x0F);
-
-                ndefT2T->TLVs.LockControlTLVs[LockTLV].BytesLockedPerLockBit = (uint8_t)(1 << BLPLB_Index);
-
-                MajorOffset_Size_DLA = (uint16_t)(1 << MOS_DLA);
-                DLA_FirstByteAddress = (uint16_t)((NbrMajorOffsets * MajorOffset_Size_DLA) + NbrMinorOffsets);
-
-                ndefT2T->TLVs.LockControlTLVs[LockTLV].NbrReservedBits = (uint8_t)(ndefT2T->TLVs.LockControlTLVs[LockTLV].BytesLockedPerLockBit -
-                                                                                   (DLA_NbrLockBits % ndefT2T->TLVs.LockControlTLVs[LockTLV].BytesLockedPerLockBit));
-                ndefT2T->TLVs.LockControlTLVs[LockTLV].LockArea[0] = (uint16_t)DLA_FirstByteAddress;
-                ndefT2T->TLVs.LockControlTLVs[LockTLV].LockArea[1] = (uint16_t)(DLA_FirstByteAddress + DLA_NbrBytes);
-                ndefT2T->TLVs.LockControlTLVs[LockTLV].InternalArea[0] = ((uint16_t)(PTX_T2T_BLOCKSIZE - 1 != ((DLA_FirstByteAddress + DLA_NbrBytes) -1) % PTX_T2T_BLOCKSIZE)) ?
-                                                                         ((uint16_t)(ndefT2T->TLVs.LockControlTLVs[LockTLV].LockArea[1] + 1)) :
-                                                                         (0u);
-                if (0 != ndefT2T->TLVs.LockControlTLVs[LockTLV].InternalArea[0])
-                {
-                    ndefT2T->TLVs.LockControlTLVs[LockTLV].InternalArea[1] = (uint16_t)(ndefT2T->TLVs.LockControlTLVs[LockTLV].InternalArea[0] +
-                                                                                        (PTX_T2T_BLOCKSIZE - (ndefT2T->TLVs.LockControlTLVs[LockTLV].InternalArea[0] % PTX_T2T_BLOCKSIZE)));
-                }
-                else
-                {
-                    /* assign InternalArea End for easier checking. */
-                    ndefT2T->TLVs.LockControlTLVs[LockTLV].InternalArea[1] = ndefT2T->TLVs.LockControlTLVs[LockTLV].LockArea[1];
-                }
-            }
-        }
-    }
-
-    return status;
-}
-
-/* looks through LockControlTLVs and saves the reserved areas */
-static ptx_Status_t ptx_NDEF_T2T_RAProcessor(ptx_NDEF_T2T_t *ndefT2T)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    uint16_t mem_byte_address;
-
-    uint8_t RAPosition;
-    /* contains: */
-    uint8_t NbrMajorOffsets;
-    uint8_t NbrMinorOffsets;
-
-    uint16_t Reserved_Area_Size;
-
-    uint8_t RAControl;
-    /* contains: */
-    uint8_t MOS_RA;
-
-    uint16_t RA_FirstByteAddress;
-    uint16_t MajorOffset_Size_RA;
-
-    if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP))
-    {
-        status = PTX_STATUS_SUCCESS;
-        for (uint8_t MemoryTLV = 0; MemoryTLV < ndefT2T->TLVs.NumberOfMemoryTLVs; MemoryTLV++)
-        {
-            mem_byte_address = ndefT2T->TLVs.MemoryControlTLVs[MemoryTLV].ByteAddress;
-            status = ptx_NDEF_T2T_ReadBlocks(ndefT2T, (uint8_t)(mem_byte_address / PTX_T2T_BLOCKSIZE), &ndefT2T->RxBuffer[0], &ndefT2T->RxLen);
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                (void)memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], PTX_T2T_BLOCKSIZE * 2);
-                RAPosition = ndefT2T->WorkBuffer[(mem_byte_address % PTX_T2T_BLOCKSIZE) + 2];
-                Reserved_Area_Size = (uint16_t)ndefT2T->WorkBuffer[(mem_byte_address % PTX_T2T_BLOCKSIZE) + 3];
-                if (0 == Reserved_Area_Size)
-                {
-                    Reserved_Area_Size = PTX_T2T_SECTORSIZE;
-                }
-                RAControl = ndefT2T->WorkBuffer[(mem_byte_address % PTX_T2T_BLOCKSIZE) + PTX_T2T_BLOCKSIZE];
-
-                NbrMajorOffsets = (RAPosition >> PTX_T2T_MASK_4);
-                NbrMinorOffsets = (RAPosition & 0x0F);
-
-                MOS_RA = (RAControl & 0x0F);
-
-                MajorOffset_Size_RA = (uint16_t)(1 << MOS_RA);
-                RA_FirstByteAddress = (uint16_t)((NbrMajorOffsets * MajorOffset_Size_RA) + NbrMinorOffsets);
-
-                ndefT2T->TLVs.MemoryControlTLVs[MemoryTLV].RsvdArea[0] = (uint16_t)RA_FirstByteAddress;
-                ndefT2T->TLVs.MemoryControlTLVs[MemoryTLV].RsvdArea[1] = (uint16_t)(RA_FirstByteAddress + Reserved_Area_Size);
+                *dataStartAddress += (uint16_t)(block_number_ndef_len * PTX_T2T_BLOCK_SIZE);
             }
         }
     }
@@ -2008,7 +1991,7 @@ static ptx_Status_t ptx_NDEF_T2T_RAProcessor(ptx_NDEF_T2T_t *ndefT2T)
 }
 
 /* check RAs and DLAs against current address to ignore, bytes to process is to be set before the operation to either T2T block length or T2T block length * 4 depending on operation read or write  */
-static ptx_Status_t ptx_NDEF_T2T_AreaChecker (ptx_NDEF_T2T_t *ndefT2T, uint16_t *bytesToProcess, uint16_t *preserveBytes)
+static ptx_Status_t ptx_NDEF_T2T_AreaChecker (ptx_NDEF_T2T_t *ndefT2T, uint16_t *bytesToProcess, uint16_t *preserveBytes, uint16_t startByte)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -2016,7 +1999,7 @@ static ptx_Status_t ptx_NDEF_T2T_AreaChecker (ptx_NDEF_T2T_t *ndefT2T, uint16_t 
 
     uint8_t preserve_counter = 0;
 
-    uint16_t begin_byte = ndefT2T->CurrentByteAddress;
+    uint16_t begin_byte = startByte;
     uint16_t end_byte = (uint16_t)(begin_byte + bytes_to_process);
 
     if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != bytesToProcess) && (NULL != preserveBytes))
@@ -2026,6 +2009,8 @@ static ptx_Status_t ptx_NDEF_T2T_AreaChecker (ptx_NDEF_T2T_t *ndefT2T, uint16_t 
 
         for (uint16_t check_address = begin_byte; check_address < end_byte; check_address++)
         {
+            uint8_t byte_added = 0;
+
             /* check DLAs */
             for (uint8_t idx = 0; idx < ndefT2T->TLVs.NumberOfLockTLVs; idx++)
             {
@@ -2034,7 +2019,14 @@ static ptx_Status_t ptx_NDEF_T2T_AreaChecker (ptx_NDEF_T2T_t *ndefT2T, uint16_t 
                     preserveBytes[preserve_counter] = check_address;
                     preserve_counter++;
                     bytes_to_process--;
+                    byte_added = 1;
+                    break;
                 }
+            }
+
+            // Skip after found byte
+            if (byte_added) {
+                continue;
             }
 
             /* check RAs */
@@ -2045,44 +2037,12 @@ static ptx_Status_t ptx_NDEF_T2T_AreaChecker (ptx_NDEF_T2T_t *ndefT2T, uint16_t 
                     preserveBytes[preserve_counter] = check_address;
                     preserve_counter++;
                     bytes_to_process--;
+                    break;
                 }
             }
         }
         *bytesToProcess = bytes_to_process;
         status = PTX_STATUS_SUCCESS;
-    }
-
-    return status;
-}
-
-static ptx_Status_t ptx_NDEF_T2T_DataPreservation(ptx_NDEF_T2T_t *ndefT2T, uint16_t bytesToWrite, uint16_t *bytesWritten, uint8_t endOffset, uint16_t preserveAddresses[])
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    uint32_t rx_len = 0;
-
-    if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != bytesWritten) && (NULL != preserveAddresses))
-    {
-        uint16_t bytes_written = *bytesWritten;
-        uint8_t next_preserve = 0;
-
-        memcpy(&ndefT2T->WorkBuffer[0], &ndefT2T->RxBuffer[0], (uint32_t)(PTX_T2T_BLOCKSIZE - bytesToWrite - endOffset));
-
-        for (uint8_t i = 0; i < (PTX_T2T_BLOCKSIZE - bytesToWrite - endOffset); i++)
-        {
-            next_preserve = (uint8_t)(preserveAddresses[i] - ndefT2T->CurrentByteAddress);
-
-            if (PTX_T2T_MAX_NDEF_BYTE_OFFSET >= next_preserve)
-            {
-                ndefT2T->WorkBuffer[next_preserve] = ndefT2T->RxBuffer[next_preserve];
-            }
-        }
-        rx_len = ndefT2T->RxBufferSize;
-        status = ptx_NDEF_T2T_WriteBlock(ndefT2T, ndefT2T->CurrentBlock, &ndefT2T->WorkBuffer[0], PTX_T2T_BLOCKSIZE, &ndefT2T->RxBuffer[0], &rx_len, PTX_T2T_DEFAULT_TIMEOUT_MS);
-
-        (void)memset(&preserveAddresses[0], 0, PTX_T2T_BLOCKSIZE);
-        bytes_written = (uint16_t)(bytes_written + bytesToWrite);
-        *bytesWritten = bytes_written;
     }
 
     return status;
@@ -2100,14 +2060,17 @@ static ptx_Status_t ptx_NDEF_T2T_TLVProtection (ptx_NDEF_T2T_t *ndefT2T, uint16_
         for (uint8_t idx = 0; idx < ndefT2T->TLVs.NumberOfNdefTLVs; idx++)
         {
             tlv_address = ndefT2T->TLVs.NDEFTLV[idx].ByteAddress;
-            tlv_len = ndefT2T->TLVs.NDEFTLV[idx].Length + 1; // Length of NDEF TLV + length information byte
+            tlv_len = ndefT2T->TLVs.NDEFTLV[idx].Length;
+            
+            // Add length information size
+            tlv_len = (uint16_t)(tlv_len + (tlv_len >= PTX_T2T_LENGTHTHRESHOLD ? PTX_T2T_NDEF_L_FIELD_LONG : PTX_T2T_NDEF_L_FIELD_SHORT));
 
             /* for NDEF TLVs, overwriting is an option */
             if (tlv_address != overwriteByteAddress)
             {
                 /* if not the TLV to be overwritten, check if it would overlap with other NDEF TLVs. */
                 if (((tlv_address <= overwriteByteAddress) && ((tlv_address + tlv_len) >= overwriteByteAddress))
-                    || (tlv_address <= (overwriteByteAddress + overwriteLength)))
+                    || ((tlv_address <= (overwriteByteAddress + overwriteLength)) && (tlv_address >= overwriteByteAddress)))
                 {
                     status = PTX_STATUS_E_NDEF_TLV_OVERWRITE_ERROR;
                 }
@@ -2150,6 +2113,7 @@ static ptx_Status_t ptx_NDEF_T2T_TLVProtection (ptx_NDEF_T2T_t *ndefT2T, uint16_
 }
 
 
+
 static ptx_Status_t ptx_NDEF_T2T_TLVGenerator(ptx_NDEF_T2T_t *ndefT2T, uint32_t tlvLen, uint8_t *buff, uint16_t *buffLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -2160,39 +2124,41 @@ static ptx_Status_t ptx_NDEF_T2T_TLVGenerator(ptx_NDEF_T2T_t *ndefT2T, uint32_t 
 
     if (PTX_COMP_CHECK(ndefT2T, Comp_T2TOP) && (NULL != buff) && (NULL != buffLen))
     {
-        uint16_t msg_len = *buffLen;
-
         new_begin_address = (uint16_t)(PTX_T2T_TLV_AREA_BEGIN_BLOCK * PTX_T2T_BLOCKSIZE);
 
-        new_len_field = (msg_len >= PTX_T2T_LENGTHTHRESHOLD) ? (PTX_T2T_NDEF_L_FIELD_LONG) : (PTX_T2T_NDEF_L_FIELD_SHORT);
+        new_len_field = (tlvLen >= PTX_T2T_LENGTHTHRESHOLD) ? (PTX_T2T_NDEF_L_FIELD_LONG) : (PTX_T2T_NDEF_L_FIELD_SHORT);
 
         /* Reset position to beginning of TLV area. */
-        ndefT2T->CurrentByteAddress = (uint16_t)(PTX_T2T_TLV_AREA_BEGIN_BLOCK * PTX_T2T_BLOCKSIZE);
-        ndefT2T->CurrentBlock = PTX_T2T_TLV_AREA_BEGIN_BLOCK;
-        ndefT2T->CurrentBlockAddress = PTX_T2T_TLV_AREA_BEGIN_BLOCK;
+        ndefT2T->CurrentByteAddress = new_begin_address;
+        ndefT2T->CurrentBlockAddress = (ndefT2T->CurrentByteAddress / PTX_T2T_BLOCKSIZE);
+        ndefT2T->CurrentBlock = (uint8_t)(ndefT2T->CurrentBlockAddress % PTX_T2T_SECTORSIZE);
         ndefT2T->SectorParams.CurrentSector = 0u;
 
         /* Search memory until we find a space the TLV will fit into, or until we run out of space. */
         do
         {
-            status = ptx_NDEF_T2T_TLVProtection(ndefT2T, new_begin_address, (uint16_t)(msg_len + new_len_field));
-            new_begin_address = (uint16_t)(new_begin_address + PTX_T2T_BLOCKSIZE);
+            status = ptx_NDEF_T2T_TLVProtection(ndefT2T, new_begin_address, (uint16_t)(tlvLen + new_len_field));
+            if (PTX_STATUS_SUCCESS != status)
+            {
+                new_begin_address = (uint16_t)(new_begin_address + PTX_T2T_BLOCKSIZE);
+                ndefT2T->CurrentByteAddress = new_begin_address;
+                ndefT2T->CurrentBlockAddress = (ndefT2T->CurrentByteAddress / PTX_T2T_BLOCKSIZE);
+                ndefT2T->CurrentBlock = (uint8_t)(ndefT2T->CurrentBlockAddress % PTX_T2T_SECTORSIZE);
+            }
         }
         while ((PTX_STATUS_SUCCESS != status) && (ndefT2T->CCParams.Size > new_begin_address));
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            memcpy(&ndefT2T->WorkBuffer[0], &buff[0], msg_len);
-
             if (PTX_T2T_LENGTHTHRESHOLD > tlvLen)
             {
                 /* 1 L-Byte */
-                if (msg_len <= (tlvLen + (PTX_T2T_NDEF_L_FIELD_SHORT + 1)))
+                if (*buffLen >= (tlvLen + (PTX_T2T_NDEF_L_FIELD_SHORT + 1)))
                 {
                     index = (uint32_t)(tlvLen + (PTX_T2T_NDEF_L_FIELD_SHORT + 1));
 
                     /* Push data back to make space for T- and L-Bytes. */
-                    while (index > 1)
+                    while ((index - PTX_T2T_NDEF_L_FIELD_SHORT) > 0)
                     {
                         buff[index] = buff[index - (PTX_T2T_NDEF_L_FIELD_SHORT + 1)];
                         index--;
@@ -2214,12 +2180,12 @@ static ptx_Status_t ptx_NDEF_T2T_TLVGenerator(ptx_NDEF_T2T_t *ndefT2T, uint32_t 
             else
             {
                 /* 3 L-Byte */
-                if (*buffLen <= (tlvLen + (PTX_T2T_NDEF_L_FIELD_LONG + 1)))
+                if (*buffLen >= (tlvLen + (PTX_T2T_NDEF_L_FIELD_LONG + 1)))
                 {
                     index = (uint32_t)(tlvLen + (PTX_T2T_NDEF_L_FIELD_LONG + 1));
 
                     /* Push data back to make space for T- and L-Bytes. */
-                    while (index > 1)
+                    while ((index - PTX_T2T_NDEF_L_FIELD_LONG) > 0)
                     {
                         buff[index] = buff[index - (PTX_T2T_NDEF_L_FIELD_LONG + 1)];
                         index--;
@@ -2246,6 +2212,8 @@ static ptx_Status_t ptx_NDEF_T2T_TLVGenerator(ptx_NDEF_T2T_t *ndefT2T, uint32_t 
                 /* Enough resources -> TLV was created */
                 ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].ByteAddress = ndefT2T->CurrentByteAddress;
                 ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].Length = (uint16_t)tlvLen;
+                ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthByteOffset = PTX_T2T_NDEF_TLV_L_OFFSET;
+                memcpy(&ndefT2T->TLVs.NDEFTLV[ndefT2T->TLVs.NumberOfNdefTLVs].LengthBlock[0], &buff[0], PTX_T2T_BLOCKSIZE);
                 ndefT2T->TLVs.NumberOfNdefTLVs = 1;
             }
         }

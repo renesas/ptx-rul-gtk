@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -92,6 +92,7 @@ ptx_Status_t ptx_NSC_System_LoadDefaultParam(ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_System_LoadDefaultParam");
         ptx_NSC_SystemConfig_t *config = &(nsc->SysCfg);
 
         config->ClkSel          = PTX_NSC_INIT_CLOCK_SELECT_DEFAULT;
@@ -119,6 +120,8 @@ ptx_Status_t ptx_NSC_System_UpdateConfiguration(ptx_NSC_t *nsc, ptx_NSC_SystemCo
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_System_UpdateConfiguration");
+
         if ( (NULL != params) && (0 < cnt) && (PTX_NSC_SYSTEM_CONFIG_PARAM_ID_MAX_PARAMID >= cnt) )
         {
             /* Input parameters are valid and the list is not empty. Load the parameters into NSC internal SysCfg structure. */
@@ -221,34 +224,37 @@ ptx_Status_t ptx_NSC_System_UpdateConfiguration(ptx_NSC_t *nsc, ptx_NSC_SystemCo
 static ptx_Status_t ptx_NSC_System_SendSystemConfig(ptx_NSC_t* nsc)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (nsc->State == ptx_NSC_State_Init)
+    if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
-        status = PTX_STATUS_SUCCESS;
+        PTX_LOG_V(nsc->Log, "ptx_NSC_System_SendSystemConfig");
+
+        if (nsc->State == ptx_NSC_State_Init)
+        {
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            /* System is not in INIT state. Must be turned into INIT state now. */
+
+            /* Activate the FW. This shall first reset the chip, and then retrieve and check the reset notification. */
+            status = ptx_NSC_Firmware_Activate(nsc, NULL);
+
+            /*
+            * If activation was successful, NSC_RESET_NTF has arrived and has been handled
+            * in ptx_NSC_Firmware_Activate API.
+            * System turned into ptx_NSC_State_Init state in command processor notification handler.
+            */
+        }
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            /*
+            * All successful up to now. NSC is in ptx_NSC_State_Init state.
+            * The system (stack and PTX chip) is synchronized and may be initialised.
+            */
+            status = ptx_NSC_InitHw(nsc);
+        }
     }
-    else
-    {
-        /* System is not in INIT state. Must be turned into INIT state now. */
-
-        /* Activate the FW. This shall first reset the chip, and then retrieve and check the reset notification. */
-        status = ptx_NSC_Firmware_Activate(nsc, NULL);
-
-        /*
-         * If activation was successful, NSC_RESET_NTF has arrived and has been handled
-         * in ptx_NSC_Firmware_Activate API.
-         * System turned into ptx_NSC_State_Init state in command processor notification handler.
-         */
-    }
-
-    if (PTX_STATUS_SUCCESS == status)
-    {
-        /*
-         * All successful up to now. NSC is in ptx_NSC_State_Init state.
-         * The system (stack and PTX chip) is synchronized and may be initialised.
-         */
-        status = ptx_NSC_InitHw(nsc);
-    }
-
     return status;
 
 }

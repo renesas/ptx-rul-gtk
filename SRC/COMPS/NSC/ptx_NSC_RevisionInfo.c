@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -82,8 +82,10 @@ ptx_Status_t ptx_NSC_GetInfo(ptx_NSC_t *nscCtx, ptx_NSC_InfoType_t infoType, uin
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != infoData) && (NULL != infoDataLen))
+    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != infoData) && (NULL != infoDataLen))
     {
+        PTX_LOG_I(nscCtx->Log, "ptx_NSC_GetInfo");
+
         status = PTX_STATUS_SUCCESS;
 
         switch (infoType)
@@ -157,19 +159,6 @@ ptx_Status_t ptx_NSC_GetInfo(ptx_NSC_t *nscCtx, ptx_NSC_InfoType_t infoType, uin
                 /* 1By length */
                 *infoData = nscCtx->MtU;
                 *infoDataLen = PTX_GETINFO_DATA_SIZE_1;
-                break;
-            }
-
-            case ptx_NSC_Info_Temperature:
-            {
-                ptx_NSC_ParamStatus_t param_status = {0};
-                status = ptx_NSC_GetStatus(nscCtx, &param_status);
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    /* 1By length */
-                    *infoData = param_status.Temperature;
-                    *infoDataLen = PTX_GETINFO_DATA_SIZE_1;
-                }
                 break;
             }
 

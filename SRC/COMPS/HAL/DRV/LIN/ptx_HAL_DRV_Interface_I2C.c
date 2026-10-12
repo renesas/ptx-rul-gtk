@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -112,7 +112,6 @@ static ptx_HAL_DRV_Interface_I2C_PortConfig_t gDrvI2CConfigs[PTX_HAL_DRV_INTERFA
 
 static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioSetInput (ptx_HAL_DRV_Interface_I2C_t *ctx, int *retFd);
 static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising (ptx_HAL_DRV_Interface_I2C_t *ctx, int *retFd);
-static ptx_Status_t ptx_HAL_DRV_Interface_I2C_IRQ_Clear_Cancel(ptx_HAL_DRV_Interface_I2C_t *ctx);
 
 static ptx_Status_t ptx_HAL_DRV_Interface_I2C_IRQ_Config (ptx_HAL_DRV_Interface_I2C_t *ctx);
 static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ(ptx_HAL_DRV_Interface_I2C_t *ctx, uint8_t *irqPending);
@@ -130,8 +129,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
-    {
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
+    {                
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_I2C_Init");
+
         (void)memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I2C_t));
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_I2C_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
         {
@@ -145,6 +146,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
                 ctx->CompId = Comp_HAL;
 
                 status = ptx_OSAL_MutexInit(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+                
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
@@ -169,6 +171,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_DeInit");
+
         status = ptx_OSAL_MutexDeInit(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -187,6 +191,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Open");
+
         char dev_name[PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX];
         memset(dev_name, 0, sizeof(char)*PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX);
 
@@ -213,14 +219,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx)
             ctx->Port->Dev = -1;
         }
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "I2C Open OK");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Open FAILED");
-        }
     }
 
     return status;
@@ -232,19 +230,13 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Close(ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Close");
+
         (void)close(ctx->Port->Dev);
         (void)close(ctx->Port->IrqFd);
         (void)close(ctx->Port->IrqFdCancel);
         status = PTX_STATUS_SUCCESS;
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "I2C Close OK");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Close FAILED");
-        }
     }
 
     return status;
@@ -256,6 +248,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Tx");
+
         uint8_t mutex_locked = 0;
 
         status = ptx_OSAL_MutexLock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
@@ -323,14 +317,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
         }
 
 #if !defined(PTX_ENABLE_TFCI)
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "I2C Write: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Write ERROR Status: %u", status);
-        }
+        PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "TX: ");
 #endif
     }
 
@@ -344,6 +331,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Rx");
+
         if (0 == rxLen)
         {
             /*
@@ -406,10 +395,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
                 if (1 == mutex_locked)
                 {
                     ptx_Status_t st = ptx_OSAL_MutexUnlock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
-                    if (PTX_STATUS_SUCCESS != st)
-                    {
-                        PTX_LOG_I(ctx->Log, "Error ptx_OSAL_MutexUnlock ST = %d", st);
-                    }
 
                     /* Keep the error status if previously set. */
                     status = (PTX_STATUS_SUCCESS == status) ? st : status;
@@ -425,38 +410,9 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
         {
-            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "I2C Read: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "I2C Read ERROR Status: %u", status);
+            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "RX: ");
         }
 #endif
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_ActivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeactivateRxIrq(ptx_HAL_DRV_Interface_I2C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
     }
 
     return status;
@@ -469,6 +425,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_RxIrqLevel(ptx_HAL_DRV_Interface_I2C_t *c
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_RxIrqLevel");
+
         uint8_t gpio_pending = 0;
 
         /* Check if the IRQ of the GPIO-pin is already pending i.e. set to 1 */
@@ -482,122 +440,14 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_RxIrqLevel(ptx_HAL_DRV_Interface_I2C_t *c
     return status;
 }
 
-ptx_Status_t ptx_HAL_DRV_Interface_I2C_WaitForIRQ(ptx_HAL_DRV_Interface_I2C_t *ctx)
-{
-    ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        /*
-         * The routine first reads the line status: if the line is set, exit the routine.
-         * Otherwise, continue to the loop and poll continuously until the expected events come, or an internal error
-         * occurrs. Possible events to expect: line rising edge or gpio cancel.
-         * The function returns only if any of those 2 events happens.
-         *
-         * NOTE: there might be some exceptional events and the referring flags set, like POLLPRI or POLLERR.
-         * Such events are disregarded. Nevertheless a fd needs to be read to clear the event.
-         */
-
-        int rv;
-        int64_t rd;
-        struct pollfd pfd[2];
-        struct gpioevent_data event;
-        uint8_t gpio_pending = 0;
-        uint8_t exit_loop = 0;
-
-        /* Check if the IRQ of the GPIO-pin is already pending i.e. set to 1 */
-        st = ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ(ctx, &gpio_pending);
-
-        if ((PTX_STATUS_SUCCESS == st) && (0 == gpio_pending))
-        {
-            while ((0 == exit_loop) && (PTX_STATUS_SUCCESS == st))
-            {
-                memset(&pfd[0], 0, 2 * sizeof(struct pollfd));
-
-                /* Add file descriptors to the set */
-                pfd[0].fd = ctx->Port->IrqFdCancel;
-                pfd[0].events = POLLIN | POLLPRI;
-
-                pfd[1].fd = ctx->Port->IrqFd;
-                pfd[1].events = POLLIN | POLLPRI;
-
-                gpio_pending = 0;
-
-                /* Wait to infinity and beyond... */
-                rv = poll(&pfd[0], 2, -1);
-                if (rv > 0)
-                {
-                    /* There is one or more events available. GpioCancel is higher priority. */
-
-                    if (0 != pfd[0].revents)
-                    {
-                        /* Cancel Event happened. Read to clear. */
-                        (void)ptx_HAL_DRV_Interface_I2C_IRQ_Clear_Cancel(ctx);
-
-                        /* Check also the IrqLine event just to clear it. */
-                        if (0 != pfd[1].revents)
-                        {
-                            rd = read(ctx->Port->IrqFd, &event, sizeof(event));
-                        }
-
-                        st = PTX_STATUS_E_HAL_CANCELLED;
-                    }
-                    else if (0 != pfd[1].revents)
-                    {
-                        /* Irq line Event happened. Read to get the event data, or just to clear. */
-
-                        rd = read(ctx->Port->IrqFd, &event, sizeof(event));
-                        if (0 >= rd)
-                        {
-                            st = PTX_STATUS_E_GEN_INTERNAL;
-                        }
-                        else
-                        {
-                            if ( (0 != (pfd[1].revents & POLLIN)) && (GPIOEVENT_EVENT_RISING_EDGE == event.id))
-                            {
-                                /* IRQ line trigger. */
-                                gpio_pending = 1;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        /* Unexpected error. */
-                        st = PTX_STATUS_E_GEN_INTERNAL;
-                    }
-
-                    if ((PTX_STATUS_SUCCESS == st) && (0 != gpio_pending))
-                    {
-                        gpio_pending = 0;
-
-                        /* The line might be set. Please note that there might be some false alarm. So, check the line once more. */
-                        st = ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ(ctx, &gpio_pending);
-                        if ((PTX_STATUS_SUCCESS == st) && (0 != gpio_pending))
-                        {
-                            /* IRQ line is set. */
-                            exit_loop = 1U;
-                        }
-                    }
-
-                }
-                else
-                {
-                    /* An error. Cannot be a timeout since we wait for an infinite time. */
-                    st = PTX_STATUS_E_GEN_INTERNAL;
-                }
-            }
-        }
-    }
-
-    return st;
-}
-
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetParameter(ptx_HAL_DRV_Interface_I2C_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -622,8 +472,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_GetParameter(ptx_HAL_DRV_Interface_I2C_t 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -655,6 +507,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetSlaveAddress(ptx_HAL_DRV_Interface_I2C
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetSlaveAddress");
+
         ctx->BusAddr = address;
         status = PTX_STATUS_SUCCESS;
     }
@@ -668,6 +522,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed(ptx_HAL_DRV_Interfac
 
     if ((NULL != ctx) && (0 != speed))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed");
+
         /*
             Note: There is no way to directly change the clock speed for I2C under Linux through Kernel calls during runtime.
                   To change it update the "config.txt" file in your firmware folder and reboot.
@@ -713,57 +569,62 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_IRQ_Config (ptx_HAL_DRV_Interface_
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERFACE_OPEN;
 
-    int fd;
-
-    char buffer[PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX];
-    memset(buffer, 0, PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX);
-    PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_SET_GPIOCHIP(buffer, PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_GPIOCHIP_USED);
-
-    /*
-     * Open a chip fd here. This fd will be used to retrieve line fd and  then closed. A different
-     * fd is then used for furter gpio access.
-     */
-    fd = open(buffer, O_RDWR | O_NONBLOCK);
-    if (fd > 0)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        ctx->Port->IrqFd = fd;
-        st = ptx_HAL_DRV_Interface_I2C_GpioSetInput(ctx, &fd);
+
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_IRQ_Config");
+
+        int fd;
+
+        char buffer[PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX];
+        memset(buffer, 0, PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX);
+        PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_SET_GPIOCHIP(buffer, PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_GPIOCHIP_USED);
+
+        /*
+        * Open a chip fd here. This fd will be used to retrieve line fd and  then closed. A different
+        * fd is then used for furter gpio access.
+        */
+        fd = open(buffer, O_RDWR | O_NONBLOCK);
+        if (fd > 0)
+        {
+            ctx->Port->IrqFd = fd;
+            st = ptx_HAL_DRV_Interface_I2C_GpioSetInput(ctx, &fd);
+            if (PTX_STATUS_SUCCESS == st)
+            {
+                /*
+                * Opened fd was closed in GpioSetInput and new fd was assigned by the GPIO interface API.
+                * This fd is used from now on - for all further ioctl requests.
+                */
+                ctx->Port->IrqFd = fd;
+            }
+        }
+
         if (PTX_STATUS_SUCCESS == st)
         {
-            /*
-             * Opened fd was closed in GpioSetInput and new fd was assigned by the GPIO interface API.
-             * This fd is used from now on - for all further ioctl requests.
-             */
-            ctx->Port->IrqFd = fd;
+            st = ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising(ctx, &fd);
+            if (PTX_STATUS_SUCCESS == st)
+            {
+                /*
+                * Fd was modified/closed inside GpioSetIrqRising.
+                * This final fd is used to get line state and to poll for line events.
+                */
+                ctx->Port->IrqFd = fd;
+            }
         }
-    }
 
-    if (PTX_STATUS_SUCCESS == st)
-    {
-        st = ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising(ctx, &fd);
         if (PTX_STATUS_SUCCESS == st)
         {
-            /*
-             * Fd was modified/closed inside GpioSetIrqRising.
-             * This final fd is used to get line state and to poll for line events.
-             */
-            ctx->Port->IrqFd = fd;
+            /* Fd used to cancel WaitForIrq operation. */
+            ctx->Port->IrqFdCancel = eventfd(0, O_NONBLOCK);
+            if (ctx->Port->IrqFdCancel <= 0)
+            {
+                /* In case Cancel Fd could not be properly set, close already open Fd */
+                (void)close(ctx->Port->IrqFd);
+
+                st = PTX_STATUS_E_GEN_INTERNAL;
+            }
         }
     }
-
-    if (PTX_STATUS_SUCCESS == st)
-    {
-        /* Fd used to cancel WaitForIrq operation. */
-        ctx->Port->IrqFdCancel = eventfd(0, O_NONBLOCK);
-        if (ctx->Port->IrqFdCancel <= 0)
-        {
-            /* In case Cancel Fd could not be properly set, close already open Fd */
-            (void)close(ctx->Port->IrqFd);
-
-            st = PTX_STATUS_E_GEN_INTERNAL;
-        }
-    }
-
     return st;
 }
 
@@ -779,6 +640,8 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioSetInput (ptx_HAL_DRV_Interfac
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != retFd))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GpioSetInput");
+
         int fd;
         int rv;
         struct gpiohandle_request req;
@@ -825,6 +688,8 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising (ptx_HAL_DRV_Inte
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != retFd))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising");
+
         int fd, rv;
         struct gpioevent_request req;
 
@@ -872,6 +737,8 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ (ptx_HAL_DRV_I
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != irqPending))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ");
+
         int fd;
         int res;
         struct gpiohandle_data data;
@@ -894,62 +761,5 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ (ptx_HAL_DRV_I
     }
 
     return st;
-}
-
-static ptx_Status_t ptx_HAL_DRV_Interface_I2C_IRQ_Clear_Cancel (ptx_HAL_DRV_Interface_I2C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        uint64_t rd_num;
-        ssize_t br;
-        int i = 0;
-        size_t bytes_read = 0;
-        size_t bytes_to_read = sizeof(rd_num);
-
-        status = PTX_STATUS_SUCCESS;
-
-        do
-        {
-            br = read(ctx->Port->IrqFdCancel, &rd_num, bytes_to_read - bytes_read); /* Non-blocking */
-            if (br >= 0)
-            {
-                bytes_read += (size_t)br;
-            }
-            else
-            {
-                int local_error = errno;
-
-                /*
-                 * workaround for over ambitious warning
-                 */
-                if (EAGAIN == local_error)
-                {
-                    /* Not yet all.. */
-                }
-                else if ((EAGAIN != EWOULDBLOCK) && (EWOULDBLOCK == local_error))
-                {
-                    /*
-                     * Workaround for a compile warning/error: error: logical ‘or’ of equal expressions [-Werror=logical-op]
-                     *
-                     * This happens because EWOULDBLOCK and EAGAIN might be the same value.
-                     *
-                     * EWOULDBLOCK
-                     * Operation would block (may be same value as EAGAIN)
-                     * (POSIX.1-2001).
-                     */
-                }
-                else
-                {
-                    break;
-                }
-            }
-            i++;
-        }
-        while ((bytes_read < bytes_to_read) && (i < 3));
-    }
-
-    return status;
 }
 

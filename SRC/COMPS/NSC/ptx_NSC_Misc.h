@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -86,6 +86,7 @@ typedef struct ptx_NSC_ParamStatus
     uint32_t    Rssi;               /**< The last measured RSSI value. */
     uint8_t     CollInfo;           /**< Collision information of the last reception. */
     uint8_t     Temperature;        /**< IC temperature in degree celsius. */
+    uint16_t    RfFieldStrength;    /**< Remote RF field strength */
 } ptx_NSC_ParamStatus_t;
 
 

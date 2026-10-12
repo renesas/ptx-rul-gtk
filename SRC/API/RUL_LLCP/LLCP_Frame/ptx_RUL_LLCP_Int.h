@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -75,6 +75,7 @@ extern "C" {
 #define PTX_LLCP_PDU_SEQNS_OFFSET       (0x04u) /**< Sequence send number offset */
 #define PTX_LLCP_PDU_SEQNR_MASK         (0x0Fu) /**< Sequence receive number bitmask */
 #define PTX_LLCP_PDU_SEQNR_OFFSET       (0x00u) /**< Sequence receive number offset */
+#define PTX_LLCP_PDU_MINIMUM_LEN        (0x03u) /**< Minimum PDU length. */
 
 /*
  * ####################################################################################################################
@@ -137,6 +138,7 @@ typedef struct ptx_RUL_LLCP_TrxState
     uint8_t     Vra;    /**< Receive Acknowledgement State Variable */
     uint8_t     Vs;     /**< Send State Variable */
     uint8_t     Vsa;    /**< Send Acknowledgement State Variable */
+
 } ptx_RUL_LLCP_TrxState_t;
 
 #if defined(__cplusplus)

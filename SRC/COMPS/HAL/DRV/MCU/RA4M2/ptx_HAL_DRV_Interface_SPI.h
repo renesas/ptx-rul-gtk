@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -117,7 +117,7 @@ typedef struct ptx_HAL_DRV_Interface_SPI_PortConfig
 } ptx_HAL_DRV_Interface_SPI_PortConfig_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_DRV_Interface_SPI
 {
@@ -126,7 +126,7 @@ typedef struct ptx_HAL_DRV_Interface_SPI
     ptx_HAL_DRV_Interface_SPI_PortConfig_t          *Port;          /**< Pointer to the SPI Port Configuration. */
     uint32_t                                        Speed;          /**< SPI Communication Speed. */
 
-    ptx_Log_t                                       *Logger;        /**< Initialized Logger Context.*/
+    ptx_Log_t                                       *Log;           /**< Initialized Log Context.*/
     ptx_HAL_GPIO_t                                  *Gpio;          /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_SPI_t;
 
@@ -139,7 +139,7 @@ typedef struct ptx_HAL_DRV_Interface_SPI_InitParams
     uint8_t                             PortID;         /**< ID of the hardware interface port implementation. */
 
     uint32_t                            Speed;          /**< SPI Communication Speed. */
-    ptx_Log_t                           *Log;           /**< Initialised Logger Context */
+    ptx_Log_t                           *Log;           /**< Initialised Log Context */
     ptx_HAL_GPIO_t                      *Gpio;          /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_SPI_InitParams_t;
 
@@ -153,7 +153,12 @@ typedef struct ptx_HAL_DRV_Interface_SPI_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx             Pointer to component.
+ * Initializes the SPI interface driver component. Validates input parameters and searches for a matching
+ * port configuration based on PortType and PortID. Sets up component references including Log context,
+ * GPIO context, and SPI communication speed. If Speed is 0, defaults to PTX_HAL_DRV_INTERFACE_SPI_DEFAULT_SPEED.
+ * The Log and GPIO contexts must be valid, initialized instances.
+ *
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -163,16 +168,26 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Init (ptx_HAL_DRV_Interface_SPI_t *ctx, p
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx              Pointer to component.
+ * Clears all component data and resets component ID to Comp_None. Does not close the SPI interface;
+ * ptx_HAL_DRV_Interface_SPI_Close should be called separately if the interface is open.
+ *
+ * \param[in,out]       ctx              Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeInit (ptx_HAL_DRV_Interface_SPI_t *ctx);
 
 /**
- * \brief Driver SPI Open
+ * \brief Opens the SPI interface.
  *
- * Opens the Renesas SPI hardware block and configures it according to the given configuration in \see ptx_HAL_DRV_Interface_SPI_t.Port.
+ * Opens the SCI SPI hardware block and configures it according to the port configuration. Performs the following steps:
+ * 1. Pre-configures SPI pins (MOSI and Clock) as peripheral pins controlled by SCI0
+ * 2. Opens the SCI SPI module via R_SCI_SPI_Open
+ * 3. If already open (FSP_ERR_ALREADY_OPEN or FSP_ERR_IN_USE), closes and reopens for clean state
+ * 4. Calculates and configures the SPI bitrate using R_SCI_SPI_CalculateBitrate
+ * 5. Directly updates hardware registers (SMR, BRR, MDDR) to set the desired clock frequency
+ * 6. Opens and enables the external IRQ interface
+ * 7. Registers callbacks for both SPI transfer completion and external IRQ events
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -181,9 +196,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeInit (ptx_HAL_DRV_Interface_SPI_t *ctx)
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_Open(ptx_HAL_DRV_Interface_SPI_t *ctx);
 
 /**
- * \brief Driver SPI Close
+ * \brief Closes the SPI interface.
  *
- * Closes the Renesas SPI hardware block.
+ * Closes the SCI SPI hardware block and the external IRQ interface. De-configures SPI pins (MOSI, Clock, NSS)
+ * back to input mode. Returns success if either interface is successfully closed or if it was not open (FSP_ERR_NOT_OPEN).
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -192,36 +208,40 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Open(ptx_HAL_DRV_Interface_SPI_t *ctx);
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_Close(ptx_HAL_DRV_Interface_SPI_t *ctx);
 
 /**
- * \brief Driver SPI Tx
+ * \brief Transmits data via SPI.
  *
- * Sends data to the Renesas SPI hardware block, to communicate with a slave endpoint.
+ * Sends data to the SPI slave device using the configured SPI interface. Initiates an asynchronous
+ * write operation and waits for transfer completion via callback. The transfer state is monitored
+ * with a timeout mechanism to detect transfer failures or timeouts.
  *
  * \param[in]       ctx             Pointer to component.
- * \param[in]       txBuf           Array of bytes to be transmitted.
- * \param[in]       txLen           Length of \see txBuf.
+ * \param[in]       txBuf           Array of bytes to be transmitted (must not be NULL).
+ * \param[in]       txLen           Length of txBuf in bytes.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_Tx(ptx_HAL_DRV_Interface_SPI_t *ctx, uint8_t *txBuf, uint32_t txLen);
 
 /**
- * \brief Driver SPI Rx
+ * \brief Receives data via SPI.
  *
- * Receives data from the Renesas SPI hardware block.
+ * Receives data from the SPI slave device using the configured SPI interface. Initiates an asynchronous
+ * read operation and waits for transfer completion via callback. The transfer state is monitored
+ * with a timeout mechanism to detect transfer failures or timeouts.
  *
  * \param[in]       ctx             Pointer to component.
- * \param[in]       rxBuf           Array of bytes to be received.
- * \param[in]       rxLen           Length of \see rxBuf. Must match the bytes received!
+ * \param[out]      rxBuf           Array of bytes to receive data into (must not be NULL).
+ * \param[in]       rxLen           Length of rxBuf in bytes. Must match the number of bytes expected from slave.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_Rx(ptx_HAL_DRV_Interface_SPI_t *ctx, uint8_t *rxBuf, uint32_t rxLen);
 
 /**
- * \brief Driver SPI Set NSS (Chip Select)
+ * \brief Asserts the NSS (Chip Select) pin.
  *
- * Sets the configured NSS pin to select the slave device. The NSS pin is configured
- * in \ref ptx_HAL_DRV_Interface_SPI_t.Port.
+ * Sets the configured NSS pin to LOW to select the SPI slave device. The NSS pin is configured
+ * in the port configuration structure (ptx_HAL_DRV_Interface_SPI_PortConfig_t.Nss).
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -230,10 +250,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Rx(ptx_HAL_DRV_Interface_SPI_t *ctx, uint
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetNss(ptx_HAL_DRV_Interface_SPI_t *ctx);
 
 /**
- * \brief Driver SPI Reset NSS (Chip Select)
+ * \brief De-asserts the NSS (Chip Select) pin.
  *
- * Resets the configured NSS pin to deselect the slave device. The NSS pin is configured
- * in \ref ptx_HAL_DRV_Interface_SPI_t.Port.
+ * Sets the configured NSS pin to HIGH to deselect the SPI slave device. The NSS pin is configured
+ * in the port configuration structure (ptx_HAL_DRV_Interface_SPI_PortConfig_t.Nss).
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -241,70 +261,45 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetNss(ptx_HAL_DRV_Interface_SPI_t *ctx);
  */
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_ResetNss(ptx_HAL_DRV_Interface_SPI_t *ctx);
 
-/**
- * \brief Driver SPI Activate Rx IRQ.
- *
- * Activates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_SPI_t.Port.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_SPI_ActivateRxIrq(ptx_HAL_DRV_Interface_SPI_t *ctx);
 
 /**
- * \brief Driver SPI Deactivate Rx IRQ.
+ * \brief Reads the current level of the Rx IRQ pin.
  *
- * Deactivates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_SPI_t.Port.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeactivateRxIrq(ptx_HAL_DRV_Interface_SPI_t *ctx);
-
-/**
- * \brief Driver SPI Rx IRQ Level
- *
- * Reads the Rx IRQ Level from the configured pin. The pin must be configured in \ref ptx_HAL_DRV_Interface_SPI_t.Port.
+ * Reads the current logic level (HIGH or LOW) of the configured IRQ pin using the GPIO interface.
+ * The IRQ pin is configured in the port configuration structure (ptx_HAL_DRV_Interface_SPI_PortConfig_t.Irq).
  *
  * \param[in]       ctx             Pointer to component.
- * \param[out]      level           Pointer to the current value of the IRQ pin
+ * \param[out]      level           Pointer to variable for storing pin level (0 = LOW, 1 = HIGH).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_RxIrqLevel(ptx_HAL_DRV_Interface_SPI_t *ctx, uint8_t* level);
 
 /**
- * \brief Driver SPI Wait for IRQ to be triggered
+ * \brief Sets a parameter for the SPI interface.
  *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_SPI_WaitForIRQ(ptx_HAL_DRV_Interface_SPI_t *ctx);
-
-/**
- * \brief Driver SPI Set Parameter function.
- *
- * Sets a HAL SPI Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Configures an SPI interface parameter selected by type. Supported parameters include:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Changes the SPI communication speed.
+ *   The interface will be closed and reopened with the new speed.
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address: Not available for SPI (returns PTX_STATUS_E_GEN_NOT_AVAILABLE).
+ * - HAL_DRV_Interface_Parameter_Type_UART_Enable_Fast_Mode: Not available for SPI (returns PTX_STATUS_E_GEN_NOT_AVAILABLE).
  *
  * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * \param[in]       parameter      Parameter (type, value) struct specifying the parameter to set.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetParameter(ptx_HAL_DRV_Interface_SPI_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 
 /**
- * \brief Driver SPI Get Parameter function.
+ * \brief Gets a parameter from the SPI interface.
  *
- * Gets a HAL SPI Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Retrieves the current value of an SPI interface parameter selected by type. Supported parameters include:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Returns the current SPI communication speed.
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address: Not available for SPI (returns PTX_STATUS_E_GEN_NOT_AVAILABLE).
  *
  * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * \param[in,out]   parameter      Parameter (type, value) struct to receive the parameter value.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -318,4 +313,3 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_GetParameter(ptx_HAL_DRV_Interface_SPI_t 
 #endif /* Guard */
 
 /** @} */
-

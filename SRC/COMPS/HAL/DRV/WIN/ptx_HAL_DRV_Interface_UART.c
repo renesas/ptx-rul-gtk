@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -88,15 +88,17 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Init(ptx_HAL_DRV_Interface_UART_t *ctx, 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_UART_Init");
+
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_UART_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_UART_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
         {
             if ((gDrvUartPortConfigs[config].Type == initParams->PortType) && (gDrvUartPortConfigs[config].ID == initParams->PortID))
             {
-                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvUartPortConfigs[config].ModuleDescriptor, NULL);
+                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvUartPortConfigs[config].ModuleDescriptor, NULL, initParams->Log);
                 if (PTX_STATUS_SUCCESS == status)
                 {
                     ctx->Port = &gDrvUartPortConfigs[config];
@@ -120,6 +122,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_DeInit(ptx_HAL_DRV_Interface_UART_t *ctx
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_DeInit");
+
         status = ptx_HAL_FTD2XX_LibClose(ctx->Ftd2xx_ctx);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -138,16 +142,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Open(ptx_HAL_DRV_Interface_UART_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Open");
+
         status = ptx_HAL_FTD2XX_UART_Open(ctx->Ftd2xx_ctx, ctx->Speed);
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "UART Open OK on FTDI: %s", ctx->Port->ModuleDescriptor);
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "UART Open FAILED");
-        }
     }
     return status;
 }
@@ -158,49 +156,30 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Close(ptx_HAL_DRV_Interface_UART_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Close");
+
         status = ptx_HAL_FTD2XX_UART_Close(ctx->Ftd2xx_ctx);
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "UART Close OK on FTDI: %s", ctx->Port->ModuleDescriptor);
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "UART Close FAILED");
-        }
     }
 
     return status;
 }
 
-
-
-ptx_Status_t ptx_HAL_DRV_Interface_UART_TRx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *txBuf, uint32_t *txLen, uint8_t *rxBuf, uint32_t *rxLen)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = ptx_HAL_FTD2XX_UART_TRx(ctx->Ftd2xx_ctx, txBuf, txLen, rxBuf, rxLen);
-    }
-
-    return status;
-}
 
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *txBuf, uint32_t txLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Tx");
+
         status = ptx_HAL_FTD2XX_UART_TRx(ctx->Ftd2xx_ctx, txBuf, &txLen, NULL, 0);
 
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
         {
-            PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "UART Write: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "UART Write ERROR Status: %u", status);
+            PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "TX: ");
         }
 #endif
     }
@@ -211,44 +190,19 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, ui
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Rx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *rxBuf, uint32_t rxLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        status = ptx_HAL_FTD2XX_UART_TRx(ctx->Ftd2xx_ctx, NULL, 0, rxBuf, &rxLen);
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Rx");
 
+        status = ptx_HAL_FTD2XX_UART_TRx(ctx->Ftd2xx_ctx, NULL, 0, rxBuf, &rxLen);
+        
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
         {
-            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "UART Read: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "UART Read ERROR Status: %u", status);
+            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "RX: ");
         }
 #endif
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_UART_ActivateRxIrq(ptx_HAL_DRV_Interface_UART_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_UART_DeactivateRxIrq(ptx_HAL_DRV_Interface_UART_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
     }
 
     return status;
@@ -257,25 +211,16 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_DeactivateRxIrq(ptx_HAL_DRV_Interface_UA
 ptx_Status_t ptx_HAL_DRV_Interface_UART_RxIrqLevel(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *level)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != level))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_RxIrqLevel");
+
         uint32_t modem_state = 0;
         status = ptx_HAL_FTD2XX_UART_GetModemStatus(ctx->Ftd2xx_ctx, &modem_state);
 
         /* Level of CTS is inverted */
         *level = (modem_state & PTX_HAL_DRV_INTERFACE_UART_FT232H_MODEM_STATUS_CTS_OFFSET) == 0 ? 1 : 0;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_UART_WaitForIRQ(ptx_HAL_DRV_Interface_UART_t* ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
     }
 
     return status;
@@ -287,6 +232,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_SetParameter(ptx_HAL_DRV_Interface_UART_
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_SetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -312,6 +259,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_GetParameter(ptx_HAL_DRV_Interface_UART_
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_GetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -343,6 +292,8 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_SetTransmissionSpeed(ptx_HAL_DRV_
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (0 != speed))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_SetTransmissionSpeed");
+
         status = ptx_HAL_FTD2XX_UART_SetSpeed(ctx->Ftd2xx_ctx, speed);
         if (PTX_STATUS_SUCCESS == status)
         {

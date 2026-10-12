@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -124,16 +124,16 @@ typedef struct ptx_RUL_LLCP_Link_InitParams
  */
 typedef struct ptx_RUL_LLCP_Link
 {
-    ptx_Comps_t                             CompId;         /**< Component Id */
-    ptx_RUL_LLCP_ServiceAccessPoint_t       Local;          /**< Local SAP */
-    ptx_RUL_LLCP_ServiceAccessPoint_t       Remote;         /**< Remote SAP */
-    ptx_RUL_LLCP_TrxState_t                 TrxStates;      /**< TRX state variables: Vr, Vra, Vs, Vsa */
-    ptx_RUL_LLCP_Link_State_t               LinkState;      /**< Link State (SAP Registered, SAPs Connected, etc.) */
-    ptx_RUL_LLCP_Link_Type_t                Type;           /**< ConnectionOriented, ConnectionLess */
-    ptx_RUL_LLCP_ServiceDiscoveryState_t    SdpState;       /**< Service Discovery Procedure*/
-    uint8_t                                 InUse;          /**< Link in use flag */
-    uint8_t                                 BusyReleased;   /**< Budy released flag */
-    char                                    ServiceUri[PTX_LLCP_LINK_DEFAULT_SERVICE_URI_LENGTH]; /**< Service Uri Name */
+    ptx_Comps_t                             CompId;                                                 /**< Component Id */
+    ptx_RUL_LLCP_ServiceAccessPoint_t       Local;                                                  /**< Local SAP */
+    ptx_RUL_LLCP_ServiceAccessPoint_t       Remote;                                                 /**< Remote SAP */
+    ptx_RUL_LLCP_TrxState_t                 TrxStates;                                              /**< TRX state variables: Vr, Vra, Vs, Vsa */
+    ptx_RUL_LLCP_Link_State_t               LinkState;                                              /**< Link State (SAP Registered, SAPs Connected, etc.) */
+    ptx_RUL_LLCP_Link_Type_t                Type;                                                   /**< ConnectionOriented, ConnectionLess */
+    ptx_RUL_LLCP_ServiceDiscoveryState_t    SdpState;                                               /**< Service Discovery Procedure*/
+    uint8_t                                 InUse;                                                  /**< Link in use flag */
+    uint8_t                                 BusyReleased;                                           /**< Budy released flag */
+    char                                    ServiceUri[PTX_LLCP_LINK_DEFAULT_SERVICE_URI_LENGTH];   /**< Service Uri Name */
 } ptx_RUL_LLCP_Link_t;
 
 

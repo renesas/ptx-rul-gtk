@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -72,12 +72,14 @@
 ptx_Status_t ptx_HAL_DRV_GPIO_Init (ptx_HAL_DRV_GPIO_t *ctx, ptx_HAL_DRV_GPIO_InitParams_t *initParams)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    PTX_UNUSED_PARAMETER(initParams);
-    if (NULL != ctx)
+    
+    if ((NULL != ctx)&& (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_GPIO_Init");
+
         ctx->CompId = Comp_HAL;
         ctx->Gpio_only = 0; /* per default GPIO is not used standalone */
-
+        ctx->Log = initParams->Log;
         status = PTX_STATUS_SUCCESS;
     }
 
@@ -90,6 +92,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_DeInit (ptx_HAL_DRV_GPIO_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_GPIO_DeInit");
+
         memset(ctx, 0, sizeof(ptx_HAL_DRV_GPIO_t));
         ctx->CompId = Comp_None;
     }
@@ -103,9 +107,13 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
-        status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xx_ctx, MODULE_DESCRIPTOR, NULL);
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Open");
+        
+        status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xx_ctx, MODULE_DESCRIPTOR, NULL, gpio->Log);
+
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -133,7 +141,7 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx)
         }
         else
         {
-            status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xx_ctx, MODULE_DESCRIPTOR, NULL);
+            status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xx_ctx, MODULE_DESCRIPTOR, NULL, gpio->Log);
         }
 
         if (PTX_STATUS_SUCCESS == status)
@@ -154,8 +162,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Close (void *ctx)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Close");
+
         if (gpio->Gpio_only)
         {
             status = ptx_HAL_FTD2XX_LibClose(gpio->Ftd2xx_ctx);
@@ -165,11 +176,6 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Close (void *ctx)
             /** NOTHING TODO */
             status = PTX_STATUS_SUCCESS;
         }
-    }
-
-    if (PTX_STATUS_SUCCESS != status)
-    {
-        PTX_LOG_I (gpio->Log, "Error code : %u", status);
     }
 #endif
 
@@ -185,10 +191,13 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPin (void *ctx, uint16_t pin, uint8_t *level)
 {
 #if !defined(PTX_ENABLE_UART)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
 
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPin");
+
         ptx_HAL_FTD2XX_GPIO_t gpio_pin;
         status = ptx_HAL_MapGPIOPin(pin, &gpio_pin);
         uint16_t lvl = (uint16_t) * level;
@@ -274,6 +283,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPort (void *ctx, uint32_t port, uint16_t *data
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPort");
+
         uint8_t data8 = 0x00;
         status = ptx_HAL_FTD2XX_GetHighPinsState(gpio->Ftd2xx_ctx, &data8);
         *data = (uint16_t) data8;
@@ -297,8 +308,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePort (void *ctx, uint32_t port, uint16_t data
     PTX_UNUSED_PARAMETER(port);
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPort");
+
         status = ptx_HAL_FTD2XX_SetHighPinsState(gpio->Ftd2xx_ctx, data, mask);
     }
 #endif
@@ -321,8 +335,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_SetCfgPin (void *ctx, ptx_HAL_DRV_GPIO_Cfg_t cfg[]
     PTX_UNUSED_PARAMETER(cfgLen);
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_SetCfgPin");
+
         /* Not used. Just return status. */
         status = PTX_STATUS_E_GEN_NOT_AVAILABLE;
     }

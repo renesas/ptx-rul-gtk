@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -92,6 +92,8 @@ ptx_Status_t ptx_NSC_RUL_RfConfig_LoadParam(ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RUL_RfConfig_LoadParam");
+
         ptx_NSC_RfConfig_t *config = &(nsc->RfCfg);
 
         /* Check the version */
@@ -171,16 +173,6 @@ ptx_Status_t ptx_NSC_RUL_RfConfig_LoadParam(ptx_NSC_t *nsc)
                     case NSC_RfConfig_ParamId_PollV_26K5:
                         config->RfCfgParam[idx].Value = ptx_NSC_RfConfig_PollV26_5;
                         config->RfCfgParam[idx].Length = ptx_NSC_RfConfig_PollV26_5_len;
-                        break;
-
-                    case NSC_RfConfig_ParamId_PollV53:
-                        config->RfCfgParam[idx].Value = ptx_NSC_RfConfig_PollV53;
-                        config->RfCfgParam[idx].Length = ptx_NSC_RfConfig_PollV53_len;
-                        break;
-
-                    case NSC_RfConfig_ParamId_PollV106:
-                        config->RfCfgParam[idx].Value = ptx_NSC_RfConfig_PollV106;
-                        config->RfCfgParam[idx].Length = ptx_NSC_RfConfig_PollV106_len;
                         break;
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)
@@ -268,8 +260,10 @@ ptx_Status_t ptx_NSC_RfConfig_SetSection(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != config) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != config))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfConfig_SetSection");
+
         switch (config->Id)
         {
             case NSC_RfConfig_ParamId_Poll:
@@ -368,21 +362,6 @@ ptx_Status_t ptx_NSC_RfConfig_SetSection(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_
                 }
                 break;
 
-            case NSC_RfConfig_ParamId_PollV53:
-                if (ptx_NSC_RfConfig_PollV53_len == config->Length)
-                {
-                    memcpy(ptx_NSC_RfConfig_PollV53, config->Value, ptx_NSC_RfConfig_PollV53_len);
-                    status = PTX_STATUS_SUCCESS;
-                }
-                break;
-
-            case NSC_RfConfig_ParamId_PollV106:
-                if (ptx_NSC_RfConfig_PollV106_len == config->Length)
-                {
-                    memcpy(ptx_NSC_RfConfig_PollV106, config->Value, ptx_NSC_RfConfig_PollV106_len);
-                    status = PTX_STATUS_SUCCESS;
-                }
-                break;
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)
             case NSC_RfConfig_ParamId_Listen:
@@ -455,8 +434,10 @@ ptx_Status_t ptx_NSC_RfConfig_GetSection(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != config) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != config))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfConfig_GetSection");
+
         status = PTX_STATUS_SUCCESS;
         switch (config->Id)
         {
@@ -565,8 +546,10 @@ ptx_Status_t ptx_NSC_RfConfig_SetParam(ptx_NSC_t *nsc, ptx_NSC_RfConfig_ParamId_
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (ParamId_Max > id) )
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (ParamId_Max > id))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfConfig_SetParam");
+
         uint8_t *parameter_ptr;
 
         status = ptx_NSC_RfConfig_GetParamPointer(nsc, id, &parameter_ptr);
@@ -584,8 +567,10 @@ ptx_Status_t ptx_NSC_RfConfig_GetParam(ptx_NSC_t *nsc, ptx_NSC_RfConfig_ParamId_
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (ParamId_Max > id) && (NULL != value) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (ParamId_Max > id) && (NULL != value))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfConfig_GetParam");
+
         uint8_t *parameter_ptr;
 
         status = ptx_NSC_RfConfig_GetParamPointer(nsc, id, &parameter_ptr);
@@ -603,8 +588,10 @@ ptx_Status_t ptx_NSC_GetRfConfigInfo(ptx_NSC_t *nsc, uint8_t *infoData, uint8_t 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != infoData) && (NULL != infoDataLen) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != infoData) && (NULL != infoDataLen))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_GetRfConfigInfo");
+
         const uint8_t rfconfig_info_size = 2U;
         infoData[0] = ptx_NSC_RfConfig_Version_Major;
         infoData[1] = ptx_NSC_RfConfig_Version_Minor;
@@ -627,8 +614,10 @@ static ptx_Status_t ptx_NSC_RfConfig_GetParamPointer(ptx_NSC_t *nsc, ptx_NSC_RfC
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (ParamId_Max > id) && (NULL != value) )
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (ParamId_Max > id) && (NULL != value))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfConfig_GetParamPointer");
+
         ptx_NSC_RfConfig_Param_t poll_param_section;
         memset(&poll_param_section, 0, sizeof(ptx_NSC_RfConfig_Param_t));
 

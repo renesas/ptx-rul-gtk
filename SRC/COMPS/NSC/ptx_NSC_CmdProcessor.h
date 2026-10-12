@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -247,11 +247,13 @@ extern "C" {
  * \brief NSC_RESET_NTF parameters
  */
 #define PTX_NSC_CMD_PROCESSOR_RESET_NTF                     (0x90u)         /**< NSC Reset Notification Code */
-#define PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN                  (0x06u)         /**< NSC Reset Notification Length */
+#define PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN_MIN              (0x06u)         /**< NSC Reset Notification Length */
+#define PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN_MAX              (0x07u)         /**< Extended NSC Reset Notification Length */
 #define PTX_NSC_RESET_NTF_HWVER_IDX                         (0x01u)         /**< Reset Notification: HW version parameter index */
 #define PTX_NSC_RESET_NTF_FWVER_IDX                         (0x02u)         /**< Reset Notification: FW version parameter index */
 #define PTX_NSC_RESET_NTF_FWVER_LEN                         (0x02u)         /**< Reset Notification: FW version parameter length */
 #define PTX_NSC_RESET_NTF_DERIVATE_IDX                      (0x04u)         /**< Reset Notification: commercial derivate parameter index */
+#define PTX_NSC_RESET_NTF_ROMVERSION_IDX                    (0x06u)         /**< Extended Reset Notification: ROM version index */
 #define PTX_NSC_RESET_NTF_INVALID_FIRMWARE                  (0x0000u)       /**< No Firmware available, or invalid Firmware (e.g. CRC invalid) */
 
 

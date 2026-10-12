@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -235,7 +235,7 @@ ptx_Status_t ptx_FeliCaDTE_RunTest(ptx_FeliCaDTE_t *feliCaDTE, ptx_FeliCaDTE_Tes
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE)) && (NULL != testParams))
+    if (PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE) && (NULL != testParams))
     {
         switch (testParams->ID)
         {
@@ -274,7 +274,7 @@ static ptx_Status_t ptx_FeliCaDTE_RunPerformanceTest(ptx_FeliCaDTE_t *feliCaDTE,
     ptx_FeliCaDTE_TestProgressParams_t progress_params;
     (void)memset(&progress_params, 0, sizeof(ptx_FeliCaDTE_TestProgressParams_t));
 
-    if ((PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE)) && (NULL != testParams))
+    if (PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE) && (NULL != testParams))
     {
         if ((testParams->Params.PerformanceTest.NrTests <= testParams->Params.PerformanceTest.ResultBufferSize) &&
             (NULL != (testParams->Params.PerformanceTest.ResultBuffer)))
@@ -295,7 +295,7 @@ static ptx_Status_t ptx_FeliCaDTE_RunPerformanceTest(ptx_FeliCaDTE_t *feliCaDTE,
                 {
                     if ((PTX_FELICADTE_SENSF_RES_LENGTH != rx_len) || (PTX_FELICADTE_SENSF_RES_CONST != rx_buffer[1]))
                     {
-                        status = PTX_STATUS_E_FELICA_PROTOCOL_ERROR;
+                        status = PTX_STATUS_E_NSC_RFERROR;
                     }
                 }
 
@@ -357,7 +357,7 @@ static ptx_Status_t ptx_FeliCaDTE_RunRFDigProtTest(ptx_FeliCaDTE_t *feliCaDTE, p
     ptx_FeliCaDTE_TempTestData_t temp_test_data;
     (void)memset(&temp_test_data, 0, sizeof(ptx_FeliCaDTE_TempTestData_t));
 
-    if ((PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE)) && (NULL != testParams))
+    if (PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE) && (NULL != testParams))
     {
         if ((PTX_FELICADTE_RW_MIN_RESULT_BUFFER_SIZE <= testParams->Params.RWDigProtTest.ResultBufferSize) &&
             (NULL != (testParams->Params.RWDigProtTest.ResultBuffer)))
@@ -708,7 +708,7 @@ static ptx_Status_t ptx_FeliCaDTE_Data_Exchange(ptx_FeliCaDTE_t *feliCaDTE, uint
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE)) && (NULL != tx) && (0 != txLength) && (NULL != rxLength))
+    if (PTX_COMP_CHECK(feliCaDTE, Comp_FeliCa_DTE) && (NULL != tx) && (0 != txLength) && (NULL != rxLength))
     {
         status = ptx_RUL_Exchange(feliCaDTE->Rul, tx, txLength, rx, rxLength, timeoutMs);
     }

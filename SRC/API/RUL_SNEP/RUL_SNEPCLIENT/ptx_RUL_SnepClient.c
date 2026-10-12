@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -86,6 +86,8 @@ ptx_Status_t ptx_RUL_SnepClient_Init(ptx_RUL_SnepClient_t *ctx, ptx_RUL_LLCP_t *
 
         status = ptx_RUL_LLCP_EnableSnep(ctx->Llcp);
 
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_Init");
+
         if (PTX_STATUS_SUCCESS == status)
         {
             ctx->CompId = Comp_SNEP;
@@ -141,6 +143,8 @@ ptx_Status_t ptx_RUL_SnepClient_DeInit(ptx_RUL_SnepClient_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_DeInit");
+
         status = ptx_RUL_LLCP_DisableSnep(ctx->Llcp);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -164,6 +168,8 @@ ptx_Status_t ptx_RUL_SnepClient_StartDefaultDiscovery(ptx_RUL_SnepClient_t *ctx,
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_StartDefaultDiscovery");
+
         /**
          * A wrapper function that starts the default RF discovery
          * for SNEP and takes care of the general bytes.
@@ -180,6 +186,8 @@ ptx_Status_t ptx_RUL_SnepClient_WaitForActivation(ptx_RUL_SnepClient_t *ctx, uin
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_WaitForActivation");
+
         /**
          * A wrapper function waiting for a defined amount of time
          * until the peer has been activated
@@ -196,6 +204,8 @@ ptx_Status_t ptx_RUL_SnepClient_ConnectToServer(ptx_RUL_SnepClient_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_ConnectToServer");
+
         if (0 != ctx->ExtendedDtaMode)
         {
             /* In case of the DTA mode we connect to the extended SNEP DTA server. */
@@ -225,12 +235,29 @@ ptx_Status_t ptx_RUL_SnepClient_ConnectToServer(ptx_RUL_SnepClient_t *ctx)
 
 ptx_Status_t ptx_RUL_SnepClient_PutMessage(ptx_RUL_SnepClient_t *ctx, uint8_t *message, uint32_t messageLength)
 {
-    return ptx_RUL_SnepClient_InitRequest(ctx, message, messageLength, PutRequest);
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if (PTX_COMP_CHECK(ctx, Comp_SNEP) && (NULL != message))
+    {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_PutMessage");
+        status = ptx_RUL_SnepClient_InitRequest(ctx, message, messageLength, PutRequest);
+    }
+
+    return status;
 }
 
 ptx_Status_t ptx_RUL_SnepClient_GetMessage(ptx_RUL_SnepClient_t *ctx, uint8_t *message, uint32_t messageLength)
 {
-    return ptx_RUL_SnepClient_InitRequest(ctx, message, messageLength, GetRequest);
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    
+    if (PTX_COMP_CHECK(ctx, Comp_SNEP) && (NULL != message))
+    {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_GetMessage");
+
+        status =  ptx_RUL_SnepClient_InitRequest(ctx, message, messageLength, GetRequest);
+    }
+
+    return status;
 }
 
 ptx_Status_t ptx_RUL_SnepClient_Handle(ptx_RUL_SnepClient_t *ctx)
@@ -239,6 +266,8 @@ ptx_Status_t ptx_RUL_SnepClient_Handle(ptx_RUL_SnepClient_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_Handle");
+
         status = ptx_RUL_LLCP_Handle(ctx->Llcp);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -256,6 +285,8 @@ ptx_Status_t ptx_RUL_SnepClient_InitRequest(ptx_RUL_SnepClient_t *ctx, uint8_t *
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP) && (NULL != message) && (0 != messageLength))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_InitRequest");
+
         if (0 != ctx->ConnectedToServer)
         {
             status = PTX_STATUS_SUCCESS;
@@ -295,6 +326,8 @@ ptx_Status_t ptx_RUL_SnepClient_Start(ptx_RUL_SnepClient_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_Start");
+
         /* Allocate a link from the LLCP component. */
         status = ptx_RUL_LLCP_AllocateLink(ctx->Llcp, &ctx->Link);
 
@@ -323,6 +356,8 @@ ptx_Status_t ptx_RUL_SnepClient_Process(ptx_RUL_SnepClient_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_Process");
+
         uint8_t is_down = 0;
         status = ptx_RUL_LLCP_IsLinkDown(ctx->Llcp, &is_down);
 
@@ -385,6 +420,8 @@ ptx_Status_t ptx_RUL_SnepClient_ProcessState_PrepareRequest(ptx_RUL_SnepClient_t
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_ProcessState_PrepareRequest");
+
         status = PTX_STATUS_SUCCESS;
         switch (ctx->RequestType)
         {
@@ -422,6 +459,8 @@ ptx_Status_t ptx_RUL_SnepClient_ProcessState_SendFragment(ptx_RUL_SnepClient_t *
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_ProcessState_SendFragment");
+
         ctx->CurrentNrBytes = ptx_RUL_SnepClient_GetBytesToProcess(ctx, ctx->MsgToSendIndex, ctx->ProcessedBytes, 0);
         ptx_RUL_SnepClient_SetMessage(ctx, ClientRequestCode_Null, &ctx->MsgToSendBuffer[ctx->ProcessedBytes], ctx->CurrentNrBytes, 0, 0);
         ctx->ProcessedBytes += ctx->CurrentNrBytes;
@@ -463,6 +502,8 @@ ptx_Status_t ptx_RUL_SnepClient_ProcessReceiveFragment(ptx_RUL_SnepClient_t *ctx
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_ProcessReceiveFragment");
+
         uint8_t rx_data[PTX_LLCP_FRAME_BUFFER_LEN];
         uint32_t rx_data_len = sizeof(rx_data);
         status = ptx_RUL_LLCP_Link_ReadMessageInbox(ctx->Link, rx_data, &rx_data_len);
@@ -513,6 +554,8 @@ ptx_Status_t ptx_RUL_SnepClient_ProcessResponse(ptx_RUL_SnepClient_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_SNEP))
     {
+        PTX_LOG_I(&ctx->Llcp->Rul->Log, "ptx_RUL_SnepClient_ProcessResponse");
+
         uint8_t rx_data[PTX_LLCP_FRAME_BUFFER_LEN];
         uint32_t rx_data_len = sizeof(rx_data);
         status = ptx_RUL_LLCP_Link_ReadMessageInbox(ctx->Link, rx_data, &rx_data_len);
@@ -658,7 +701,6 @@ void ptx_RUL_SnepClient_SetControlMessage(ptx_RUL_SnepClient_t *ctx, ptx_RUL_Sne
 static void ptx_RUL_SnepClient_SetMessage(ptx_RUL_SnepClient_t *ctx, ptx_RUL_SnepClient_RequestCode_t code, uint8_t *information, uint32_t informationLength, uint32_t messageLength, uint32_t acceptableLength)
 {
     ctx->TxBufferLen = 0;
-
     if (ClientRequestCode_Null != code)
     {
         /* Set the implemented SNEP version. */

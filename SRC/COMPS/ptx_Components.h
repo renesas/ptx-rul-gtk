@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -101,7 +101,6 @@ typedef enum ptx_Comps
     /* */
     Comp_LOG,                /**< Logger Component. */
     Comp_HCI,                /**< HCI Component. */
-    Comp_NVM,                /**< NVM Component */
     Comp_BUFFER,             /**< Buffer */
     Comp_PT,                 /**< Processing Thread Component. */
     Comp_AIS,                /**< API AIS Component. */

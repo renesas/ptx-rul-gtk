@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -80,6 +80,8 @@ ptx_Status_t ptx_NSC_Interface_Init(ptx_NSC_t *nsc, ptx_NSC_Interface_InitParams
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_Interface_Init");
+
         nsc->CmdProcessor.FetchMsg  = ptx_NSC_RUL_FetchMsg;
         nsc->RfCfg.LoadCfgParam     = ptx_NSC_RUL_RfConfig_LoadParam;
 
@@ -96,9 +98,11 @@ ptx_Status_t ptx_NSC_Interface_Deinit(ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_Interface_Deinit");
+
         nsc->CmdProcessor.FetchMsg = NULL;
         nsc->RfCfg.LoadCfgParam    = NULL;
-        nsc->Extension              = NULL;
+        nsc->Extension             = NULL;
         status = PTX_STATUS_SUCCESS;
     }
 

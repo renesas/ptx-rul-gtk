@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -131,7 +131,7 @@ typedef struct ptx_HAL_DRV_Interface_UART
 
     ptx_HAL_DRV_Interface_UART_PortConfig_t         *Port;                                                     /**< Pointer to the UART Port Configuration. */
     uint32_t                                        Speed;                                                     /**< Communication Speed. */
-    ptx_Log_t                                       *Logger;                                                   /**< Initialised Logger Context. */
+    ptx_Log_t                                       *Log;                                                   /**< Initialised Log Context. */
     ptx_HAL_GPIO_t                                  *Gpio;                                                     /**< Initialized GPIO Context. */
 
     uint8_t                                         RxRingBuffer[PTX_HAL_DRV_INTERFACE_UART_RX_RING_BUF_SIZE]; /**< Receive Ringbuffer used for the Debug Port Type. */
@@ -148,7 +148,7 @@ typedef struct ptx_HAL_DRV_Interface_UART_InitParams
     uint8_t                             *InterfaceName;     /**< Device name. RFU. */
     uint32_t                            InterfaceNameLen;   /**< Device name length. RFU. */
     uint32_t                            Speed;              /**< UART Default driver speed. */
-    ptx_Log_t                           *Log;               /**< Initialized Logger Context */
+    ptx_Log_t                           *Log;               /**< Initialized Log Context */
     ptx_HAL_GPIO_t                      *Gpio;              /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_UART_InitParams_t;
 
@@ -159,17 +159,26 @@ typedef struct ptx_HAL_DRV_Interface_UART_InitParams
  */
 
 /**
- * \brief Component Initialisation.
+ * \brief Component Initialization.
+ *
+ * Initializes the UART interface driver component. Validates input parameters and searches for a matching
+ * port configuration based on PortType and PortID. Sets up component references including Log context,
+ * GPIO context, and UART communication speed (baud rate). If Speed is 0, defaults to
+ * PTX_HAL_DRV_INTERFACE_UART_DEFAULT_BAUDRATE (115200 bps). The Log and GPIO contexts must be valid,
+ * initialized instances. Supports both Default and Debug port types.
  *
  * \param[in]       ctx             Pointer to component.
- * \param[in]       initParams      Pointer to initialisation parameters.
+ * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Init(ptx_HAL_DRV_Interface_UART_t *ctx, ptx_HAL_DRV_Interface_UART_InitParams_t *initParams);
 
 /**
- * \brief Component de-initialisation.
+ * \brief Component De-Initialization.
+ *
+ * Clears all component data and resets component ID to Comp_None. Does not close the UART interface;
+ * ptx_HAL_DRV_Interface_UART_Close should be called separately if the interface is open.
  *
  * \param[in]       ctx              Pointer to component.
  *
@@ -178,9 +187,15 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Init(ptx_HAL_DRV_Interface_UART_t *ctx, 
 ptx_Status_t ptx_HAL_DRV_Interface_UART_DeInit(ptx_HAL_DRV_Interface_UART_t *ctx);
 
 /**
- * \brief Driver UART Open
+ * \brief Opens the UART interface.
  *
- * Opens the Renesas UART hardware and configures it.
+ * Opens the SCI UART hardware block and configures it according to the port configuration. Performs the following steps:
+ * 1. Opens the SCI UART module via R_SCI_UART_Open
+ * 2. If already open (FSP_ERR_ALREADY_OPEN), closes and reopens for clean state
+ * 3. For Default port type: Opens and enables the external IRQ interface and registers IRQ callback
+ * 4. Registers the UART transfer callback for handling Tx/Rx completion and character reception events
+ * 5. Sets the baud rate using R_SCI_UART_BaudCalculate and R_SCI_UART_BaudSet
+ * 6. For Debug port type: Initializes the RX ring buffer for asynchronous character reception
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -189,9 +204,11 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_DeInit(ptx_HAL_DRV_Interface_UART_t *ctx
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Open(ptx_HAL_DRV_Interface_UART_t *ctx);
 
 /**
- * \brief Driver UART Close
+ * \brief Closes the UART interface.
  *
- * Closes the Renesas UART hardware.
+ * Closes the SCI UART hardware block and the external IRQ interface (for Default port type).
+ * For Debug port type, resets the RX ring buffer. Returns success if either interface is successfully
+ * closed or if it was not open (FSP_ERR_NOT_OPEN).
  *
  * \param[in]       ctx             Pointer to component.
  *
@@ -200,95 +217,78 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Open(ptx_HAL_DRV_Interface_UART_t *ctx);
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Close(ptx_HAL_DRV_Interface_UART_t *ctx);
 
 /**
- * \brief Driver UART Tx
+ * \brief Transmits data via UART.
  *
- * Sends data to the Renesas UART hardware, to communicate with an endpoint.
+ * Sends data to the UART interface using the configured UART hardware. Initiates an asynchronous
+ * write operation and waits for transfer completion via callback. The transfer state is monitored
+ * with a timeout mechanism to detect transfer failures or timeouts. For Debug port type, data is
+ * not logged to avoid recursion.
  *
  * \param[in]       ctx             Pointer to component.
- * \param[in]       txBuf           Array of bytes to be transmitted.
- * \param[in]       txLen           Length of \see txBuf.
+ * \param[in]       txBuf           Array of bytes to be transmitted (must not be NULL).
+ * \param[in]       txLen           Length of txBuf in bytes.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *txBuf, uint32_t txLen);
 
 /**
- * \brief Driver UART Rx
+ * \brief Receives data via UART.
  *
- * Receives data from the Renesas UART hardware.
+ * Receives data from the UART interface. Behavior depends on port type:
+ * - Debug port type: Reads data from the RX ring buffer (asynchronously populated by character reception ISR)
+ * - Default port type: Initiates an asynchronous read operation and waits for transfer completion via callback.
+ *   The transfer state is monitored with a timeout mechanism to detect transfer failures or timeouts.
  *
  * \param[in]       ctx             Pointer to component.
- * \param[in]       rxBuf           Array of bytes to be received.
- * \param[in]       rxLen           Length of \see rxBuf. Must match the bytes received!
+ * \param[out]      rxBuf           Array of bytes to receive data into (must not be NULL).
+ * \param[in]       rxLen           Length of rxBuf in bytes. For Debug port type, actual bytes read may be less.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Rx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *rxBuf, uint32_t rxLen);
 
 /**
- * \brief Driver UART Activate Rx IRQ.
+ * \brief Reads the current level of the Rx IRQ pin or RX buffer status.
  *
- * Activates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_UART_t.Port.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_ActivateRxIrq(ptx_HAL_DRV_Interface_UART_t *ctx);
-
-/**
- * \brief Driver UART Deactivate Rx IRQ.
- *
- * Deactivates the Rx IRQ. The interrupt needs to be configured in \ref ptx_HAL_DRV_Interface_UART_t.Port.
+ * Behavior depends on port type:
+ * - Debug port type: Returns 1 if data is available in the RX ring buffer, 0 otherwise
+ * - Default port type: Reads the current logic level (HIGH or LOW) of the configured IRQ pin using
+ *   the GPIO interface. The IRQ pin is configured in the port configuration structure
+ *   (ptx_HAL_DRV_Interface_UART_PortConfig_t.Irq).
  *
  * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_DeactivateRxIrq(ptx_HAL_DRV_Interface_UART_t *ctx);
-
-/**
- * \brief Driver Rx IRQ Level Callback Datatype
- *
- * This callback is called when the RX IRQ Pin Level must be determined.
- *
- * \param[in]       ctx          Pointer to component.
- * \param[out]      level        Pointer to level value.
+ * \param[out]      level           Pointer to variable for storing pin level or buffer status (0 or 1).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_RxIrqLevel(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *level);
 
 /**
- * \brief Driver UART Wait for IRQ to be triggered
+ * \brief Sets a parameter for the UART interface.
  *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_WaitForIRQ(ptx_HAL_DRV_Interface_UART_t *ctx);
-
-/**
- * \brief Driver UART Set Parameter function.
- *
- * Sets a HAL UART Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Configures a UART interface parameter selected by type. Supported parameters include:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Changes the UART baud rate.
+ *   Uses R_SCI_UART_BaudCalculate with 3% error tolerance and modulation disabled.
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address: Not available for UART (returns PTX_STATUS_E_GEN_NOT_AVAILABLE).
+ * - HAL_DRV_Interface_Parameter_Type_UART_Enable_Fast_Mode: Not available for UART (returns PTX_STATUS_E_GEN_NOT_AVAILABLE).
  *
  * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * \param[in]       parameter      Parameter (type, value) struct specifying the parameter to set.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_SetParameter(ptx_HAL_DRV_Interface_UART_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 
 /**
- * \brief Driver UART Get Parameter function.
+ * \brief Gets a parameter from the UART interface.
  *
- * Gets a HAL UART Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Retrieves the current value of a UART interface parameter selected by type. Supported parameters include:
+ * - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Returns the current UART baud rate.
+ * - HAL_DRV_Interface_Parameter_Type_I2C_Slave_Address: Not available for UART (returns PTX_STATUS_E_GEN_NOT_AVAILABLE).
  *
  * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * \param[out]      parameter      Parameter (type, value) struct to receive the parameter value.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -301,11 +301,16 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_GetParameter(ptx_HAL_DRV_Interface_UART_
  */
 
 /**
- * \brief Driver UART callback
+ * \brief UART transfer callback.
  *
- * The interrupt callback called in case there was a new UART event.
+ * Interrupt callback invoked when a UART event occurs. Handles the following events:
+ * - UART_EVENT_RX_CHAR: Character received asynchronously (Debug port type only). Stores character in RX ring buffer.
+ * - UART_EVENT_RX_COMPLETE: Asynchronous read operation completed (Default port type). Sets transfer state to complete.
+ * - UART_EVENT_TX_DATA_EMPTY: Transmit buffer empty (intermediate state, no action taken).
+ * - UART_EVENT_TX_COMPLETE: Transmit operation completed. Sets transfer state to complete.
+ * - Error events (parity, framing, overflow, break detect): Currently ignored.
  *
- * \param[in]        p_args         The arguments containing the relevant information about the UART event.
+ * \param[in]       p_args         Pointer to UART callback arguments containing event type and data.
  */
 void ptx_HAL_DRV_Interface_UART_TransferCallback(uart_callback_args_t *p_args);
 

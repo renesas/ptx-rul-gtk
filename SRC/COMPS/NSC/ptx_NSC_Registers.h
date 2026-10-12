@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -556,6 +556,8 @@ extern "C" {
 #define ANA_TEST_BUF_REG                                            (0x01DF)
 #define ANA_TEST_BUF_REG_RST                                        (0x00)
 #define ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK                        (0x30)
+#define ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK_PAD4                   (0x10)
+#define ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK_PAD6                   (0x20)
 #define ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK                    (0x0F)
 #define ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD4               (0x01)
 #define ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD6               (0x02)

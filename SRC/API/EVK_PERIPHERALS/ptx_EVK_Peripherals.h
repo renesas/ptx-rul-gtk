@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -90,6 +90,7 @@ typedef struct ptx_EVK_Peripherals
     ptx_EVK_Peripherals_TemperatureSensor_t  TempSensor;     /**< Temperature Sensor. */
     ptx_EVK_Peripherals_PowerSensor_t        PowerSensorVdTx;/**< Power sensor for VdTx. */
     ptx_EVK_Peripherals_PowerSensor_t        PowerSensorVbat;/**< Power sensor for Vbat. */
+    ptx_Log_t                               *Log;            /**< LOG context. */
 } ptx_EVK_Peripherals_t;
 
 

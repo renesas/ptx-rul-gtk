@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -61,6 +61,8 @@
 
 #include "ptx_HAL_DRV_Timer_Int.h"
 #include "ptx_HAL_DRV_Timer.h"
+
+#include "ptx_Log.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -183,7 +185,7 @@ typedef enum ptx_HAL_Tmr_Id
 } ptx_HAL_Tmr_Id_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_Tmr
 {
@@ -200,6 +202,8 @@ typedef struct ptx_HAL_Tmr
     ptx_HAL_Tmr_RegExecCb_t      RegExecCb;      /**< Callback function to register an callback for timer execution. */
     ptx_HAL_DRV_Tmr_CfgCb_t      Cfg;            /**< Callback function to configure the timer setting. */
     ptx_HAL_Tmr_SleepCb_t        Sleep;          /**< Callback function for Sleep/Delay functionality. */
+    ptx_Log_t                    *Log;           /**< Initialised Log Context */
+
 
 } ptx_HAL_Tmr_t;
 
@@ -208,10 +212,13 @@ typedef struct ptx_HAL_Tmr
  */
 typedef struct ptx_HAL_Tmr_InitParams
 {
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
     void                        *Osal;          /**< Osal context - used by specific implementations. */
 #endif
     void 			            *RFU;           /**< Empty struct not allowed in clang */
+    ptx_Log_t                   *Log;           /**< Initialised Log Context */
+
 } ptx_HAL_Tmr_InitParams_t;
 
 /*
@@ -223,7 +230,7 @@ typedef struct ptx_HAL_Tmr_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -233,7 +240,7 @@ ptx_Status_t ptx_HAL_Tmr_Init (ptx_HAL_Tmr_t *ctx, ptx_HAL_Tmr_InitParams_t *ini
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx   Pointer to component.
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */

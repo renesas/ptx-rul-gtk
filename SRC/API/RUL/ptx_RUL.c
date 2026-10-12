@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -62,7 +62,6 @@
  * ####################################################################################################################
  */
 
-#define PTX_RUL_MAX_CW_MULTIPLIER       (0xB1)          /* Maximum CW multiplier. */
 #define PTX_RUL_QMEAS_CENTER_FREQ       (13560000U)     /* Q-measurement center frequency in Hz (= 13.56MHz). */
 #define PTX_RUL_ADC_MAXAMPLSB           (235U)          /* Max. amplitude LSB. */
 #define PTX_RUL_AMP_MEAS_FACTOR         (1000U)         /* Amplitude measurement is scaled by a factor of 1000. */
@@ -70,19 +69,19 @@
 /*
  * T3T SENSF-REQ defines.
  */
-#define PTX_RUL_T3T_SENFREQ_TXR_BUFFER_SIZE 253u        /* Maximum TRx buffer size for T3T-SensF-Req. */
-#define PTX_RUL_T3T_SENSFREQ_COMMAND_CODE   0u          /* SensF-Req command code. */
-#define PTX_RUL_T3T_SENSFREQ_COMMAND_LEN    6u          /* SensF-Req command length. */
-#define PTX_RUL_T3T_SENSFREQ_MAX_TSN        16u         /* Maximum timeslot number. */
-#define PTX_RUL_T3T_SENSFREQ_APPTIMEOUT_MS  500u        /* Application timeout. Must be larger than possible max. FWT (~21 ms). */
-#define PTX_RUL_T3T_MAX_PARAMS              (uint32_t)2 /* Maximum number of parameters used for T3T during NSC.RF_SET_PARAMETER */
+#define PTX_RUL_T3T_SENSFREQ_TXR_BUFFER_SIZE    253u        /* Maximum TRx buffer size for T3T-SensF-Req. */
+#define PTX_RUL_T3T_SENSFREQ_COMMAND_CODE       0u          /* SensF-Req command code. */
+#define PTX_RUL_T3T_SENSFREQ_COMMAND_LEN        6u          /* SensF-Req command length. */
+#define PTX_RUL_T3T_SENSFREQ_MAX_TSN            16u         /* Maximum timeslot number. */
+#define PTX_RUL_T3T_SENSFREQ_APPTIMEOUT_MS      500u        /* Application timeout. Must be larger than possible max. FWT (~21 ms). */
+#define PTX_RUL_T3T_MAX_PARAMS                  (uint32_t)2 /* Maximum number of parameters used for T3T during NSC.RF_SET_PARAMETER */
 
 /*
  * Frame Waiting Time lookup table for A10 (in ticks).
  *
  * Timeout of 2,44 + [1...15] * 1,22 => ~21ms (1 == min. timeslots; 15 == max. timeslots)
  *
- * Internal uses a resolution of 128/fc per tick ~ 9,44us; 1 ms is roughly 106 ticks (~1.00059ms)
+ * Internally uses a resolution of 128/fc per tick ~ 9,44us; 1 ms is roughly 106 ticks (~1.00059ms)
  * Note: The resolution is limited to 24-bits i.e. the max. value is roughly 158 s.
  *
  * Calculated as follows: ceiling((2.44 + [1...16]*1.22 * 10^-3)/(64/fc)) [ticks]
@@ -180,6 +179,8 @@ ptx_Status_t ptx_RUL_Init(ptx_RUL_t *rul, ptx_RUL_InitParams_t *initParams)
 
         status = ptx_RUL_AllocInit(rul, initParams);
 
+        PTX_LOG_I(&rul->Log, "ptx_RUL_Init");
+
         if (PTX_STATUS_SUCCESS == status)
         {
             ptx_NSC_CmdProcessor_Cfg_t cmdproc_cfg_params;
@@ -220,6 +221,8 @@ ptx_Status_t ptx_RUL_InitHardware(ptx_RUL_t* rul)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_InitHardware");
+
         /*
          * Reset DFY.
          */
@@ -257,19 +260,32 @@ ptx_Status_t ptx_RUL_InitHardware(ptx_RUL_t* rul)
         if (PTX_STATUS_SUCCESS == status)
         {
             status = ptx_NSC_RfConfig(&(rul->Nsc), NULL, 0);
-            /*
-             * Give the PTX2xxR/W some time to power up completely after the RF Config.
-             * If big blocks are started it may cause the system to send corrupted HIP packages.
-             * To overcome this problem, we determined that this sleep helps.
-             * For further information please see PTX2KPDP-5097
-             */
-            ptx_RUL_Sleep(rul, 100);
         }
 
-        if (ptx_RUL_StatusInfoSystem_NSCReset == rul->SystemStatus)
+        if (PTX_STATUS_SUCCESS == status)
         {
-            /* Overwrite system status change from Reset NTF's */
-            rul->SystemStatus = ptx_RUL_StatusInfoSystem_OK;
+            if (ptx_RUL_StatusInfoSystem_NSCReset == rul->SystemStatus)
+            {
+                /* Overwrite system status change from Reset NTF's */
+                rul->SystemStatus = ptx_RUL_StatusInfoSystem_OK;
+            }
+        }
+        else
+        {
+           /*
+            * Overtemperature is the only expected error during initial hardware configuration:
+            * If the overtemperature threshold is set too low, the device may enter this state
+            * already during NSC_INIT_CMD. In that situation, the NSC_INIT_CMD does not receive
+            * its regular response; instead, an overtemperature error notification is sent and
+            * the system powers down.
+            *
+            * Without this check below, the caller would only see PTX_STATUS_E_NSC_PROTOCOL.
+            * Therefore, translate this case to PTX_STATUS_E_GEN_OVERTEMPERATURE.
+            */
+            if (ptx_RUL_StatusInfoSystem_ErrorTemperature == rul->SystemStatus)
+            {
+                status = PTX_STATUS_E_GEN_OVERTEMPERATURE;
+            }
         }
     }
 
@@ -282,6 +298,7 @@ ptx_Status_t ptx_RUL_DeInit(ptx_RUL_t *rul)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_DeInit");
         /* Reset & Disable DFY to reduce power consumption. */
         status = ptx_HIP_SysRst(&(rul->Hip), HIP_Cmd_SysRst_RstDisDfy);
 
@@ -300,7 +317,7 @@ ptx_Status_t ptx_RUL_DeInit(ptx_RUL_t *rul)
             status = ptx_HAL_DeInit(&(rul->Hal));
         }
 
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
         if (PTX_STATUS_SUCCESS == status)
         {
             status = ptx_OSAL_DeInit(&(rul->Osal));
@@ -309,7 +326,7 @@ ptx_Status_t ptx_RUL_DeInit(ptx_RUL_t *rul)
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            status = ptx_Log_DeInit(&(rul->Log));
+            status = ptx_Log_DeInit(&rul->Log);
         }
 
         if (PTX_STATUS_SUCCESS == status)
@@ -327,6 +344,7 @@ ptx_Status_t ptx_RUL_Reset(ptx_RUL_t* rul, ptx_RUL_ResetTypes_t resetType)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_Reset");
         /* Map the request to internal NSC reset types. */
 
         ptx_NSC_Reset_Types_t nsc_reset_type;
@@ -367,6 +385,7 @@ ptx_Status_t ptx_RUL_Deactivate(ptx_RUL_t *rul, ptx_RUL_DeactivateParams_t *para
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != params))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_Deactivate");
         ptx_NSC_RfDeact_Param_t deactivation_parameters;
         memset(&deactivation_parameters, 0, sizeof(deactivation_parameters));
 
@@ -459,8 +478,9 @@ ptx_Status_t ptx_RUL_GetStatusInfo(ptx_RUL_t *rul, ptx_RUL_Status_Params_t *stat
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != statusParams) )
+    if ( PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != statusParams))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_GetStatusInfo");
         status = ptx_NSC_CmdProcessor_GetPendingMsg(&(rul->Nsc));
 
         switch (statusParams->Type)
@@ -526,8 +546,9 @@ ptx_Status_t ptx_RUL_BitsExchangeMode(ptx_RUL_t *rul, ptx_RUL_BitsExchangeMode_t
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(rul, Comp_RUL) && (ptx_RUL_BitsExchangeMode_Max > enable) )
+    if (PTX_COMP_CHECK(rul, Comp_RUL) && (ptx_RUL_BitsExchangeMode_Max > enable))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_BitsExchangeMode");
         status = ptx_NSC_CltMsg_Enable(&(rul->Nsc), (ptx_NSC_CltMode_t)enable);
     }
 
@@ -539,8 +560,9 @@ ptx_Status_t ptx_RUL_BitsExchange(ptx_RUL_t *rul, ptx_RUL_BitsExchangeParams_t *
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != txParams) && (NULL != rxParams) && (NULL != numBits) )
+    if ( PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != txParams) && (NULL != rxParams) && (NULL != numBits))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_BitsExchange");
         status = ptx_NSC_CltMsg(&(rul->Nsc), txParams->Data, txParams->Parity, txParams->DataLen);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -569,10 +591,11 @@ ptx_Status_t ptx_RUL_Exchange(ptx_RUL_t *rul, uint8_t *tx, uint32_t txLen, uint8
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_Exchange");
         uint8_t continue_with_rx = 1U;
         if ((NULL != tx) && (0 < txLen))
         {
-            status = ptx_NSC_DataTx (&(rul->Nsc), tx, txLen, 0U);
+            status = ptx_NSC_DataTx (&(rul->Nsc), tx, txLen, 0U, PTX_NSC_DATA_TIMEOUT_DEFAULT);
             if (PTX_STATUS_SUCCESS != status)
             {
                 continue_with_rx = 0;
@@ -597,6 +620,8 @@ ptx_Status_t ptx_RUL_ConfigGPIO(ptx_RUL_t *rul, ptx_RUL_GPIONbr_t gpioNbr, ptx_R
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ConfigGPIO");
+
         uint16_t gpio_address;
         uint8_t gpio_cfg_index;
 
@@ -718,6 +743,7 @@ ptx_Status_t ptx_RUL_WriteGPIO(ptx_RUL_t *rul, ptx_RUL_GPIONbr_t gpioNbr, ptx_RU
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_WriteGPIO");
         uint16_t gpio_address;
         uint8_t gpio_cfg_index;
 
@@ -768,6 +794,7 @@ ptx_Status_t ptx_RUL_ReadGPIO(ptx_RUL_t *rul, ptx_RUL_GPIONbr_t gpioNbr, ptx_RUL
 
     if ( PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != value) )
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_ReadGPIO");
         uint16_t gpio_address;
         uint8_t gpio_cfg_index;
 
@@ -807,6 +834,7 @@ ptx_Status_t ptx_RUL_Sleep(ptx_RUL_t* rul, uint32_t ms)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_Sleep");
         if (0 != ms)
         {
             status = ptx_HAL_Sleep(&(rul->Hal), ms);
@@ -826,7 +854,8 @@ ptx_Status_t ptx_RUL_Send(ptx_RUL_t* rul, uint8_t* tx, uint32_t txLen)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != tx) && (0 < txLen))
     {
-        status = ptx_NSC_DataTx (&(rul->Nsc), tx, txLen, 0U);
+        PTX_LOG_I(&rul->Log, "ptx_RUL_Send");
+        status = ptx_NSC_DataTx (&(rul->Nsc), tx, txLen, 0U, PTX_NSC_DATA_TIMEOUT_DEFAULT);
     }
 
     return status;
@@ -838,6 +867,7 @@ ptx_Status_t ptx_RUL_Receive(ptx_RUL_t* rul, uint8_t* rx, uint32_t* rxLen, uint3
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != rx) && (NULL != rxLen) && (0 < *rxLen))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_Receive");
         status = ptx_NSC_DataRx (&(rul->Nsc), rx, rxLen, msTimeout);
     }
 
@@ -850,6 +880,7 @@ ptx_Status_t ptx_RUL_GetInfo(ptx_RUL_t* rul, ptx_RUL_InfoTypes_t infoType, uint8
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != infoBuf) && (NULL != infoBufLen))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_GetInfo");
         uint8_t nscInfoType = ptx_NSC_Info_MAX;
         const uint8_t standardInfoSize = 1u;
         const uint8_t swRevisionInfoSize = 3u;
@@ -887,7 +918,7 @@ ptx_Status_t ptx_RUL_GetInfo(ptx_RUL_t* rul, ptx_RUL_InfoTypes_t infoType, uint8
                 expectedDataSize = fwRevisionInfoSize;
                 break;
             case ptx_RUL_InfoType_Chip_Temperature:
-                nscInfoType = ptx_NSC_Info_Temperature;
+                /* Data is retrieved via NSC GetStatus, therefore no nscInfoType is required */
                 expectedDataSize = standardInfoSize;
                 break;
             case ptx_RUL_InfoType_Mtu_Size:
@@ -915,6 +946,19 @@ ptx_Status_t ptx_RUL_GetInfo(ptx_RUL_t* rul, ptx_RUL_InfoTypes_t infoType, uint8
                 /* Input buffer is too small for the requested data. */
                 status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
             }
+            else if (ptx_RUL_InfoType_Chip_Temperature == infoType)
+            {
+                /* Handle special case for chip temperature info type. */
+                ptx_NSC_ParamStatus_t param_status = {0};
+                status = ptx_NSC_GetStatus(&(rul->Nsc), &param_status);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    /* 1By length */
+                    *infoBuf = param_status.Temperature;
+                    *infoBufLen = 1;
+                }
+            }
             else
             {
                 /* Provided buffer is big enough to hold the requested data. */
@@ -929,13 +973,14 @@ ptx_Status_t ptx_RUL_GetInfo(ptx_RUL_t* rul, ptx_RUL_InfoTypes_t infoType, uint8
 ptx_Status_t ptx_RUL_T3T_SensFReq(ptx_RUL_t* rul, uint16_t systemCode, uint8_t requestCode, uint8_t tsn, uint8_t* rx, uint32_t* rxLength)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    uint8_t trx_buffer[PTX_RUL_T3T_SENFREQ_TXR_BUFFER_SIZE];
-    uint32_t rx_len = PTX_RUL_T3T_SENFREQ_TXR_BUFFER_SIZE;
+    uint8_t trx_buffer[PTX_RUL_T3T_SENSFREQ_TXR_BUFFER_SIZE];
+    uint32_t rx_len = PTX_RUL_T3T_SENSFREQ_TXR_BUFFER_SIZE;
     uint32_t timeout = 0;
     uint8_t tsn_int = 0;
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (rx != NULL) && (rxLength != NULL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_T3T_SensFReq");
         ptx_NSC_RfSetParameter_Param_t rf_Par[PTX_RUL_T3T_MAX_PARAMS];
 
         /* This function is only available if activated card / device is using the T3T-protocol */
@@ -965,7 +1010,7 @@ ptx_Status_t ptx_RUL_T3T_SensFReq(ptx_RUL_t* rul, uint16_t systemCode, uint8_t r
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                /* FeliCa-/T3T-response data is build up as follows
+                /* FeliCa-/T3T-response data is built up as follows
                  * Offset 0: Complete ATQC/SENSF_RES - 18 or 20 bytes, depending if RD requested) consisting of
                  *           - LEN-byte.....: 12h or 14h
                  *           - RESPONSE-code: 01h
@@ -1006,7 +1051,7 @@ ptx_Status_t ptx_RUL_T3T_SensFReq(ptx_RUL_t* rul, uint16_t systemCode, uint8_t r
         }
         else
         {
-            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;;
+            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
         }
     }
 
@@ -1019,6 +1064,7 @@ ptx_Status_t ptx_RUL_T5T_Isolated_EoF (ptx_RUL_t* rul, uint8_t* rx, uint32_t* rx
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (rx != NULL) && (rxLength != NULL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_T5T_Isolated_EoF");
         status = ptx_NSC_CtrlTx(&(rul->Nsc), PTX_NSC_DATA_MSG_EOF);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -1040,6 +1086,7 @@ ptx_Status_t ptx_RUL_UpdateHardwareConfiguration(ptx_RUL_t* rul, uint32_t nrConf
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != configs) && (0 != nrConfigs) && (max_allowed_params >= nrConfigs))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_UpdateHardwareConfiguration");
         ptx_NSC_RfConfig_Param_t nsc_rf_params[PTX_NSC_RFCONFIG_PARAMID_MAX_PARAMID];
         uint8_t rfconfig_tlv_count = 0;
 
@@ -1111,6 +1158,7 @@ ptx_Status_t ptx_RUL_SetPowerMode(ptx_RUL_t *rul, ptx_RUL_PowerMode_t powerMode)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_SetPowerMode");
         switch (powerMode)
         {
             case PowerMode_Standby:
@@ -1136,6 +1184,7 @@ ptx_Status_t ptx_RUL_WriteDAC(ptx_RUL_t *rul, uint8_t value)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_WriteDAC");
         if (ANA_TUNE_REG_TUNE_MAX_VALUE >= value)
         {
             value = value & ANA_TUNE_REG_TUNE_MASK;
@@ -1146,28 +1195,13 @@ ptx_Status_t ptx_RUL_WriteDAC(ptx_RUL_t *rul, uint8_t value)
     return status;
 }
 
-ptx_Status_t ptx_RUL_GetRSSIValue(ptx_RUL_t *rul, uint32_t *result)
-{
-
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != result))
-    {
-        uint8_t cwPowerLevel = 0x58;
-        status = ptx_RUL_RSSIMeasurement(rul, cwPowerLevel, AdcAveraging_16Samples, result);
-        status = PTX_STATUS_SUCCESS;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_RUL_RSSIMeasurement(ptx_RUL_t *rul, uint8_t cwPowerLevel, ptx_RUL_AdcAveraging_t averaging, uint32_t *result)
+ptx_Status_t ptx_RUL_GetRSSIValue(ptx_RUL_t *rul, uint8_t cwPowerLevel, ptx_RUL_AdcAveraging_t averaging, uint32_t *result)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != result)
-         && (PTX_RUL_MAX_CW_MULTIPLIER >= cwPowerLevel) && (AdcAveraging_Max > averaging) )
+    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != result) && (AdcAveraging_Max > averaging))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_GetRSSIValue");
         /* Set the result to zero. */
         *result = 0;
 
@@ -1213,7 +1247,7 @@ ptx_Status_t ptx_RUL_CalibrateTxEsdPreventionThreshold(ptx_RUL_t *rul, uint8_t *
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != results) && (PTX_RUL_MAX_CW_MULTIPLIER >= resultsLength))
+    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != results))
     {
         /* Configure the Low-Power ADC for the RSSI measurement. */
         uint8_t regVal = ANA_RX_CONTROL1_REG_RST;
@@ -1352,6 +1386,7 @@ ptx_Status_t ptx_RUL_RfFieldMeasurement(ptx_RUL_t *rul, uint32_t targetFrequency
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != rfAmp) && (averaging < AdcAveraging_Max))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_RfFieldMeasurement");
         ptx_RUL_Clk_Params_t clk_params;
         (void) memset(&clk_params, 0, sizeof(ptx_RUL_Clk_Params_t));
 
@@ -1386,18 +1421,20 @@ ptx_Status_t ptx_RUL_RfFieldMeasurement(ptx_RUL_t *rul, uint32_t targetFrequency
 
         if (PTX_STATUS_SUCCESS == status)
         {
+            uint32_t measuredAmp = rf_test_result.RfAmpOut.RfAmplitude;
+
             /*
              *  In case we are above PTX_RUL_ADC_MAXAMPLSB the ADC got into the non-linear range!
              *  Hence, the measurement is invalid.
              */
-            if (*rfAmp >= (PTX_RUL_ADC_MAXAMPLSB * PTX_RUL_AMP_MEAS_FACTOR))
+            if (measuredAmp >= (PTX_RUL_ADC_MAXAMPLSB * PTX_RUL_AMP_MEAS_FACTOR))
             {
                 *rfAmp = 0;
                 status = PTX_STATUS_E_GEN_ADCCLIPPING;
             }
             else
             {
-                *rfAmp = rf_test_result.RfAmpOut.RfAmplitude;
+                *rfAmp = measuredAmp;
             }
         }
     }
@@ -1412,6 +1449,7 @@ ptx_Status_t ptx_RUL_RoutingTableConfig(ptx_RUL_t *rul, uint32_t length, ptx_RUL
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_RoutingTableConfig");
         ptx_NSC_t nsc = rul->Nsc;
         uint32_t idx = 0;
 
@@ -1475,19 +1513,21 @@ static ptx_Status_t ptx_RUL_AllocInit(ptx_RUL_t *rul, ptx_RUL_InitParams_t *init
          * Log component initialisation
          */
 
-        status = ptx_Log_Init(&(rul->Log), NULL);
+        status = ptx_Log_Init(&rul->Log, NULL);
 
         if (PTX_STATUS_SUCCESS == status)
         {
+            PTX_LOG_V(&rul->Log, "ptx_RUL_AllocInit");
+
             ptx_HAL_InitParams_t hal_init;
             memset(&hal_init, 0, sizeof(hal_init));
             hal_init.InterfaceType = initParams->InterfaceInitParams.InterfaceType;
             hal_init.InterfacePortType = initParams->InterfaceInitParams.InterfacePortType;
             hal_init.InterfacePortID = initParams->InterfaceInitParams.InterfacePortID;
             hal_init.NumberOfTimers = initParams->InterfaceInitParams.NumberOfTimers;
-            hal_init.Log = &(rul->Log);
+            hal_init.Log = &rul->Log;
 
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
             /* The following 2 parameters are used only for UART interface on OS-based platforms. */
             hal_init.InterfaceName = initParams->InterfaceInitParams.InterfaceName;
             hal_init.InterfaceNameLen = initParams->InterfaceInitParams.InterfaceNameLen;
@@ -1515,7 +1555,7 @@ static ptx_Status_t ptx_RUL_AllocInit(ptx_RUL_t *rul, ptx_RUL_InitParams_t *init
 
 
             hip_init.Hal = &(rul->Hal);
-
+            hip_init.Log = &rul->Log;
             status = ptx_HIP_Open(&(rul->Hip), &hip_init);
         }
 
@@ -1526,6 +1566,7 @@ static ptx_Status_t ptx_RUL_AllocInit(ptx_RUL_t *rul, ptx_RUL_InitParams_t *init
 
             nsc_init.Hal = &(rul->Hal);
             nsc_init.Hip = &(rul->Hip);
+            nsc_init.Log = &rul->Log;
 
             status = ptx_NSC_Init(&rul->Nsc, &nsc_init);
 
@@ -1711,26 +1752,6 @@ static ptx_Status_t ptx_RUL_MapRfConfig(ptx_RUL_HWConfig_t *hwConfig, ptx_NSC_Rf
                 break;
 #endif /* PTX_DISABLE_LISTEN_MODE */
 
-            case ptx_RUL_RF_CFG_POLL_V_53:
-#if !defined(PTX_DISABLE_LISTEN_MODE)
-                if (ptx_NSC_RfConfig_PollV53_len == hwConfig->Len)
-                {
-                    nscRfParams[idx].Id = NSC_RfConfig_ParamId_PollV53;
-                    status = PTX_STATUS_SUCCESS;
-                }
-                break;
-#endif /* PTX_DISABLE_LISTEN_MODE */
-
-            case ptx_RUL_RF_CFG_POLL_V_106:
-#if !defined(PTX_DISABLE_LISTEN_MODE)
-                if (ptx_NSC_RfConfig_PollV106_len == hwConfig->Len)
-                {
-                    nscRfParams[idx].Id = NSC_RfConfig_ParamId_PollV106;
-                    status = PTX_STATUS_SUCCESS;
-                }
-                break;
-#endif /* PTX_DISABLE_LISTEN_MODE */
-
             default:
                 status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
                 break;
@@ -1817,8 +1838,9 @@ static ptx_Status_t ptx_RUL_DecodeRawBits(ptx_RUL_t *rul, uint8_t *pldRawBits, u
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(rul, Comp_RUL)) && (NULL != pldRawBits) && (NULL != pldBytes) && (lengthRawBits > 0) && (NULL != pldParityBits) && (NULL != lengthBytes) && (NULL != numTotalBits))
+    if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != pldRawBits) && (NULL != pldBytes) && (lengthRawBits > 0) && (NULL != pldParityBits) && (NULL != lengthBytes) && (NULL != numTotalBits))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_DecodeRawBits");
         /* Ensure that enough capacity for writing the bitstream */
         uint32_t num_pld_bytes = 0;
         uint32_t num_pld_bits = 0;
@@ -1949,8 +1971,9 @@ static ptx_Status_t ptx_RUL_CheckGpioAvailability(ptx_RUL_t *rul, ptx_RUL_GPIONb
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(rul, Comp_RUL)))
+    if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_CheckGpioAvailability");
         uint8_t gpio_value = 0u;
 
         /* Only allow GPIO configuration if the GPIO is not used for Digital Testbusses. */
@@ -1975,11 +1998,12 @@ static ptx_Status_t ptx_RUL_CheckGpioAvailability(ptx_RUL_t *rul, ptx_RUL_GPIONb
             status = ptx_NSC_Read(&(rul->Nsc), ANA_TEST_BUF_REG, 1u, &gpio_value);
 
             if ((PTX_STATUS_SUCCESS == status) &&
-                (((ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK == (ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK & gpio_value)) ||
+                 (((ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK_PAD6 == (ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK_PAD6 & gpio_value)) && (ptx_RUL_GPIONbr_6 == gpioNbr)) ||
+                  ((ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK_PAD4 == (ANA_TEST_BUF_REG_ANATEST_BUF_EN_MASK_PAD4 & gpio_value)) && (ptx_RUL_GPIONbr_4 == gpioNbr)) ||
                   ((ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD8 == (ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD8 & gpio_value)) && (ptx_RUL_GPIONbr_8 == gpioNbr)) ||
                   ((ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD7 == (ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD7 & gpio_value)) && (ptx_RUL_GPIONbr_7 == gpioNbr)) ||
                   ((ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD6 == (ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD6 & gpio_value)) && (ptx_RUL_GPIONbr_6 == gpioNbr)) ||
-                  ((ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD4 == (ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD4 & gpio_value)) && (ptx_RUL_GPIONbr_4 == gpioNbr)))))
+                  ((ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD4 == (ANA_TEST_BUF_REG_ANATEST_BUF_BYPASS_MASK_PAD4 & gpio_value)) && (ptx_RUL_GPIONbr_4 == gpioNbr))))
             {
                 status = PTX_STATUS_E_GEN_NOT_PERMITTED;
             }
@@ -2149,8 +2173,10 @@ static ptx_Status_t ptx_RUL_CalculatePllParameters(ptx_RUL_t *rul, ptx_RUL_Clk_C
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( (PTX_COMP_CHECK(rul, Comp_RUL)) && (NULL != clkConfig) && (NULL != clkParams) )
+    if ( (PTX_COMP_CHECK(rul, Comp_RUL)) && (NULL != clkConfig) && (NULL != clkParams))
     {
+        PTX_LOG_V(&rul->Log, "ptx_RUL_CalculatePllParameters");
+
         ptx_NSC_SystemConfig_t system_cfg = {0};
         ptx_NSC_PllConfig_t pll_config = {0};
 

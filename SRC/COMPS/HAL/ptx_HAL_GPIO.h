@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -166,7 +166,7 @@ typedef ptx_Status_t (*ptx_HAL_GPIO_CbWritePort_t) (void *ctx, uint32_t port, ui
 typedef ptx_Status_t (*ptx_HAL_GPIO_CbSetCfgPin_t) (void *ctx, ptx_HAL_DRV_GPIO_Cfg_t cfg[], uint32_t cfgLen);
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_GPIO
 {
@@ -189,7 +189,7 @@ typedef struct ptx_HAL_GPIO
  */
 typedef struct ptx_HAL_GPIO_InitParams
 {
-    ptx_Log_t                   *Log;                   /**< Logger context. */
+    ptx_Log_t                   *Log;         /**< Log context. */
 } ptx_HAL_GPIO_InitParams_t;
 
 /*
@@ -201,7 +201,7 @@ typedef struct ptx_HAL_GPIO_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx            Pointer to component.
+ * \param[out]      ctx            Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -211,7 +211,7 @@ ptx_Status_t ptx_HAL_GPIO_Init (ptx_HAL_GPIO_t *ctx, ptx_HAL_GPIO_InitParams_t *
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx            Pointer to component.
+ * \param[in,out]       ctx            Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */

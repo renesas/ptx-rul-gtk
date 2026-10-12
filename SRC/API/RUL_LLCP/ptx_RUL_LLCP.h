@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -267,6 +267,7 @@ typedef struct ptx_RUL_LLCP_t
     uint8_t                             PeerLlcpVerison;                                /**< LLCP version used by the peer. */
     uint16_t                            PeerLlcpWks;                                    /**< Well Known Service list of the peer. */
     uint16_t                            PeerLlcpMiux;                                   /**< Miux of the peer. */
+    ptx_RUL_LLCP_DisconnectReason_t     LastDisconnectReason;                           /**< Reason why the link was terminated. */
 } ptx_RUL_LLCP_t;
 
 /*
@@ -492,16 +493,6 @@ ptx_Status_t ptx_RUL_LLCP_ConnectSapByName(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Lin
 ptx_Status_t ptx_RUL_LLCP_DisconnectSap(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t *link);
 
 /**
- * \brief Unregisters a local SAP.
- *
- * \param[in]       ctx                 Pointer to the LLCP component.
- * \param[in]       sSap                SAP address to unregister.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_RUL_LLCP_UnregisterSap(ptx_RUL_LLCP_t *ctx, uint8_t sSap);
-
-/**
  * \brief Enables support for SNEP (Updated WKS list and registers SNEP processor callback).
  *
  * \param[in]       ctx                     Pointer to the LLCP component.
@@ -523,12 +514,11 @@ ptx_Status_t ptx_RUL_LLCP_DisableSnep(ptx_RUL_LLCP_t *ctx);
  * \brief Retrieves information about the disconnect-reason.
  *
  * \param[in]       ctx                 Pointer to the LLCP component.
- * \param[in]       link                Pointer to the LLCP link of interest.
  * \param[in,out]   reason              Pointer to store the disconnect-reason.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-ptx_Status_t ptx_RUL_LLCP_GetDisconnectReason(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t *link, ptx_RUL_LLCP_DisconnectReason_t *reason);
+ptx_Status_t ptx_RUL_LLCP_GetDisconnectReason(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_DisconnectReason_t *reason);
 
 /**
  * \brief Checks if the remote peer supports LLCP.

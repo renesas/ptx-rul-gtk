@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -92,14 +92,19 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Init (ptx_HAL_DRV_GPIO_t *ctx, ptx_HAL_DRV_GPIO_In
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_GPIO_Init");
+
+
         memset(ctx, 0, sizeof(ptx_HAL_DRV_GPIO_t));
 
         ctx->CompId = Comp_HAL;
         ctx->ResetPin = PTX_HAL_RESETPIN_LINE_NR;
         ctx->ResetFd = -1;
         ctx->Log = initParams->Log;
+
+
         status = PTX_STATUS_SUCCESS;
     }
 
@@ -112,6 +117,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_DeInit (ptx_HAL_DRV_GPIO_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_GPIO_DeInit");
+
         status = ptx_HAL_DRV_GPIO_Close(ctx);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -129,6 +136,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx)
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*) ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Open");
+
         int fd;
 
         char buffer[PTX_HAL_DRV_GPIO_CHIP_BUFFER_MAX];
@@ -176,6 +185,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Close (void *ctx)
 
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Close");
+
         (void)close(gpio->ResetFd);
         status = PTX_STATUS_SUCCESS;
     }
@@ -193,6 +204,9 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPin (void *ctx, uint16_t pin, uint8_t *level)
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*) ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL) && (NULL != level))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPin");
+
+
         struct gpiohandle_data data;
 
         int ret = ioctl(gpio->ResetFd, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &data);
@@ -220,6 +234,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePin (void *ctx, uint16_t pin, uint8_t level)
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*) ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_WritePin");
+
         struct gpiohandle_data data;
         data.values[0] = (level > 0) ? PTX_HAL_DRV_GPIO_PIN_LEVEL_HIGH : PTX_HAL_DRV_GPIO_PIN_LEVEL_LOW;
 
@@ -246,6 +262,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPort (void *ctx, uint32_t port, uint16_t *data
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*) ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL) && (NULL != data))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPort");
+
         /* Not used. Just return status. */
         *data = 0;
         status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
@@ -265,6 +283,7 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePort (void *ctx, uint32_t port, uint16_t data
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_WritePort");
         /* Not used. Just return status. */
         status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
     }
@@ -279,6 +298,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_SetCfgPin (void *ctx, ptx_HAL_DRV_GPIO_Cfg_t cfg[]
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL) && (NULL != cfg) && (0 != cfgLen))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_SetCfgPin");
+
         /* Not used. Just return status. */
         status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
     }
@@ -303,6 +324,8 @@ static ptx_Status_t ptx_HAL_DRV_GPIO_GpioSetOutput (ptx_HAL_DRV_GPIO_t *ctx, int
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->ResetFd > 0) && (NULL != retFd))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_GPIO_GpioSetOutput");
+
         int fd;
         int rv;
         struct gpiohandle_request req;

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -250,7 +250,7 @@ ptx_Status_t ptx_NativeTag_MFCC_Authenticate (ptx_NativeTag_MFCC_t *mfcc,
     uint32_t total_nr_bits = 0;
     int i;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC)) &&
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) &&
         (NULL != key) &&
         (keyLen == PTX_MFCC_KEY_SIZE) &&
         (uid != key) &&
@@ -361,7 +361,7 @@ ptx_Status_t ptx_NativeTag_MFCC_Read (ptx_NativeTag_MFCC_t *mfcc, uint8_t addres
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC)) && (NULL != rx) && (NULL != rxLen))
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (NULL != rx) && (NULL != rxLen))
     {
         /* perform actual MFCC-command */
         status = ptx_NativeTag_MFCC_TRxCommand(mfcc, mfcc->IsCrypted, 0, PTX_MFCC_COMMAND_CODE_READ, address, rx, rxLen);
@@ -393,7 +393,7 @@ ptx_Status_t ptx_NativeTag_MFCC_Write (ptx_NativeTag_MFCC_t *mfcc, uint8_t addre
     uint32_t tx_len;
     uint32_t total_nr_bits = 0;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC)) && (NULL != blockData) && (blockDataLen == PTX_MFCC_DATA_BLOCK_SIZE))
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (NULL != blockData) && (blockDataLen == PTX_MFCC_DATA_BLOCK_SIZE))
     {
         /* perform actual MFCC-command -> Part 1 */
         status = ptx_NativeTag_MFCC_TRxCommand(mfcc, mfcc->IsCrypted, 0, PTX_MFCC_COMMAND_CODE_WRITE, address, &rx[0], &rx_len);
@@ -466,7 +466,7 @@ ptx_Status_t ptx_NativeTag_MFCC_GetFormattedValueBlock (ptx_NativeTag_MFCC_t *mf
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (buffer != NULL) && (PTX_MFCC_DATA_BLOCK_SIZE <= bufferSize)))
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (buffer != NULL) && (PTX_MFCC_DATA_BLOCK_SIZE <= bufferSize))
     {
         /* store value normal */
         buffer[0]  = (uint8_t)((value >>  0) & (uint8_t)0xFF);
@@ -546,7 +546,7 @@ static ptx_Status_t ptx_NativeTag_MFCC_BitsExchange(ptx_NativeTag_MFCC_t *mfcc, 
 
     uint32_t num_tot_bits = 0;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC)) && (NULL != rxLength) && (NULL != numTotBits))
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (NULL != rxLength) && (NULL != numTotBits))
     {
         num_tot_bits = *numTotBits;
         mfcc->RxData.DataLen = *rxLength;
@@ -691,7 +691,7 @@ static ptx_Status_t ptx_NativeTag_MFCC_TRxCommand(ptx_NativeTag_MFCC_t *mfcc,
     uint32_t total_nr_bits = 0;
     int i;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC)) && (NULL != response) && (NULL != responseLen))
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (NULL != response) && (NULL != responseLen))
     {
         work_buffer[index] = command;
         index++;
@@ -832,7 +832,7 @@ static ptx_Status_t ptx_NativeTag_MFCC_EncryptData(ptx_NativeTag_MFCC_t *mfcc, u
     uint32_t index;
     int i;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC)) && (NULL != data) && (NULL != length))
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (NULL != data) && (NULL != length))
     {
         if ((uint32_t)PTX_MFCC_DATA_BLOCK_SIZE >= *length)
         {
@@ -875,7 +875,7 @@ static ptx_Status_t ptx_NativeTag_MFCC_Decrypt4BitResponse(ptx_NativeTag_MFCC_t 
     uint8_t plain_value = 0;
     int i;
 
-    if ((PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC)) && (NULL != plainResponse))
+    if (PTX_COMP_CHECK(mfcc, Comp_NativeTag_MFCC) && (NULL != plainResponse))
     {
         for (i = 0; i < (int)4; i++)
         {

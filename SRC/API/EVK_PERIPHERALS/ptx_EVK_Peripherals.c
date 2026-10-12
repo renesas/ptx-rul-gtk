@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -89,6 +89,7 @@ ptx_Status_t ptx_EVK_Peripherals_Init(ptx_EVK_Peripherals_t *ctx)
         i2cInit.InterfacePortType = HAL_DRV_Interface_Port_Type_Evk;
         i2cInit.InterfacePortID = 0;
         i2cInit.NumberOfTimers = 0;
+        i2cInit.Log = ctx->Log;
         status = ptx_HAL_Init(&ctx->i2cInterface, &i2cInit);
 
         if (PTX_STATUS_SUCCESS == status)

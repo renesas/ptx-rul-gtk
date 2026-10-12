@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -77,19 +77,25 @@ ptx_Status_t ptx_HIP_Open (ptx_HIP_t *hip, ptx_HIP_InitParams_t *initParams)
 
     /* Accept only valid init params, i.e. hal and frame must also be valid. Otherwise, no point to continue. */
 
-    if ((NULL != hip) && (NULL != initParams) && PTX_COMP_CHECK(initParams->Hal, Comp_HAL))
+    if ((NULL != hip) && (NULL != initParams) && PTX_COMP_CHECK(initParams->Hal, Comp_HAL) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HIP_Open");
+
         /* Set to invalid component until init finishes successfully. */
         (void)memset(hip, 0, sizeof(ptx_HIP_t));
 
         ptx_HIP_Frame_InitParams_t hip_init_params;
         memset(&hip_init_params, 0, sizeof(ptx_HIP_Frame_InitParams_t));
-
+        
+        hip_init_params.Log = initParams->Log;
         hip_init_params.Hal = initParams->Hal;
+
+
 
 #if defined(PTX_ENABLE_SPI)
         if (HAL_Interface_Type_SPI == initParams->Hal->Interface.Type)
         {
+
             hip_init_params.EncodeCb = ptx_HIP_Frame_Encode_SPI;
         }
 #endif
@@ -116,6 +122,7 @@ ptx_Status_t ptx_HIP_Open (ptx_HIP_t *hip, ptx_HIP_InitParams_t *initParams)
         if (PTX_STATUS_SUCCESS == status)
         {
             hip->CompId = Comp_HIP;
+            hip->Log = initParams->Log;
         }
     }
 
@@ -128,6 +135,8 @@ ptx_Status_t ptx_HIP_Close (ptx_HIP_t *hip)
 
     if (PTX_COMP_CHECK(hip, Comp_HIP))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_Close");
+
         status = ptx_HIP_Frame_Close(&hip->Frame);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -142,8 +151,10 @@ ptx_Status_t ptx_HIP_SysRst (ptx_HIP_t *hip, ptx_HIP_Cmd_SysRst_t method)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(hip, Comp_HIP)) && (HIP_Cmd_SysRst_MAX > method))
+    if (PTX_COMP_CHECK(hip, Comp_HIP) && (HIP_Cmd_SysRst_MAX > method))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_SysRst");
+
         ptx_HIP_FrameData_t frame_data =
         /*    CMD    |        IS WRITE FLAG      | Addr | Addr Len |     txBuffer     |   txBufferLen  | rxBuffer | rxBufferLen */
         { HIP_Cmd_Rst, PTX_HIP_FRAME_CMD_IS_WRITE,  NULL,         0, (uint8_t*) &method, sizeof(uint8_t),      NULL,            0 };
@@ -160,6 +171,8 @@ ptx_Status_t ptx_HIP_RdSysStat (ptx_HIP_t *hip, uint8_t bytes, uint8_t *byteBuf)
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != byteBuf))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_RdSysStat");
+
         ptx_HIP_FrameData_t frame_data =
         /*    CMD    |        IS WRITE FLAG     | Addr | Addr Len |      txBuffer    |  txBufferLen  | rxBuffer | rxBufferLen */
         { HIP_Cmd_RSS, PTX_HIP_FRAME_CMD_IS_READ,  NULL,          0,           &bytes,  sizeof(bytes),   byteBuf,        bytes };
@@ -176,6 +189,8 @@ ptx_Status_t ptx_HIP_WrCMem (ptx_HIP_t *hip, uint16_t addr, uint16_t *data, uint
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != data))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_WrCMem");
+
         if ( (PTX_HIP_MAX_PAYLOAD_LENGTH / sizeof(uint16_t)) < dataLen )
         {
             status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
@@ -212,6 +227,8 @@ ptx_Status_t ptx_HIP_RdCMem (ptx_HIP_t *hip, uint16_t addr, uint16_t *data, uint
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != data))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_RdCMem");
+
         uint16_t tmp_len = (uint16_t) dataLen;
         uint16_t tmp_addr = addr;
 
@@ -246,6 +263,8 @@ ptx_Status_t ptx_HIP_WrDMem (ptx_HIP_t *hip, uint16_t addr, uint8_t *data, uint3
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != data) && (0 != dataLen))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_WrDMem");
+
         uint16_t tmp_addr = addr;
         PTX_HIP_BSWAP16(tmp_addr);
 
@@ -272,6 +291,8 @@ ptx_Status_t ptx_HIP_RdDMem (ptx_HIP_t *hip, uint16_t addr, uint8_t *data, uint3
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != data) && (0 != dataLen))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_RdDMem");
+
         uint16_t tmp_len = (uint16_t) dataLen;
         uint16_t tmp_addr = addr;
 
@@ -294,6 +315,9 @@ ptx_Status_t ptx_HIP_WrMsg (ptx_HIP_t *hip, uint8_t addr, uint8_t *data, uint32_
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != data))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_WrMsg");
+
+
         ptx_HIP_FrameData_t frame_data =
         /*     CMD     |       IS WRITE FLAG       |     Addr    |  Addr Len   |  txBuffer   | txBufferLen |   rxBuffer    | rxBufferLen */
         { HIP_Cmd_WrMsg, PTX_HIP_FRAME_CMD_IS_WRITE,        &addr, sizeof(addr),         data,      dataLen,           NULL,            0 };
@@ -310,6 +334,8 @@ ptx_Status_t ptx_HIP_RdMsgLen (ptx_HIP_t *hip, uint16_t *len)
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (len != NULL))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_RdMsgLen");
+
         ptx_HIP_FrameData_t frame_data =
         /*    CMD     |       IS WRITE FLAG      | Addr | Addr Len | txBuffer | txBufferLen |   rxBuffer    |   rxBufferLen   */
         { HIP_Cmd_RdML, PTX_HIP_FRAME_CMD_IS_READ,  NULL,         0,      NULL,            0,  (uint8_t*)len, sizeof(uint16_t) };
@@ -328,6 +354,8 @@ ptx_Status_t ptx_HIP_RdMsg (ptx_HIP_t *hip, uint8_t *msg, uint16_t msgLen)
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != msg))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_RdMsg");
+
         uint16_t tmp_len = msgLen;
         PTX_HIP_BSWAP16(tmp_len);
 
@@ -347,6 +375,8 @@ ptx_Status_t ptx_HIP_CfgFrame (ptx_HIP_t *hip, ptx_HIP_Frame_Cfg_t *var, uint8_t
 
     if (PTX_COMP_CHECK(hip, Comp_HIP) && (NULL != var) && (NULL != val))
     {
+        PTX_LOG_V(hip->Log, "ptx_HIP_CfgFrame");
+
         status = ptx_HIP_Frame_Cfg(&hip->Frame, var, val, cnt);
     }
 

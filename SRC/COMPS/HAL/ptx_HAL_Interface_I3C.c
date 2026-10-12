@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -76,8 +76,10 @@ ptx_Status_t ptx_HAL_Interface_I3C_Init(ptx_HAL_Interface_I3C_t *ctx, ptx_HAL_In
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
-    {
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
+    {        
+        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_I3C_Init");
+
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Interface_I3C_t));
 
         ptx_HAL_DRV_Interface_I3C_InitParams_t drv_init_params;
@@ -87,7 +89,8 @@ ptx_Status_t ptx_HAL_Interface_I3C_Init(ptx_HAL_Interface_I3C_t *ctx, ptx_HAL_In
         drv_init_params.Speed = initParams->Speed;
         drv_init_params.Log = initParams->Log;
         drv_init_params.Gpio = initParams->Gpio;
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+        ctx->Log = initParams->Log;
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
         drv_init_params.OS = initParams->OS;
 #endif
 
@@ -107,7 +110,9 @@ ptx_Status_t ptx_HAL_Interface_I3C_DeInit(ptx_HAL_Interface_I3C_t *ctx)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
+    {      
+        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_I3C_DeInit");
+
         status = ptx_HAL_DRV_Interface_I3C_DeInit(&ctx->Drv);
     }
 
@@ -121,7 +126,9 @@ ptx_Status_t ptx_HAL_Interface_I3C_Open(void *ctx)
     ptx_HAL_Interface_I3C_t *i3cInterface = &((ptx_HAL_Interface_t*)ctx)->I3cInterface;
 
     if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
-    {
+    {  
+        PTX_LOG_V(i3cInterface->Log, "ptx_HAL_Interface_I3C_Open");
+
         status = ptx_HAL_DRV_Interface_I3C_Open(&i3cInterface->Drv);
     }
 
@@ -135,7 +142,9 @@ ptx_Status_t ptx_HAL_Interface_I3C_Close(void *ctx)
     ptx_HAL_Interface_I3C_t *i3cInterface = &((ptx_HAL_Interface_t*)ctx)->I3cInterface;
 
     if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
-    {
+    { 
+        PTX_LOG_V(i3cInterface->Log, "ptx_HAL_Interface_I3C_Close");
+
         status = ptx_HAL_DRV_Interface_I3C_Close(&i3cInterface->Drv);
     }
 
@@ -153,6 +162,8 @@ ptx_Status_t ptx_HAL_Interface_I3C_TRx(void *ctx, uint8_t *txBuf[], uint32_t txL
 
     if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
     {
+        PTX_LOG_V(i3cInterface->Log, "ptx_HAL_Interface_I3C_TRx");
+
         /* Check if TX Request was not wanted (eg all parameters are NULL / 0) */
         if ((NULL == txBuf) && (NULL == txLen) && (0 == txBufferCnt))
         {
@@ -201,7 +212,7 @@ ptx_Status_t ptx_HAL_Interface_I3C_TRx(void *ctx, uint8_t *txBuf[], uint32_t txL
         /* Let us check for Rx operation. */
         if ((true == rxReq) && (NULL != rxBuf) && (NULL != rxLen) && (0 != rxBufferCnt))
         {
-            status = ptx_HAL_DRV_Interface_I3C_ActivateRxIrq(&i3cInterface->Drv);
+            status = PTX_STATUS_SUCCESS;
             /* Rx operation requested and parameters are valid. */
             uint32_t rxIdx = 0;
             while ((PTX_STATUS_SUCCESS == status) && (rxIdx < rxBufferCnt))
@@ -225,51 +236,6 @@ ptx_Status_t ptx_HAL_Interface_I3C_TRx(void *ctx, uint8_t *txBuf[], uint32_t txL
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_I3C_EnableAsyncRx(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_I3C_t *i3cInterface = &((ptx_HAL_Interface_t*)ctx)->I3cInterface;
-
-    if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_I3C_ActivateRxIrq(&i3cInterface->Drv);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_I3C_DisableAsyncRx(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_I3C_t *i3cInterface = &((ptx_HAL_Interface_t*)ctx)->I3cInterface;
-
-    if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_I3C_DeactivateRxIrq(&i3cInterface->Drv);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_I3C_RegAsyncRxCb(void *ctx, ptx_HAL_Interface_I3C_AsyncRxCb_t rxCb, ptx_HAL_Interface_I3C_AsyncRxCbCtx_t rxCbCtx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_I3C_t *i3cInterface = &((ptx_HAL_Interface_t*)ctx)->I3cInterface;
-
-    if (PTX_COMP_CHECK(i3cInterface, Comp_HAL) && (NULL != rxCb) && (NULL != rxCbCtx))
-    {
-        i3cInterface->AsyncRxCb       = rxCb;
-        i3cInterface->AsyncRxCbCtx    = rxCbCtx;
-
-        status = PTX_STATUS_SUCCESS;
-    }
-
-    return status;
-}
-
 ptx_Status_t ptx_HAL_Interface_I3C_RxPending(void *ctx, uint8_t *rxPending)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -278,63 +244,9 @@ ptx_Status_t ptx_HAL_Interface_I3C_RxPending(void *ctx, uint8_t *rxPending)
 
     if (PTX_COMP_CHECK(i3cInterface, Comp_HAL) && (NULL != rxPending))
     {
+        PTX_LOG_V(i3cInterface->Log, "ptx_HAL_Interface_I3C_RxPending");
+
         status = ptx_HAL_DRV_Interface_I3C_RxIrqLevel(&i3cInterface->Drv, rxPending);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_I3C_AsyncRxNonBlocking(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_I3C_t *i3cInterface = &((ptx_HAL_Interface_t*)ctx)->I3cInterface;
-
-    if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
-    {
-        uint8_t level = 0;
-
-        status = ptx_HAL_DRV_Interface_I3C_RxIrqLevel(&i3cInterface->Drv, &level);
-
-        if ((PTX_STATUS_SUCCESS == status) && (PTX_HAL_INTERFACE_I3C_IRQ_LEVEL_HIGH == level))
-        {
-            if ((NULL != i3cInterface->AsyncRxCb) && (NULL != i3cInterface->AsyncRxCbCtx))
-            {
-                i3cInterface->AsyncRxCb(i3cInterface->AsyncRxCbCtx);
-            }
-            else
-            {
-                /* No AsyncRx callback registered */
-                status = PTX_STATUS_E_GEN_INTERNAL;
-            }
-        }
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_I3C_AsyncRxBlocking(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_I3C_t *i3cInterface = &((ptx_HAL_Interface_t*)ctx)->I3cInterface;
-
-    if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_I3C_WaitForIRQ(&i3cInterface->Drv);
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            if ((NULL != i3cInterface->AsyncRxCb) && (NULL != i3cInterface->AsyncRxCbCtx))
-            {
-                i3cInterface->AsyncRxCb(i3cInterface->AsyncRxCbCtx);
-            }
-            else
-            {
-                /* No AsyncRx callback registered */
-                status = PTX_STATUS_E_GEN_INTERNAL;
-            }
-        }
     }
 
     return status;
@@ -348,6 +260,8 @@ ptx_Status_t ptx_HAL_Interface_I3C_SetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
     {
+        PTX_LOG_V(i3cInterface->Log, "ptx_HAL_Interface_I3C_SetParameter");
+
         status = ptx_HAL_DRV_Interface_I3C_SetParameter(&i3cInterface->Drv, parameter);
     }
 
@@ -362,6 +276,8 @@ ptx_Status_t ptx_HAL_Interface_I3C_GetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(i3cInterface, Comp_HAL))
     {
+        PTX_LOG_V(i3cInterface->Log, "ptx_HAL_Interface_I3C_GetParameter");
+
         status = ptx_HAL_DRV_Interface_I3C_GetParameter(&i3cInterface->Drv, parameter);
     }
 

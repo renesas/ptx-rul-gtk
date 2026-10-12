@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -74,6 +74,7 @@
 #define PTX_NFCFORUMDTA_LISTEN_WAIT_CMD_RWT                 (310u)
 #define PTX_NFCFORUMDTA_LISTEN_WAIT_CMD_RWT_P2PACM          (5u)
 #define PTX_NFCFORUMDTA_LISTEN_PATTERN_NUMBER_CMD_LEN       (4u)
+#define PTX_NFCFORUMDTA_LISTEN_SELECT_APDU_DF_LEN           (14u)
 
 /*
  * ####################################################################################################################
@@ -515,15 +516,33 @@ static ptx_Status_t ptx_NFCForumDTA_Listen_Processing_SendLoopbackRes(ptx_NFCFor
 static ptx_Status_t ptx_NFCForumDTA_Listen_Processing_SendSelRes(ptx_NFCForumDTA_t *dta, uint8_t *rx, uint32_t rxLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
     if (PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA) && (NULL != rx) && (0 != rxLen))
     {
         uint8_t SEL_RES[PTX_NFCFORUMDTA_LISTEN_SEL_RES_LEN] = {0x90, 0x00};
         uint8_t SEL_RES_DTA[PTX_NFCFORUMDTA_LISTEN_SEL_RES_DTA_LEN] = {0x01, 0x00, 0x90, 0x00};
 
-        // Check if received select is the proprietary select dta APDU
-        uint8_t SELECT_DTA_APDU[PTX_NFCFORUMDTA_LISTEN_SELECT_DTA_APDU_LEN] = {0x0E, 0x31, 0x4E, 0x46, 0x43, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46, 0x30, 0x31, 0x00};
-        if ((rxLen >= PTX_NFCFORUMDTA_LISTEN_SELECT_APDU_LEN + PTX_NFCFORUMDTA_LISTEN_SELECT_DTA_APDU_LEN) && (0 == memcmp(&rx[PTX_NFCFORUMDTA_LISTEN_SELECT_APDU_LEN], SELECT_DTA_APDU, sizeof(uint8_t) * PTX_NFCFORUMDTA_LISTEN_SELECT_DTA_APDU_LEN)))
+        /* DTA DF name variants  */
+        const uint8_t SELECT_APDU_DFNAME_1[PTX_NFCFORUMDTA_LISTEN_SELECT_APDU_DF_LEN] = {0x31, 0x4E, 0x46, 0x43, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46, 0x30, 0x31}; /* "1NFC.SYS.DDF01" */
+        const uint8_t SELECT_APDU_DFNAME_2[PTX_NFCFORUMDTA_LISTEN_SELECT_APDU_DF_LEN] = {0x32, 0x4E, 0x46, 0x43, 0x2E, 0x53, 0x59, 0x53, 0x2E, 0x44, 0x44, 0x46, 0x30, 0x31}; /* "2NFC.SYS.DDF01" */
+
+        uint8_t isDtaSelect = 0u;
+
+        // Search the whole received APDU for either DF name
+        if (rxLen >= sizeof(SELECT_APDU_DFNAME_1))
+        {
+            uint32_t i;
+            for (i = 0u; i <= (rxLen - (uint32_t)sizeof(SELECT_APDU_DFNAME_1)); i++)
+            {
+                if ((0 == memcmp(&rx[i], SELECT_APDU_DFNAME_1, sizeof(SELECT_APDU_DFNAME_1))) ||
+                    (0 == memcmp(&rx[i], SELECT_APDU_DFNAME_2, sizeof(SELECT_APDU_DFNAME_2))))
+                {
+                    isDtaSelect = 1u;
+                    break;
+                }
+            }
+        }
+
+        if (isDtaSelect != 0u)
         {
             // Send back the expected SEL_RES for the Select DTA command
             status = ptx_RUL_HCE_SendData(&dta->hce, SEL_RES_DTA, PTX_NFCFORUMDTA_LISTEN_SEL_RES_DTA_LEN);
@@ -533,11 +552,7 @@ static ptx_Status_t ptx_NFCForumDTA_Listen_Processing_SendSelRes(ptx_NFCForumDTA
             // Send back the standard SEL_RES response for other select commands
             status = ptx_RUL_HCE_SendData(&dta->hce, SEL_RES, PTX_NFCFORUMDTA_LISTEN_SEL_RES_LEN);
         }
-
-
-
     }
-
     return status;
 }
 

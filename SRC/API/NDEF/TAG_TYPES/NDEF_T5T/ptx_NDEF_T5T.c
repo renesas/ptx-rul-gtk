@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -371,7 +371,7 @@ ptx_Status_t ptx_NDEF_T5T_ReadMessage (ptx_NDEF_T5T_t *ndefT5T, uint8_t *msgBuff
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint32_t msg_buffer_size;
 
-    if (PTX_COMP_CHECK(ndefT5T, Comp_T5TOP) && (NULL != msgBuffer) && (NULL != msgLen))
+    if (PTX_COMP_CHECK(ndefT5T, Comp_T5TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
         msg_buffer_size = *msgLen;
 
@@ -1167,7 +1167,7 @@ static ptx_Status_t ptx_NDEF_T5TReadNDEFSingleBlocks(ptx_NDEF_T5T_t *ndefT5T, ui
     uint16_t bytes_received;
     uint16_t bytes_to_copy;
 
-    if (PTX_COMP_CHECK(ndefT5T, Comp_T5TOP) && (NULL != msgBuffer) && (NULL != msgLen))
+    if (PTX_COMP_CHECK(ndefT5T, Comp_T5TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
         msg_buffer_size = *msgLen;
 
@@ -1256,7 +1256,7 @@ static ptx_Status_t ptx_NDEF_T5TReadNDEFMultipleBlocks(ptx_NDEF_T5T_t *ndefT5T, 
     uint8_t first_read = 1;
     uint32_t bytes_read = 0;
 
-    if (PTX_COMP_CHECK(ndefT5T, Comp_T5TOP) && (NULL != msgBuffer) && (NULL != msgLen))
+    if (PTX_COMP_CHECK(ndefT5T, Comp_T5TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
         msg_buffer_size = *msgLen;
 
@@ -1314,7 +1314,7 @@ static ptx_Status_t ptx_NDEF_T5TReadNDEFMultipleBlocks(ptx_NDEF_T5T_t *ndefT5T, 
         if (PTX_STATUS_SUCCESS == status)
         {
             /* MsgLen is all bytes read without TLV-Header, beginning offsets, and end offsets. */
-            *msgLen = bytes_read;
+            *msgLen = ndefT5T->NDEF_TLV_LENGTH;
         }
         else
         {

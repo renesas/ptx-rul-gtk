@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -83,12 +83,12 @@ typedef struct ptx_PSL_QMeas_Parameters
 } ptx_PSL_QMeas_Parameters_t;
 
 /**
- * \brief Antenna Q measurement input parameters.
+ * \brief Antenna Q measurement results.
  */
 typedef struct ptx_PSL_QMeas_Result
 {
     uint32_t            QFactor;            /**< Calculated Q-Factor multiplied by the factor of 100. */
-    uint32_t            ResonaceFreq;       /**< Resonance frequency. 0 if not found */
+    uint32_t            ResonanceFreq;      /**< Resonance frequency. 0 if not found */
     uint32_t            LowerCornerFreq;    /**< Lower -3dB corner frequency. 0 if not found */
     uint32_t            UpperCornerFreq;    /**< Upper -3dB corner frequency. 0 if not found */
 } ptx_PSL_QMeas_Result_t;
@@ -152,7 +152,7 @@ typedef struct ptx_PSL_Ddpc_Params
 typedef struct ptx_PSL_Ddpc_Status
 {
     uint8_t     PowerLevel; /**< The power level currently in use (either 0 or 1). */
-    uint32_t    Rssi;       /**< Current RSSI value (used to decide, which powerlevel to use). */
+    uint32_t    Rssi;       /**< Current RSSI value (used to decide, which power level to use). */
 } ptx_PSL_Ddpc_Status_t;
 
 
@@ -245,7 +245,7 @@ typedef enum ptx_PSL_DScopeRamModule
 } ptx_PSL_DScopeRamModule_t;
 
 /**
- * \brief PSL Initialisation Parameters.
+ * \brief PSL Initialization Parameters.
  */
 typedef struct ptx_PSL_InitParams
 {
@@ -271,10 +271,10 @@ typedef struct ptx_PSL
  */
 
 /**
- * \brief PSL Component Initialisation.
+ * \brief PSL Component Initialization.
  *
  * \param[in,out]   psl             Pointer to PSL component.
- * \param[in]       initParams      Pointer to initialisation parameters.
+ * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -282,10 +282,10 @@ ptx_Status_t ptx_PSL_Init(ptx_PSL_t *psl, ptx_PSL_InitParams_t *initParams);
 
 /**
  * \brief PSL RF Field Amplitude Measurement at the provided frequency.
- * *
+ *
  * \param[in]       psl             Pointer to PSL component.
  * \param[in]       targetFrequency Target frequency for the amplitude measurement.
- * \param[out]      averaging       Number of measurement to average.
+ * \param[in]       averaging       Number of measurement to average.
  * \param[out]      rfAmp           Pointer to the measurement result.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -400,7 +400,7 @@ ptx_Status_t ptx_PSL_ReadRegister(ptx_PSL_t *psl, uint16_t address, uint8_t *val
 ptx_Status_t ptx_PSL_ModifyRegister(ptx_PSL_t *psl, uint16_t address, uint8_t bitValue, uint8_t mask);
 
 /**
- * \brief Reset all registers involved in analog MUX and digital Mux configuration to default values.
+ * \brief Reset all registers involved in analog Mux and digital Mux configuration to default values.
  *
  * \param[in]       psl             Pointer to PSL component.
  *
@@ -409,7 +409,7 @@ ptx_Status_t ptx_PSL_ModifyRegister(ptx_PSL_t *psl, uint16_t address, uint8_t bi
 ptx_Status_t ptx_PSL_ResetAllRegs(ptx_PSL_t *psl);
 
 /**
- * \brief Map any analog signal to specific I/O pad.
+ * \brief Map any analog signal to a specific I/O pad.
  *
  * \param[in]       psl             Pointer to PSL component.
  * \param[in]       testPinNr       Test pin number (Atst0 - Atst3).
@@ -443,7 +443,7 @@ ptx_Status_t ptx_PSL_ShortOutputSignal(ptx_PSL_t *psl, ptx_PSL_AnaTestPin_t pin1
  * \brief Configure the digital multiplexer with the provided configuration to analyze internal digital test signals.
  *
  * \param[in]       psl             Pointer to PSL component.
- * \param[in]       swapTestMux     Enables swapping for complete TB0, TB1.
+ * \param[in]       swapTestMux     Enables swapping of the complete TB0/TB1 buses.
  * \param[in]       swapTB1         Defines the bit swapping configuration within TB1.
  * \param[in]       swapTB0         Defines the bit swapping configuration within TB0.
  * \param[in]       sysClkPinNbr    Defines the pin number for the system clock output.
@@ -473,17 +473,17 @@ ptx_Status_t ptx_PSL_DigMuxSelectSignal(ptx_PSL_t *psl, ptx_PSL_TB_t signal);
 
 /**
  * \brief Measures the system inherent noise seen by the receiver to determine the signal detector threshold necessary to
- *        prevent unintended activation of the digital receiver. The measurement dependend on the data rate and the type.
+ *        prevent unintended activation of the digital receiver. The measurement depends on the data rate and the type.
  *
  * \param[in]     psl               Pointer to PSL component.
- * \param[in]     inParams          Structure defining the measurement paramters. See \ref ptx_PSL_SigDet_InParams_t
+ * \param[in]     inParams          Structure defining the measurement parameters. See \ref ptx_PSL_SigDet_InParams_t
  * \param[out]    sigDetValue       Resulting SigDet value. The value can be written directly to the RD_THR registers.
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_PSL_SigDetMeasurement(ptx_PSL_t *psl, ptx_PSL_SigDet_InParams_t *inParams, uint32_t *sigDetValue);
 
 /**
- * \brief Deinitialized the PSL component and resets all the devices' registers to their reset states.
+ * \brief Deinitializes the PSL component and resets all the device registers to their reset states.
  *
  * \param[in]     psl               Pointer to PSL component.
  *

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -732,7 +732,7 @@ ptx_Status_t ptx_POS_DTE_GetTransacAState(ptx_POS_DTE_t *ctx, ptx_POS_DTE_Transa
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(ctx, Comp_POS_DTE)) && (NULL != state))
+    if (PTX_COMP_CHECK(ctx, Comp_POS_DTE) && (NULL != state))
     {
         *state = ctx->TransacAState;
         status = PTX_STATUS_SUCCESS;
@@ -840,7 +840,7 @@ ptx_Status_t ptx_POS_DTE_GetTransacBState(ptx_POS_DTE_t *ctx, ptx_POS_DTE_Transa
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(ctx, Comp_POS_DTE)) && (NULL != state))
+    if (PTX_COMP_CHECK(ctx, Comp_POS_DTE) && (NULL != state))
     {
         *state = ctx->TransacBState;
         status = PTX_STATUS_SUCCESS;
@@ -966,7 +966,7 @@ ptx_Status_t ptx_POS_DTE_GetLoopbackState(ptx_POS_DTE_t *ctx, ptx_POS_DTE_Loopba
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(ctx, Comp_POS_DTE)) && (NULL != state))
+    if (PTX_COMP_CHECK(ctx, Comp_POS_DTE) && (NULL != state))
     {
         *state = ctx->LoopbackState;
         status = PTX_STATUS_SUCCESS;
@@ -1151,7 +1151,7 @@ static ptx_Status_t ptx_POS_DTE_INT_State_ExchangePPSE(ptx_POS_DTE_t* ctx, uint8
     uint8_t tx_data[PTX_POS_DTE_EXCHANGE_BUFFER_SIZE];
     uint32_t tx_data_len = (uint32_t)sizeof(ptx_POS_DTE_C_APDU_PPSE);
 
-    if ((PTX_COMP_CHECK(ctx, Comp_POS_DTE)) && (NULL != rxData) && (NULL != rxDataLength))
+    if (PTX_COMP_CHECK(ctx, Comp_POS_DTE) && (NULL != rxData) && (NULL != rxDataLength))
     {
         memcpy(&tx_data[0], &ptx_POS_DTE_C_APDU_PPSE[0], tx_data_len);
 
@@ -1374,7 +1374,7 @@ static void ptx_POS_DTE_INT_HandlePPSE(ptx_POS_DTE_t* ctx, uint8_t *rxData, uint
 {
     ptx_Status_t status;
 
-    if ((PTX_COMP_CHECK(ctx, Comp_POS_DTE)) && (NULL != rxData))
+    if (PTX_COMP_CHECK(ctx, Comp_POS_DTE) && (NULL != rxData))
     {
         PTX_LOG_I_MEM(ctx->Logger, rxData, rxDataLength, "RX = ");
 
@@ -1785,7 +1785,7 @@ static ptx_Status_t ptx_POS_DTE_Anticollision(ptx_POS_DTE_t *ctx, uint8_t cascad
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(ctx, Comp_POS_DTE)) && (NULL != uid))
+    if (PTX_COMP_CHECK(ctx, Comp_POS_DTE) && (NULL != uid))
     {
         status = ptx_POS_DTE_Set_A_Standard_Frame(ctx, (uint8_t)0);
 
@@ -1817,7 +1817,7 @@ static ptx_Status_t ptx_POS_DTE_Activate(ptx_POS_DTE_t *ctx, uint8_t cascadeLeve
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(ctx, Comp_POS_DTE)) && (NULL != uid) && (0 != selRes))
+    if (PTX_COMP_CHECK(ctx, Comp_POS_DTE) && (NULL != uid) && (0 != selRes))
     {
         status = ptx_POS_DTE_Set_A_Standard_Frame(ctx, (uint8_t)1);
 
@@ -1969,4 +1969,3 @@ static ptx_Status_t ptx_POS_DTE_ChangeRfSettings(ptx_POS_DTE_t *ctx, uint8_t use
 
     return status;
 }
-

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -80,8 +80,10 @@ ptx_Status_t ptx_HAL_Interface_SPI_Init (ptx_HAL_Interface_SPI_t *ctx, ptx_HAL_I
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_SPI_Init");
+
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Interface_SPI_t));
 
         /* Initialize the driver. */
@@ -92,7 +94,9 @@ ptx_Status_t ptx_HAL_Interface_SPI_Init (ptx_HAL_Interface_SPI_t *ctx, ptx_HAL_I
         drv_init_params.Speed = initParams->Speed;
         drv_init_params.Log = initParams->Log;
         drv_init_params.Gpio = initParams->Gpio;
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+        ctx->Log = initParams->Log;
+
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
         drv_init_params.OS = initParams->OS;
 #endif
 
@@ -113,6 +117,8 @@ ptx_Status_t ptx_HAL_Interface_SPI_DeInit (ptx_HAL_Interface_SPI_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_SPI_DeInit");
+
         status = ptx_HAL_DRV_Interface_SPI_DeInit(&ctx->Drv);
     }
 
@@ -127,6 +133,8 @@ ptx_Status_t ptx_HAL_Interface_SPI_Open (void *ctx)
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
+        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_Open");
+
         status = ptx_HAL_DRV_Interface_SPI_Open(&spiInterface->Drv);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -145,6 +153,8 @@ ptx_Status_t ptx_HAL_Interface_SPI_Close (void *ctx)
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
+        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_Close");
+
         status = ptx_HAL_DRV_Interface_SPI_Close(&spiInterface->Drv);
     }
 
@@ -161,6 +171,8 @@ ptx_Status_t ptx_HAL_Interface_SPI_TRx (void *ctx, uint8_t *txBuf[], uint32_t tx
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
         status = ptx_HAL_DRV_Interface_SPI_SetNss(&spiInterface->Drv);
+
+        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_TRx");
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -185,11 +197,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_TRx (void *ctx, uint8_t *txBuf[], uint32_t tx
                     ++i;
                 }
             }
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            status = ptx_HAL_DRV_Interface_SPI_ActivateRxIrq(&spiInterface->Drv);
         }
 
         if (PTX_STATUS_SUCCESS == status)
@@ -226,51 +233,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_TRx (void *ctx, uint8_t *txBuf[], uint32_t tx
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_SPI_EnableAsyncRx (void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_SPI_t *spiInterface = &((ptx_HAL_Interface_t*)ctx)->SpiInterface;
-
-    if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_SPI_ActivateRxIrq(&spiInterface->Drv);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_SPI_DisableAsyncRx (void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_SPI_t *spiInterface = &((ptx_HAL_Interface_t*)ctx)->SpiInterface;
-
-    if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_SPI_DeactivateRxIrq(&spiInterface->Drv);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_SPI_RegAsyncRxCb(void *ctx, ptx_HAL_Interface_SPI_AsyncRxCb_t rxCb, ptx_HAL_Interface_SPI_AsyncRxCbCtx_t rxCbCtx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_SPI_t *spiInterface = &((ptx_HAL_Interface_t*)ctx)->SpiInterface;
-
-    if (PTX_COMP_CHECK(spiInterface, Comp_HAL) && (NULL != rxCb) && (NULL != rxCbCtx))
-    {
-        spiInterface->AsyncRxCb       = rxCb;
-        spiInterface->AsyncRxCbCtx    = rxCbCtx;
-
-        status = PTX_STATUS_SUCCESS;
-    }
-
-    return status;
-}
-
 ptx_Status_t ptx_HAL_Interface_SPI_RxPending(void *ctx, uint8_t *rxPending)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -279,64 +241,9 @@ ptx_Status_t ptx_HAL_Interface_SPI_RxPending(void *ctx, uint8_t *rxPending)
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
+        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_RxPending");
+
         status = ptx_HAL_DRV_Interface_SPI_RxIrqLevel(&spiInterface->Drv, rxPending);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_SPI_AsyncRxNoNBlocking(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_SPI_t *spiInterface = &((ptx_HAL_Interface_t*)ctx)->SpiInterface;
-
-    if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
-    {
-        uint8_t level = 0;
-
-        status = ptx_HAL_DRV_Interface_SPI_RxIrqLevel(&spiInterface->Drv, &level);
-
-        if ((PTX_STATUS_SUCCESS == status) && (PTX_HAL_INTERFACE_SPI_IRQ_LEVEL_HIGH == level))
-        {
-            if ((NULL != spiInterface->AsyncRxCb) && (NULL != spiInterface->AsyncRxCbCtx))
-            {
-                spiInterface->AsyncRxCb(spiInterface->AsyncRxCbCtx);
-            }
-            else
-            {
-                /* No AsyncRx callback registered */
-                status = PTX_STATUS_E_GEN_INTERNAL;
-            }
-        }
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_SPI_AsyncRxBlocking(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_SPI_t *spiInterface = &((ptx_HAL_Interface_t*)ctx)->SpiInterface;
-
-    if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
-    {
-
-        status = ptx_HAL_DRV_Interface_SPI_WaitForIRQ(&spiInterface->Drv);
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            if ((NULL != spiInterface->AsyncRxCb) && (NULL != spiInterface->AsyncRxCbCtx))
-            {
-                spiInterface->AsyncRxCb(spiInterface->AsyncRxCbCtx);
-            }
-            else
-            {
-                /* No AsyncRx callback registered */
-                status = PTX_STATUS_E_GEN_INTERNAL;
-            }
-        }
     }
 
     return status;
@@ -350,6 +257,7 @@ ptx_Status_t ptx_HAL_Interface_SPI_SetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
+        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_SetParameter");
 
         status = ptx_HAL_DRV_Interface_SPI_SetParameter(&spiInterface->Drv, parameter);
     }
@@ -365,6 +273,7 @@ ptx_Status_t ptx_HAL_Interface_SPI_GetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
+        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_GetParameter");
 
         status = ptx_HAL_DRV_Interface_SPI_GetParameter(&spiInterface->Drv, parameter);
     }

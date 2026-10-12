@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -83,7 +83,13 @@ extern "C" {
  */
 
 /**
- * \brief Function used to select card for activation when the chip is reader and there are more than one card within the field.
+ * \brief Function used to select card for activation when the chip in Poll mode.
+ *        
+ * Selects card for activation in Poll Mode, this can be done in multiple scenarios (multiple cards, multiple 
+ * protocols or deactivated card). In one special case the NSC RF_STATE is internally overwritten to SLEEP_A when activating a T2T. 
+ * This is required to ensure a correct activation in multi-card scenarios with T2T and T5T cards. Additional if the first
+ * NSC_RF_ACTIVATE_CMD fails a second one is sent with a modified NSC RF_STATE which is set to the corresponding Technology SLEEP state.
+ * This ensures a full activation on a second try, for problematic multi-card scenarios. 
  *
  * \param[in]       nsc         Pointer to the component structure.
  * \param[in]       param       Pointer to the structure of the RF Activate parameters.

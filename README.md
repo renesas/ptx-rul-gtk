@@ -1,6 +1,6 @@
 # GTK4 Discovery Application
 
-GTK4 application using the PTX205R and the RUL SDK 1.2.0 reference implementation for the Raspberry Pi and SPI.
+GTK4 application using the PTX205R and the RUL SDK 1.2.1 reference implementation for the Raspberry Pi and SPI.
 
 ## Modificatons made to the SDK example
 
@@ -31,7 +31,7 @@ Connect the PTX board via USB-C for power.
 
 ## Software requirements
 
-- RUL SDK 1.2.0
+- RUL SDK 1.2.1
 - GTK4 - install the `libgtk-4-dev` package
 - cmake
 

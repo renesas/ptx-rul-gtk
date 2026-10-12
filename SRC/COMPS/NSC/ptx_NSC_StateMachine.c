@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -47,6 +47,7 @@
  * ####################################################################################################################
  */
 #include "ptx_NSC_Int.h"
+#include "ptx_NSC_RfConfig.h"
 #include "ptx_NSC_StateMachine.h"
 
 
@@ -113,6 +114,8 @@ ptx_Status_t ptx_NSC_CheckRfStateCmdExecution(ptx_NSC_t *nsc, ptx_NSC_SM_CmdId_t
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CheckRfStateCmdExecution");
+
         if (ptx_NSC_SM_CmdId_Undefined > cmdId)
         {
             const uint32_t invalid_table_index = 0xFFFFu;
@@ -148,84 +151,90 @@ static ptx_Status_t ptx_NSC_SM_CheckParams(uint32_t cmdTableIdx, ptx_NSC_State_t
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((uint8_t)ptx_NSC_SM_CmdId_RfDeactivate == ptx_NSC_SM_CmdCheckTable[cmdTableIdx].CmdId)
+    if(NULL != cmdParams)
     {
-        /* Additional parameter check required for RfDeactivate command. */
-        if (PTX_NSC_SM_DEACT_PARAMLEN == cmdParams[PTX_NSC_SM_DEACT_LEN_IDX])
+        if ((uint8_t)ptx_NSC_SM_CmdId_RfDeactivate == ptx_NSC_SM_CmdCheckTable[cmdTableIdx].CmdId)
         {
-            ptx_NSC_RfDeact_Type_t type = (ptx_NSC_RfDeact_Type_t)cmdParams[1];
-
-            if (NSC_RfDeact_Type_ProtSpecific == type)
+            /* Additional parameter check required for RfDeactivate command. */
+            if (PTX_NSC_SM_DEACT_PARAMLEN == cmdParams[PTX_NSC_SM_DEACT_LEN_IDX])
             {
-                if (ptx_NSC_State_Poll_Dep == state)
+                ptx_NSC_RfDeact_Type_t type = (ptx_NSC_RfDeact_Type_t)cmdParams[1];
+
+                if (NSC_RfDeact_Type_ProtSpecific == type)
+                {
+                    if (ptx_NSC_State_Poll_Dep == state)
+                    {
+                        status = PTX_STATUS_SUCCESS;
+                    }
+                }
+                else
                 {
                     status = PTX_STATUS_SUCCESS;
                 }
             }
+
+            if ((PTX_STATUS_SUCCESS == status) && (NSC_RfDeact_State_Poll == (ptx_NSC_RfDeact_State_t)cmdParams[PTX_NSC_SM_DEACT_STATE_IDX]))
+            {
+                /* Deactivation to RF_POLL state is allowed only from any of the POLL states. */
+                if ((ptx_NSC_State_Poll_Dep != state) && (ptx_NSC_State_Poll_Test != state) && (ptx_NSC_State_Poll != state))
+                {
+                    status = PTX_STATUS_E_GEN_INVALID_STATE;
+                }
+            }
+            else if ((PTX_STATUS_SUCCESS == status) && ( (NSC_RfDeact_State_ListenIdle == (ptx_NSC_RfDeact_State_t)cmdParams[PTX_NSC_SM_DEACT_STATE_IDX]) ||
+                                                        (NSC_RfDeact_State_ListenSleep == (ptx_NSC_RfDeact_State_t)cmdParams[PTX_NSC_SM_DEACT_STATE_IDX]) )    )
+            {
+                /* Deactivation to RF_LISTEN_IDLE/SLEEP states is allowed only from RF_LISTEN state. */
+                if (ptx_NSC_State_Listen != state)
+                {
+                    status = PTX_STATUS_E_GEN_INVALID_STATE;
+                }
+            }
             else
             {
-                status = PTX_STATUS_SUCCESS;
+                /* No special handling for other cases, or error already set. */
             }
-        }
 
-        if ((PTX_STATUS_SUCCESS == status) && (NSC_RfDeact_State_Poll == (ptx_NSC_RfDeact_State_t)cmdParams[PTX_NSC_SM_DEACT_STATE_IDX]))
-        {
-            /* Deactivation to RF_POLL state is allowed only from any of the POLL states. */
-            if ((ptx_NSC_State_Poll_Dep != state) && (ptx_NSC_State_Poll_Test != state) && (ptx_NSC_State_Poll != state))
-            {
-                status = PTX_STATUS_E_GEN_INVALID_STATE;
-            }
         }
-        else if ((PTX_STATUS_SUCCESS == status) && ( (NSC_RfDeact_State_ListenIdle == (ptx_NSC_RfDeact_State_t)cmdParams[PTX_NSC_SM_DEACT_STATE_IDX]) ||
-                                                     (NSC_RfDeact_State_ListenSleep == (ptx_NSC_RfDeact_State_t)cmdParams[PTX_NSC_SM_DEACT_STATE_IDX]) )    )
-        {
-            /* Deactivation to RF_LISTEN_IDLE/SLEEP states is allowed only from RF_LISTEN state. */
-            if (ptx_NSC_State_Listen != state)
-            {
-                status = PTX_STATUS_E_GEN_INVALID_STATE;
-            }
-        }
-        else
-        {
-            /* No special handling for other cases, or error already set. */
-        }
-
     }
-
     return status;
 }
 
 static uint8_t ptx_NSC_SM_IsCmdAllowed(ptx_NSC_t *nsc, ptx_NSC_SM_CmdId_t cmdId, uint32_t *cmdTableIdx)
 {
     uint8_t is_allowed = 0;
-    uint32_t i = 0;
-    uint8_t cmd_id = (uint8_t)cmdId;
-    uint32_t check_table_size = sizeof(ptx_NSC_SM_CmdCheckTable) / sizeof(ptx_NSC_SM_CmdCheckItem_t);
-    uint16_t rf_state = PTX_NSC_SM_BITMASK(nsc->State);
 
-    while (i < check_table_size)
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != cmdTableIdx))
     {
-        if (ptx_NSC_SM_CmdCheckTable[i].CmdId == cmd_id)
+        uint32_t i = 0;
+        uint8_t cmd_id = (uint8_t)cmdId;
+        uint32_t check_table_size = sizeof(ptx_NSC_SM_CmdCheckTable) / sizeof(ptx_NSC_SM_CmdCheckItem_t);
+        uint16_t rf_state = PTX_NSC_SM_BITMASK(nsc->State);
+        PTX_LOG_V(nsc->Log, "ptx_NSC_SM_IsCmdAllowed");
+
+        while (i < check_table_size)
         {
-            /* Command is found... */
-            if (0 != (rf_state & ptx_NSC_SM_CmdCheckTable[i].StateBitMask))
+            if (ptx_NSC_SM_CmdCheckTable[i].CmdId == cmd_id)
             {
-                /* and is allowed */
-                is_allowed = 1u;
-                *cmdTableIdx = i;
-            }
-            else
-            {
-                /* and is not allowed => wrong state!!! */
+                /* Command is found... */
+                if (0 != (rf_state & ptx_NSC_SM_CmdCheckTable[i].StateBitMask))
+                {
+                    /* and is allowed */
+                    is_allowed = 1u;
+                    *cmdTableIdx = i;
+                }
+                else
+                {
+                    /* and is not allowed => wrong state!!! */
+                }
+
+                /* Stop surfing through the items */
+                break;
             }
 
-            /* Stop surfing through the items */
-            break;
+            i++;
         }
-
-        i++;
     }
-
     return is_allowed;
 }
 

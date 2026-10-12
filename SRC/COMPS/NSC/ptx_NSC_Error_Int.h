@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -97,6 +97,7 @@ typedef enum ptx_NSC_ErrorCodes
     NSC_ErrorCode_OverCurrent               = 0x32u,      /**< Over current protection error. */
     NSC_ErrorCode_VddTx                     = 0x33u,      /**< VDD Tx error. */
     NSC_ErrorCode_OTPConfig                 = 0x34u,      /**< OTP configuration error. */
+    NSC_ErrorCode_OutOfMemory               = 0x35u,      /**< Device ran out of memory (e.g. Data from NFC-HW not read fast enough by Host/Application). */
     NSC_ErrorCode_UnknownError              = 0xFFu,      /**< Unknown error. */
 } ptx_NSC_ErrorCodes_t;
 

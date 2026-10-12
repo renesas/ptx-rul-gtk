@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -98,8 +98,10 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Init (ptx_HAL_DRV_Tmr_t *ctx, ptx_HAL_DRV_Tmr_InitP
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Tmr_Init");
+
         ctx->Port = NULL;
 
         for (uint8_t portID = 0; (PTX_HAL_DRV_TMR_MAX_PORTS > portID) && (NULL == ctx->Port); ++portID)
@@ -112,9 +114,13 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Init (ptx_HAL_DRV_Tmr_t *ctx, ptx_HAL_DRV_Tmr_InitP
 
                 ctx->Port->TimerAssigned = 1;
 
-                ctx->CompId = Comp_HAL;
+                ctx->Log = initParams->Log;
 
+                ctx->CompId = Comp_HAL;
+                
                 status = PTX_STATUS_SUCCESS;
+
+
             }
         }
     }
@@ -128,6 +134,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_DeInit (ptx_HAL_DRV_Tmr_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Tmr_DeInit");
+
         ctx->Port->ExecCb    = NULL;
         ctx->Port->ExecCbCtx = NULL;
         ctx->Port->TimerAssigned = 0;
@@ -150,6 +158,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Open (void *ctx)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Open");
+
         fsp_err_t r_status = R_GPT_Open(tmr->Port->Instance->p_ctrl, tmr->Port->Instance->p_cfg);
         if (FSP_ERR_ALREADY_OPEN == r_status)
         {
@@ -179,6 +189,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Close (void *ctx)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Close");
+
         fsp_err_t r_status = R_GPT_Close(tmr->Port->Instance->p_ctrl);
         if ((FSP_SUCCESS == r_status) || (FSP_ERR_NOT_OPEN == r_status))
         {
@@ -201,6 +213,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Start (void *ctx)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Start");
+
         tmr->Port->IsElapsed = PTX_HAL_DRV_TMR_IS_ELAPSED_FALSE;
 
         fsp_err_t r_status = R_GPT_Start(tmr->Port->Instance->p_ctrl);
@@ -225,6 +239,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Stop (void *ctx)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Stop");
+
         fsp_err_t r_status = R_GPT_Stop(tmr->Port->Instance->p_ctrl);
         if (FSP_SUCCESS == r_status)
         {
@@ -247,6 +263,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_IsElapsed (void *ctx, uint8_t *isElapsed)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != isElapsed))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_IsElapsed");
+
         *isElapsed = tmr->Port->IsElapsed;
 
         status = PTX_STATUS_SUCCESS;
@@ -263,6 +281,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_RegExecCb (void *ctx, ptx_HAL_DRV_Tmr_ExecCb_t cb, 
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cb) && (NULL != cbCtx))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_RegExecCb");
+
         tmr->Port->ExecCb    = cb;
         tmr->Port->ExecCbCtx = cbCtx;
 
@@ -280,6 +300,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Cfg (void *ctx, ptx_HAL_DRV_Tmr_Cfg_t cfg[], uint32
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cfg) && (0 < len))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Cfg");
+
         fsp_err_t err = FSP_ERR_INVALID_ARGUMENT;
         uint8_t idx = 0;
         do
@@ -321,6 +343,8 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Sleep (void *ctx, uint32_t timeout)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (0 != timeout))
     {
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Sleep");
+
         status = ptx_HAL_DRV_Tmr_Stop(tmr);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -331,6 +355,7 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Sleep (void *ctx, uint32_t timeout)
             cfg.CfgType = HAL_DRV_Tmr_CfgType_Period;
             cfg.TimeUnit = HAL_DRV_Tmr_Unit_mSec;
             cfg.Period = timeout;
+            
             status = ptx_HAL_DRV_Tmr_Cfg(tmr, &cfg, len);
         }
 
@@ -395,53 +420,63 @@ void ptx_HAL_DRV_Tmr_ISR(timer_callback_args_t *p_args)
 static fsp_err_t ptx_HAL_DRV_Tmr_PeriodSet (ptx_HAL_DRV_Tmr_t *tmr, ptx_HAL_DRV_Tmr_Cfg_t *cfg)
 {
     fsp_err_t err = FSP_ERR_INVALID_ARGUMENT;
-    uint32_t period = 0;
 
-    uint32_t pclkd_freq_hz = R_FSP_SystemClockHzGet(FSP_PRIV_CLOCK_PCLKD) >> ((timer_cfg_t*)tmr->Port->Instance->p_cfg)->source_div;
-
-    switch (cfg->TimeUnit)
+    if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cfg))
     {
-        case HAL_DRV_Tmr_Unit_mSec:
-            period = (uint32_t)(((uint64_t)pclkd_freq_hz * cfg->Period) / PTX_HAL_DRV_TMR_MILLISEC_PER_SEC);
-            err = FSP_SUCCESS;
-            break;
-        case HAL_DRV_Tmr_Unit_Sec:
-            period = (uint32_t)((uint64_t)pclkd_freq_hz * cfg->Period);
-            err = FSP_SUCCESS;
-            break;
-        default:
-            err = FSP_ERR_INVALID_ARGUMENT;
-    }
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_PeriodSet");
 
-    if (0 == period)
-    {
-        err = FSP_ERR_INVALID_TIMING_SETTING;
-    }
+        uint32_t period = 0;
 
-    if (FSP_SUCCESS == err)
-    {
-        err = R_GPT_PeriodSet(tmr->Port->Instance->p_ctrl, period);
-    }
+        uint32_t pclkd_freq_hz = R_FSP_SystemClockHzGet(FSP_PRIV_CLOCK_PCLKD) >> ((timer_cfg_t*)tmr->Port->Instance->p_cfg)->source_div;
 
+        switch (cfg->TimeUnit)
+        {
+            case HAL_DRV_Tmr_Unit_mSec:
+                period = (uint32_t)(((uint64_t)pclkd_freq_hz * cfg->Period) / PTX_HAL_DRV_TMR_MILLISEC_PER_SEC);
+                err = FSP_SUCCESS;
+                break;
+            case HAL_DRV_Tmr_Unit_Sec:
+                period = (uint32_t)((uint64_t)pclkd_freq_hz * cfg->Period);
+                err = FSP_SUCCESS;
+                break;
+            default:
+                err = FSP_ERR_INVALID_ARGUMENT;
+        }
+
+        if (0 == period)
+        {
+            err = FSP_ERR_INVALID_TIMING_SETTING;
+        }
+
+        if (FSP_SUCCESS == err)
+        {
+            err = R_GPT_PeriodSet(tmr->Port->Instance->p_ctrl, period);
+        }
+    }
     return err;
 }
 
 static fsp_err_t ptx_HAL_DRV_Tmr_ModeSet (ptx_HAL_DRV_Tmr_t *tmr, ptx_HAL_DRV_Tmr_Cfg_t *cfg)
 {
     fsp_err_t err = FSP_ERR_INVALID_ARGUMENT;
-
-    switch (cfg->Mode)
+    
+    if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cfg))
     {
-        case HAL_DRV_Tmr_Mode_Periodic:
-            tmr->Port->Mode = cfg->Mode;
-            err = FSP_SUCCESS;
-            break;
-        case HAL_DRV_Tmr_Mode_SingleShot:
-            tmr->Port->Mode = cfg->Mode;
-            err = FSP_SUCCESS;
-            break;
-        default:
-            err = FSP_ERR_INVALID_ARGUMENT;
+        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_ModeSet");
+
+        switch (cfg->Mode)
+        {
+            case HAL_DRV_Tmr_Mode_Periodic:
+                tmr->Port->Mode = cfg->Mode;
+                err = FSP_SUCCESS;
+                break;
+            case HAL_DRV_Tmr_Mode_SingleShot:
+                tmr->Port->Mode = cfg->Mode;
+                err = FSP_SUCCESS;
+                break;
+            default:
+                err = FSP_ERR_INVALID_ARGUMENT;
+        }
     }
 
     return err;

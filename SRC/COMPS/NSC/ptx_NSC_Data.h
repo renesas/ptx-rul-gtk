@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -92,10 +92,11 @@ extern "C" {
  * \param[in] payload    Pointer to data.
  * \param[in] len        Length of data.
  * \param[in] isChained  Indicates whether the message is chained or not.
+ * \param[in] timeout    Timeout in ms used for waiting for an acknowledgement if data was chained.
  *
  * \return Status, indicating whether the operation was successful. See ptx_Status_t.
  */
-ptx_Status_t ptx_NSC_DataTx(ptx_NSC_t *nsc, uint8_t *payload, uint32_t len, uint8_t isChained);
+ptx_Status_t ptx_NSC_DataTx(ptx_NSC_t *nsc, uint8_t *payload, uint32_t len, uint8_t isChained, uint32_t timeout);
 
 /**
  * \brief Receives arbitrary data.

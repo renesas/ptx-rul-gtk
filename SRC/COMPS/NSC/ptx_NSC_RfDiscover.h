@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -365,8 +365,8 @@ typedef struct ptx_NSC_CmdDiscover_TypeFPollCmdParams
 {
     uint8_t     OverwriteDefaultParams;			                    /**< Indicator to overwrite default command parameters. */
     uint8_t     SystemCode[PTX_NSC_TYPES_SENSFREQ_SYS_CODE_LEN];	/**< 16-Bit System Code according to FeliCa/T3T. */
-    uint8_t     RequestCode;					                    /**<  8-Bit Requested Code according to FeliCa/T3T. */
-    uint8_t     InitialTimeSlotNr;				                    /**<  8-Bit Timeslot-Number according to FeliCa/T3T - used only during initial Polling. */
+    uint8_t     RequestCode;					                    /**< 8-Bit Requested Code according to FeliCa/T3T. */
+    uint8_t     InitialTimeSlotNr;				                    /**< 8-Bit Timeslot-Number according to FeliCa/T3T - used only during initial Polling. */
 } ptx_NSC_CmdDiscover_TypeFPollCmdParams_t;
 
 /**
@@ -382,6 +382,7 @@ typedef struct ptx_NSC_RfDiscovery_Cfg
      * 3 ... ISO poll mode.
      * 4 ... Activate RF field and move to RF_POLL state.
      * 5 ... LPCD poll mode.
+     * 6 ... Proprietary Type-F poll mode (RFU).
      */
     uint8_t     PollMode;
 
@@ -437,6 +438,13 @@ typedef struct ptx_NSC_RfDiscovery_Cfg
      * 0 ... No limit is set
      */
     uint8_t     PollDevicesLimit;
+
+    /**
+     * Enable/disable internal RF-Amplitude Limiter (RFU).
+     * 0 ... Internal RF-Limiter disabled
+     * 1 ... Internal RF-Limiter enabled
+     */
+    uint8_t     PollRFAmplitudeLimiterEnable;
 
     /**
      * Initial poll technology for the NFC Forum poll mode.
@@ -540,6 +548,17 @@ typedef struct ptx_NSC_RfDiscovery_Cfg
      * is defined by the poll mode \see PollMode.
      */
     uint8_t     PollTypeFDeviceLimit;
+
+    /**
+     * RF-Field Reset before transmission of SENSF_REQ.
+     * 
+     * Note: This Feature is currently RFU.
+     *
+     *  0 = No RF-Reset is performed before next SENSF_REQ (default / standard behavior )
+     *  1 = RF-Reset is performed before next SENSF_REQ
+     *  other values are interpreted as 1
+     */
+    uint8_t     PollTypeFFieldReset;
 
     /**
      *  Bail out after NFC-A, or NFC-B, or NFC-F technology is found

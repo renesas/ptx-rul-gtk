@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -354,7 +354,7 @@ ptx_Status_t ptx_NDEF_T3T_ReadMessage (ptx_NDEF_T3T_t *ndefT3T, uint8_t *msgBuff
     uint8_t nfcid2[PTX_T3T_NFCID2_SIZE];
     ptx_NativeTag_T3T_MRTI_t mrti_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != msgBuffer) && (NULL != msgLen))
+    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
         msg_buffer_size = *msgLen;
 
@@ -735,7 +735,7 @@ static ptx_Status_t ptx_NDEF_T3T_ReadLoop(ptx_NDEF_T3T_t *ndefT3T, uint32_t *msg
     ptx_NativeTag_T3T_Services_t service_info;
     ptx_NativeTag_T3T_Blocks_t block_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != msgLen) && (NULL != msgBuffer))
+    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != msgLen) && (0 != *msgLen) && (NULL != msgBuffer))
     {
         msg_len = (uint32_t)(*msgLen);
 

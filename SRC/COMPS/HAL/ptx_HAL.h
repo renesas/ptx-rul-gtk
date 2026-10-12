@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -84,26 +84,7 @@ extern "C" {
  */
 
 /**
- * \brief Async Receive Callback Type
- *
- * This callback must be implemented if async communication from the PTX2xxR/W to the host MCU is required.
- * Usually this callback will be implemented by the HIP layer.
- *
- * \param[in]   ctx             Initialised context for the callback
- */
-typedef void (*ptx_HAL_Interface_AsyncRxCb_t)(void *ctx);
-
-/**
- * \brief Async Rx Context
- *
- * This context must for the requirements for the \ref ptx_HAL_Interface_AsyncRxCb_t callback!
- *
- * \note This callback must be at least \ref ptx_HAL_t!
- */
-typedef void *ptx_HAL_Interface_AsyncRxCbCtx_t;
-
-/**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL
 {
@@ -136,7 +117,7 @@ typedef struct ptx_HAL_InitParams
     uint8_t                             NumberOfTimers;         /**< Number of requested Timers. */
 
     ptx_Log_t                           *Log;                   /**< Logger context. */
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
     void                                *Osal;                  /**< OSAL context */
 #endif
 } ptx_HAL_InitParams_t;
@@ -150,7 +131,7 @@ typedef struct ptx_HAL_InitParams
 /**
  * \brief HAL Component Initialization.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -160,7 +141,7 @@ ptx_Status_t ptx_HAL_Init (ptx_HAL_t *ctx, ptx_HAL_InitParams_t *initParams);
 /**
  * \brief HAL Component De-Initialization.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -173,7 +154,7 @@ ptx_Status_t ptx_HAL_DeInit (ptx_HAL_t *ctx);
  *
  * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -186,7 +167,7 @@ ptx_Status_t ptx_HAL_Interface_Open (ptx_HAL_t *ctx);
  *
  * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -208,9 +189,9 @@ ptx_Status_t ptx_HAL_Interface_Close (ptx_HAL_t *ctx);
  * \param[in]       txBuf           Pointer to array of data to be transmitted.
  * \param[in]       txLen           Length of each of the arrays in \see txBuf.
  * \param[in]       txBufferCnt     Number of buffers to be transmitted.
- * \param[inout]    rxBuf           Pointer to array of data to be received. The array must have the right size!
- * \param[inout]    rxLen           Length of each array to be received.
- * \param[in]       rxBufferCnt     Number of buffers to be transmitted.
+ * \param[out]      rxBuf           Pointer to array of data to be received. The array must have the right size!
+ * \param[in]       rxLen           Length of each array to be received.
+ * \param[in]       rxBufferCnt     Number of buffers to be received.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -246,63 +227,12 @@ ptx_Status_t ptx_HAL_Interface_Tx (ptx_HAL_t *ctx, uint8_t *txBuf, uint32_t txLe
  * \note It is required that the device implements this function in order to work!
  *
  * \param[in]       ctx             Pointer to component.
- * \param[inout]    rxBuf           Array with the length of data to be received.
+ * \param[out]      rxBuf           Array with the length of data to be received.
  * \param[in]       rxLen           Number of bytes to be received.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_Interface_Rx (ptx_HAL_t *ctx, uint8_t *rxBuf, uint32_t rxLen);
-
-/**
- * \brief HAL Communication Interface Enable Async Rx
- *
- * Enables the async rx functionality.
- *
- * Depending on the intended usage of this function, it may not be implemented!
- *
- * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
- * \note It is required that the device implements this function in order to work!
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_EnableAsyncRx (ptx_HAL_t *ctx);
-
-/**
- * \brief HAL Communication Interface Disable Async Rx
- *
- * Disables the async rx functionality.
- *
- * Depending on the intended usage of this function, it may not be implemented!
- *
- * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
- * \note It is required that the device implements this function in order to work!
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_DisableAsyncRx (ptx_HAL_t *ctx);
-
-/**
- * \brief HAL Communication Interface Register Async Rx Callback.
- *
- * Registers the callback \see rxCb. The callback is called if \see ptx_HAL_Interface_AsyncRx detects an transfer.
- * \see rxCbCtx is the corresponding context for the callback to work with.
- *
- * Depending on the intended usage of this function, it may not be implemented!
- *
- * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
- * \note It is required that the device implements this function in order to work!
- *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       rxCb            Callback function.
- * \param[in]       rxCbCtx         Callback context.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_RegAsyncRxCb (ptx_HAL_t *ctx, ptx_HAL_Interface_AsyncRxCb_t rxCb, ptx_HAL_Interface_AsyncRxCbCtx_t rxCbCtx);
 
 /**
  * \brief HAL Communication Interface Receive Operation Pending.
@@ -319,42 +249,6 @@ ptx_Status_t ptx_HAL_Interface_RegAsyncRxCb (ptx_HAL_t *ctx, ptx_HAL_Interface_A
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_Interface_RxPending(ptx_HAL_t *ctx, uint8_t* rxPending);
-
-/**
- * \brief HAL Communication Interface Async Rx NoN Blocking function.
- *
- * Checks if the attached device wants to communicate with the host. The device signals this by either an
- * GPIO pin, or RTS, etc. If this function detects the signal, it executes a \see ptx_HAL_Interface_AsyncRxCb_t
- * callback.
- *
- * Depending on the intended usage of this function, it may not be implemented!
- *
- * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
- * \note It is required that the device implements this function in order to work!
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_AsyncRxNoNBlocking (ptx_HAL_t *ctx);
-
-/**
- * \brief HAL Communication Interface Async Rx Blocking function.
- *
- * Checks if the attached device wants to communicate with the host, and it waits until IRQ is triggered. The device signals this by either an
- * GPIO pin, or RTS, etc. If this function detects the signal, it executes a \see ptx_HAL_Interface_AsyncRxCb_t
- * callback.
- *
- * Depending on the intended usage of this function, it may not be implemented!
- *
- * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
- * \note It is required that the device implements this function in order to work!
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_AsyncRxBlocking (ptx_HAL_t *ctx);
 
 /**
  * \brief HAL Communication Interface Set Parameter function.
@@ -394,7 +288,7 @@ ptx_Status_t ptx_HAL_Interface_GetParameter(ptx_HAL_t *ctx, ptx_HAL_DRV_Interfac
  * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
  * \note It is required that the device implements this function in order to work!
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -406,7 +300,7 @@ ptx_Status_t ptx_HAL_GPIO_Open (ptx_HAL_t *ctx);
  * \note It is required to initialise a device in \ref ptx_HAL_Init, otherwise this function will not work!
  * \note It is required that the device implements this function in order to work!
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -523,7 +417,7 @@ ptx_Status_t ptx_HAL_WaitForIrq (ptx_HAL_t *ctx);
 /**
  * \brief Timer Open.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]   ctx             Pointer to component.
  * \param[in]       id              Timer Id
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -533,7 +427,7 @@ ptx_Status_t ptx_HAL_Tmr_Open (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id);
 /**
  * \brief Timer Close.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]   ctx             Pointer to component.
  * \param[in]       id              Timer Id
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.

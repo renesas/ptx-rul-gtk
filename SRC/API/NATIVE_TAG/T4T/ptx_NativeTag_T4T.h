@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -71,8 +71,8 @@ extern "C" {
  * \name T4T Tag specific definitions
  * @{
  */
-#define PTX_T4T_MIN_TX_BUFFER_SIZE   (uint32_t)256  /**< Minimum Tx buffer size. */
-#define PTX_T4T_MIN_BUFFER_LEN        (uint32_t)256  /**< Minimum internal data buffer. */
+#define PTX_T4T_MIN_TX_BUFFER_SIZE   (uint32_t)256   /**< Minimum Tx buffer size. */
+#define PTX_T4T_MIN_BUFFER_LEN       (uint32_t)256   /**< Minimum internal data buffer length. */
 /** @} */
 /*
  * ####################################################################################################################

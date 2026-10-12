@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -115,8 +115,23 @@ typedef enum ptx_NSC_RoutingType
     Aid_Based = 0x05,                           /**< AID based routing */
     Apdu_Based,                                 /**< RFU */
     System_Code_Based,                          /**< RFU */
-    MaxNumOfTypes                                  /**< RFU */
+    MaxNumOfTypes                               /**< RFU */
 } ptx_NSC_RoutingType_t;
+
+/**
+ * Routing table priority. Used to sort the entries for the NSC_RF_SET_ROUTING_TABLE_CMD.
+ * Enumerations are listed according to the respective priority: highest priority is enumerated first, 
+ * lowest priority last before the delimiter.
+ */
+typedef enum ptx_NSC_RTPriority
+{
+    NSC_RTPriority_Aid = 0,                     /**< AID based routing (highest priority) */
+    NSC_RTPriority_Apdu,                        /**< APDU pattern based routing (not supported) */
+    NSC_RTPriority_SysCode,                     /**< System code based routing (not supported) */
+    NSC_RTPriority_Prot,                        /**< Protocol based routing */
+    NSC_RTPriority_Tech,                        /**< Technology based routing (lowest priority) */
+    NSC_RTPriority_SIZE                         /**< Values delimiter */
+} ptx_NSC_RTPriority_t;
 
 /**
  * Types of forced routing targets.
@@ -155,9 +170,10 @@ typedef struct ptx_NSC_RoutingProtocol
  */
 typedef struct ptx_NSC_RoutingAID
 {
-    uint8_t                     *Aid;           /**< AID */
+    uint8_t                     Aid[PTX_NSC_RT_AID_MAX_LEN];    /**< AID buffer */
     uint32_t                    LengthOfAid;    /**< AID Length */
     ptx_NSC_RoutingTarget_t     Target;         /**< Target */
+    uint8_t                     MatchingType;   /**< Matching type bits relevant for SELECT AID */
     uint8_t                     PowerState;     /**< RFU */
     uint8_t                     Qualifier;      /**< RFU */
 } ptx_NSC_RoutingAID_t;
@@ -214,9 +230,8 @@ typedef struct ptx_NSC_ForcedRoutingInfo
  */
 typedef struct ptx_NSC_RoutingList
 {
-    ptx_NSC_RoutingEntry_t          Entry;          /**< Routing Entry */
     ptx_NSC_RoutingType_t           EntryType;      /**< Routing Type */
-    struct ptx_NSC_RoutingList      *NextEntry;     /**< Next Entry */
+    ptx_NSC_RoutingEntry_t          Entry;          /**< Routing Entry */
 } ptx_NSC_RoutingList_t;
 
 /**
@@ -224,11 +239,7 @@ typedef struct ptx_NSC_RoutingList
  */
 typedef struct ptx_NSC_RoutingTable
 {
-    ptx_NSC_RoutingList_t           *RoutingEntries;    /**< Routing Entry */
-    uint32_t                        NumOfEntries;       /**< Number of Entries */
-    uint32_t                        BytesUsed;          /**< Bytes Used */
-    ptx_NSC_RoutingList_t           *ReadRoutingEntry;  /**< Read Routing Entry */
-    uint32_t                        ReadNumOfEntries;   /**< Read Number of Entries */
+    ptx_NSC_RoutingList_t           RoutingEntries[PTX_NSC_RT_USER_ENTRIES_CAPACITY];    /**< Routing Entries List */
     ptx_NSC_ForcedRoutingInfo_t     ForcedRoutingInfo;  /**< RFU */
 } ptx_NSC_RoutingTable_t;
 

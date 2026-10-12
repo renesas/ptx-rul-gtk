@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -201,6 +201,9 @@ typedef struct ptx_RUL_SnepClient
     uint32_t                            ProcessedBytes;                                 /**< Number of bytes already processed. */
     uint32_t                            CurrentNrBytes;                                 /**< Current number of bytes. */
     uint8_t                             ContinueResponseReceived;                       /**< Continue response. */
+    ptx_Log_t                           *Log;                                           /**< Pointer to logger context. */
+
+
 } ptx_RUL_SnepClient_t;
 
 /*

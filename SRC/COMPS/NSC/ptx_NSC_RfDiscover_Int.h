@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -76,58 +76,66 @@ extern "C" {
  * \name Length and Offset definitions.
  * @{
  */
-#define PTX_NSC_RF_DISCOVER_IDLE_TIME_LEN       (3u)    /**< Length of the idle time parameter. */
-#define PTX_NSC_RF_DISCOVER_STDBY_WU_CONF_LEN   (2u)    /**< Length of the standby/wake-up parameter. */
-#define PTX_NSC_RF_DISCOVER_ATTRIBINF_LEN       (15U)   /**< NSC Type ATTRIBINF length */
-#define PTX_NSC_RF_DISCOVER_PARAM2_OFFSET       (6U)    /**< NSC Type B PARAM2 offset within ATTRIB */
-#define PTX_NSC_RF_DISCOVER_ATRREQ_GEN_LEN      (15U)   /**< NSC Type ATR REQ GEN length */
-#define PTX_NSC_RF_DISCOVER_SENSRES_LEN         (2U)    /**< NSC Type SENSRES length */
-#define PTX_NSC_RF_DISCOVER_SENSBRES_LEN        (13U)   /**< NSC Type B SENSRES length */
-#define PTX_NSC_RF_DISCOVER_NFCID0_LEN          (4u)    /**< NSC Type B NFCID0 length. */
-#define PTX_NSC_RF_DISCOVER_APPDATA_LEN         (4u)    /**< NSC Type B Application Data length. */
-#define PTX_NSC_RF_DISCOVER_PROTOCOLINFO_LEN    (4u)    /**< NSC Type B Protocol Info length. */
-#define PTX_NSC_RF_DISCOVER_NFCID0_OFFSET       (1u)    /**< NSC Type B NFCID0 offset within SENSB_RES. */
-#define PTX_NSC_RF_DISCOVER_APPDATA_OFFSET      (5u)    /**< NSC Type B Application Data offset within SENSB_RES. */
-#define PTX_NSC_RF_DISCOVER_PROTINFO0_OFFSET    (9u)    /**< NSC Type B Protocol Info offset within SENSB_RES. */
-#define PTX_NSC_RF_DISCOVER_PROTINFO1_OFFSET    (10u)   /**< NSC Type B Protocol Info byte 1 offset within SENSB_RES. */
-#define PTX_NSC_RF_DISCOVER_PROTINFO2_OFFSET    (11u)   /**< NSC Type B Protocol Info byte 2 offset within SENSB_RES. */
-#define PTX_NSC_RF_DISCOVER_PINFO1_FSCI_MASK    (0xF0)  /**< NSC Type B Protocol Info byte 1 FSCI mask. */
-#define PTX_NSC_RF_DISCOVER_PINFO2_FWI_MASK     (0xF0)  /**< NSC Type B Protocol Info byte 2 FWI mask. */
-#define PTX_NSC_RF_DISCOVER_RATS_FSDI_MASK      (0xF0)  /**< NSC Type A Protocol RATS byte 1 FSDI mask. */
-#define PTX_NSC_RF_DISCOVER_ATRRIB_FSDI_MASK    (0x0F)  /**< NSC Type B Protocol ATTRIB byte 0 FSDI mask. */
-#define PTX_NSC_RF_DISCOVER_SENSFRES_LEN_OFFSET (0u)    /**< NSC Type F SENSF_RES length offset */
-#define PTX_NSC_RF_DISCOVER_SENSFRES_LEN        (18U)   /**< NSC Type F SENSF_RES length */
-#define PTX_NSC_RF_DISCOVER_SENSFREQ_SC_LEN     (2U)    /**< NSC Type F SENSF_REQ System Code length */
-#define PTX_NSC_RF_DISCOVER_SENSFRES_MAXLEN     (20U)   /**< NSC Type F SENSRES maximum length, including the length byte. */
-#define PTX_NSC_RF_DISCOVER_FIX_VAL_OFF         (1u)    /**< NSC Type F SENSF_RES fixed value offset */
-#define PTX_NSC_RF_DISCOVER_FIX_VAL             (1u)    /**< NSC Type F SENSF_RES fixed value */
-#define PTX_NSC_RF_DISCOVER_NFCID2_LEN          (8u)    /**< NSC Type F NFCID2 length. */
-#define PTX_NSC_RF_DISCOVER_NFCID2_OFFSET       (2u)    /**< NSC Type F NFCID2 offset within SENSF_RES. */
-#define PTX_NSC_RF_DISCOVER_NFCID2_CAP_OFFSET   (2u)    /**< NSC Type F NFCID2 capability offset within SENSF_RES. (Determines support for NFC-DEP) */
-#define PTX_NSC_RF_DISCOVER_NFCID2_CAP_NFC_DEP  (1u)    /**< NSC Type F capability indicator for NFC-DEP protocol in NFCID2 */
-#define PTX_NSC_RF_DISCOVER_PAD0_LEN            (2u)    /**< NSC Type F PAD0 length. */
-#define PTX_NSC_RF_DISCOVER_PAD0_OFFSET         (10u)   /**< NSC Type F PAD0 offset within SENSF_RES. */
-#define PTX_NSC_RF_DISCOVER_PAD1_LEN            (3u)    /**< NSC Type F PAD1 length. */
-#define PTX_NSC_RF_DISCOVER_PAD1_OFFSET         (12u)   /**< NSC Type F PAD1 offset within SENSF_RES. */
-#define PTX_NSC_RF_DISCOVER_PAD2_LEN            (1u)    /**< NSC Type F PAD2 length. */
-#define PTX_NSC_RF_DISCOVER_PAD2_OFFSET         (17u)   /**< NSC Type F PAD2 offset within SENSF_RES. */
-#define PTX_NSC_RF_DISCOVER_MRTICHECK_OFFSET    (15u)   /**< NSC Type F MRTI_Check offset within SENSF_RES. */
-#define PTX_NSC_RF_DISCOVER_MRTIUPDATE_OFFSET   (16u)   /**< NSC Type F MRTI_Update offset within SENSF_RES. */
-#define PTX_NSC_RF_DISCOVER_RD_LEN              (2u)    /**< NSC Type F RD length. */
-#define PTX_NSC_RF_DISCOVER_RD_OFFSET           (18u)   /**< NSC Type F RD offset within SENSF_RES. */
-#define PTX_NSC_RF_DISCOVER_INVENTORY_RES_LEN   (10U)   /**< NSC Type V INVENTORY length. */
-#define PTX_NSC_RF_DISCOVER_UID_LEN             (8u)    /**< NSC Type V UID length. */
-#define PTX_NSC_RF_DISCOVER_UID_OFFSET          (2u)    /**< NSC Type V UID offset within INVENTORY_RES. */
-#define PTX_NSC_RF_DISCOVER_ATS_HDR_LEN         (5U)    /**< NSC Type IsoDep ATS header length. */
-#define PTX_NSC_RF_DISCOVER_ATS_LEN             (20U)   /**< NSC Type IsoDep ATS maximum length. */
-#define PTX_NSC_RF_DISCOVER_ATTRIBRES_LEN       (16u)   /**< NSC Type IsoDep ATTRIB_RES maximum length. */
-#define PTX_NSC_RF_DISCOVER_ATR_RES_LEN         (19U)   /**< NSC Type NfcDep ATR_RES length. */
-#define PTX_NSC_RF_DISCOVER_ATR_RES_G_BYTES_LEN (15U)   /**< NSC Type NfcDep G-BYTES length from ATR_RES, as defined in NSC Spec. */
-#define PTX_NSC_RF_DISCOVER_SENSFRES_MINLEN     (18U)   /**< NSC Type F SENSRES minimum length, including the length byte. */
-#define PTX_NSC_RF_DISCOVER_ATR_REQG_MAXLEN     (15U)   /**< NSC NFC-ACM Poll Mode ATR_REQ G (General bytes) maximum length. */
-#define PTX_NSC_RF_DISCOVER_LISTEN_LR_MASK      (0x30)  /**< NSC Listen Mode NFC-DEP LR value mask */
+#define PTX_NSC_RF_DISCOVER_IDLE_TIME_LEN           (3u)    /**< Length of the idle time parameter. */
+#define PTX_NSC_RF_DISCOVER_STDBY_WU_CONF_LEN       (2u)    /**< Length of the standby/wake-up parameter. */
+#define PTX_NSC_RF_DISCOVER_ATTRIBINF_LEN           (15U)   /**< NSC Type ATTRIBINF length */
+#define PTX_NSC_RF_DISCOVER_PARAM2_OFFSET           (6U)    /**< NSC Type B PARAM2 offset within ATTRIB */
+#define PTX_NSC_RF_DISCOVER_ATRREQ_GEN_LEN          (15U)   /**< NSC Type ATR REQ GEN length */
+#define PTX_NSC_RF_DISCOVER_SENSRES_LEN             (2U)    /**< NSC Type SENSRES length */
+#define PTX_NSC_RF_DISCOVER_SELRES_LEN              (1u)    /**< NSC Type A SELRES length. */
+#define PTX_NSC_RF_DISCOVER_SENSBRES_LEN            (13U)   /**< NSC Type B SENSRES length */
+#define PTX_NSC_RF_DISCOVER_NFCID0_LEN              (4u)    /**< NSC Type B NFCID0 length. */
+#define PTX_NSC_RF_DISCOVER_APPDATA_LEN             (4u)    /**< NSC Type B Application Data length. */
+#define PTX_NSC_RF_DISCOVER_PROTOCOLINFO_LEN        (4u)    /**< NSC Type B Protocol Info length. */
+#define PTX_NSC_RF_DISCOVER_NFCID0_OFFSET           (1u)    /**< NSC Type B NFCID0 offset within SENSB_RES. */
+#define PTX_NSC_RF_DISCOVER_APPDATA_OFFSET          (5u)    /**< NSC Type B Application Data offset within SENSB_RES. */
+#define PTX_NSC_RF_DISCOVER_PROTINFO0_OFFSET        (9u)    /**< NSC Type B Protocol Info offset within SENSB_RES. */
+#define PTX_NSC_RF_DISCOVER_PROTINFO1_OFFSET        (10u)   /**< NSC Type B Protocol Info byte 1 offset within SENSB_RES. */
+#define PTX_NSC_RF_DISCOVER_PROTINFO2_OFFSET        (11u)   /**< NSC Type B Protocol Info byte 2 offset within SENSB_RES. */
+#define PTX_NSC_RF_DISCOVER_PINFO1_FSCI_MASK        (0xF0)  /**< NSC Type B Protocol Info byte 1 FSCI mask. */
+#define PTX_NSC_RF_DISCOVER_PINFO2_FWI_MASK         (0xF0)  /**< NSC Type B Protocol Info byte 2 FWI mask. */
+#define PTX_NSC_RF_DISCOVER_RATS_FSDI_MASK          (0xF0)  /**< NSC Type A Protocol RATS byte 1 FSDI mask. */
+#define PTX_NSC_RF_DISCOVER_ATRRIB_FSDI_MASK        (0x0F)  /**< NSC Type B Protocol ATTRIB byte 0 FSDI mask. */
+#define PTX_NSC_RF_DISCOVER_SENSFRES_LEN_OFFSET     (0u)    /**< NSC Type F SENSF_RES length offset */
+#define PTX_NSC_RF_DISCOVER_SENSFRES_LEN            (18U)   /**< NSC Type F SENSF_RES length */
+#define PTX_NSC_RF_DISCOVER_SENSFREQ_SC_LEN         (2U)    /**< NSC Type F SENSF_REQ System Code length */
+#define PTX_NSC_RF_DISCOVER_SENSFRES_MAXLEN         (20U)   /**< NSC Type F SENSRES maximum length, including the length byte. */
+#define PTX_NSC_RF_DISCOVER_FIX_VAL_OFF             (1u)    /**< NSC Type F SENSF_RES fixed value offset */
+#define PTX_NSC_RF_DISCOVER_FIX_VAL                 (1u)    /**< NSC Type F SENSF_RES fixed value */
+#define PTX_NSC_RF_DISCOVER_NFCID2_LEN              (8u)    /**< NSC Type F NFCID2 length. */
+#define PTX_NSC_RF_DISCOVER_NFCID2_OFFSET           (2u)    /**< NSC Type F NFCID2 offset within SENSF_RES. */
+#define PTX_NSC_RF_DISCOVER_NFCID2_CAP_OFFSET       (2u)    /**< NSC Type F NFCID2 capability offset within SENSF_RES. (Determines support for NFC-DEP) */
+#define PTX_NSC_RF_DISCOVER_NFCID2_CAP_NFC_DEP      (1u)    /**< NSC Type F capability indicator for NFC-DEP protocol in NFCID2 */
+#define PTX_NSC_RF_DISCOVER_PAD0_LEN                (2u)    /**< NSC Type F PAD0 length. */
+#define PTX_NSC_RF_DISCOVER_PAD0_OFFSET             (10u)   /**< NSC Type F PAD0 offset within SENSF_RES. */
+#define PTX_NSC_RF_DISCOVER_PAD1_LEN                (3u)    /**< NSC Type F PAD1 length. */
+#define PTX_NSC_RF_DISCOVER_PAD1_OFFSET             (12u)   /**< NSC Type F PAD1 offset within SENSF_RES. */
+#define PTX_NSC_RF_DISCOVER_PAD2_LEN                (1u)    /**< NSC Type F PAD2 length. */
+#define PTX_NSC_RF_DISCOVER_PAD2_OFFSET             (17u)   /**< NSC Type F PAD2 offset within SENSF_RES. */
+#define PTX_NSC_RF_DISCOVER_MRTICHECK_OFFSET        (15u)   /**< NSC Type F MRTI_Check offset within SENSF_RES. */
+#define PTX_NSC_RF_DISCOVER_MRTIUPDATE_OFFSET       (16u)   /**< NSC Type F MRTI_Update offset within SENSF_RES. */
+#define PTX_NSC_RF_DISCOVER_RD_LEN                  (2u)    /**< NSC Type F RD length. */
+#define PTX_NSC_RF_DISCOVER_RD_OFFSET               (18u)   /**< NSC Type F RD offset within SENSF_RES. */
+#define PTX_NSC_RF_DISCOVER_INVENTORY_RES_LEN       (10U)   /**< NSC Type V INVENTORY length. */
+#define PTX_NSC_RF_DISCOVER_UID_LEN                 (8u)    /**< NSC Type V UID length. */
+#define PTX_NSC_RF_DISCOVER_UID_OFFSET              (2u)    /**< NSC Type V UID offset within INVENTORY_RES. */
+#define PTX_NSC_RF_DISCOVER_ATS_HDR_LEN             (5U)    /**< NSC Type IsoDep ATS header length. */
+#define PTX_NSC_RF_DISCOVER_ATS_LEN                 (20U)   /**< NSC Type IsoDep ATS maximum length. */
+#define PTX_NSC_RF_DISCOVER_ATTRIBRES_LEN           (16u)   /**< NSC Type IsoDep ATTRIB_RES maximum length. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_MIN_LEN         (4U)    /**< NSC Type NfcDep ATR_RES Minimum length. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_LEN             (19U)   /**< NSC Type NfcDep ATR_RES length. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_G_BYTES_LEN     (15U)   /**< NSC Type NfcDep G-BYTES length from ATR_RES, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_G_BYTES_OFFSET  (4U)    /**< NSC Type NfcDep B-BYTES ATR_RES Offset, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_TO_OFFSET       (2U)    /**< NSC Type NfcDep TO Byte ATR_RES Offset, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_TO_WT_MASK      (0x0F)  /**< NSC Type NfcDep TO Byte ATR_RES Bitmask for WT, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_PP_OFFSET       (3U)    /**< NSC Type NfcDep PP Byte ATR_RES Offset, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_PP_LR_MASK      (0x30)  /**< NSC Type NfcDep PP Byte ATR_RES Bitmask for LR, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_ATR_RES_PP_GT_MASK      (0x02)  /**< NSC Type NfcDep PP Byte ATR_RES Bitmask for GT, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_SENSFRES_MINLEN         (18U)   /**< NSC Type F SENSRES minimum length, including the length byte. */
+#define PTX_NSC_RF_DISCOVER_ATR_REQG_MAXLEN         (15U)   /**< NSC NFC-ACM Poll Mode ATR_REQ G (General bytes) maximum length. */
+#define PTX_NSC_RF_DISCOVER_LISTEN_LR_MASK          (0x30)  /**< NSC Listen Mode NFC-DEP LR value mask */
 
-#define PTX_NSC_RF_DISCOVER_MAX_PARAMCOUNT      (15u)   /**< Maximum number of parameters accepted to build NSC_RF_DISCOVER_CMD message.
+#define PTX_NSC_RF_DISCOVER_MAX_PARAMCOUNT          (15u)   /**< Maximum number of parameters accepted to build NSC_RF_DISCOVER_CMD message.
                                                              not more than PTX_NSCDISC_MAX_PARAMCOUNT parameters can be put
                                                              into one NSC_RF_DISCOVER_CMD.  */
 
@@ -243,7 +251,8 @@ typedef enum ptx_NSC_RfDiscover_PollMode
     NSC_RfDiscover_PollMode_EMVCo      = 0x02,  /**< EMVCo poll mode. */
     NSC_RfDiscover_PollMode_Iso        = 0x03,  /**< ISO poll mode. */
     NSC_RfDiscover_PollMode_ActivateRf = 0x04,  /**< Activate RF field and move to RF_POLL state. */
-    NSC_RfDiscover_PollMode_Lpcd       = 0x05   /**< LPCD poll mode. */
+    NSC_RfDiscover_PollMode_Lpcd       = 0x05,  /**< LPCD poll mode. */
+    NSC_RfDiscover_PollMode_TypeFPropr = 0x06   /**< Proprietary Type-F poll mode (RFU). */
 } ptx_NSC_RfDiscover_PollMode_t;
 
 /**
@@ -303,6 +312,7 @@ typedef struct ptx_NSC_RfDiscover_Param_Poll
     ptx_NSC_RfDiscover_InitialTech_t InitialTech;                                   /**< Sets the initial polling technology for the NFC Forum poll mode. */
     uint8_t                         NtfEnable;                                      /**< Enable transmission of NTFs: LPCD or error notifications. */
     uint8_t                         DevicesLimit;                                   /**< Maximum number of devices to be resolved during NFC poll mode discovery. */
+    uint8_t                         RFAmplitudeLimiterEnable;                       /**< Enable/Disable internal RF-Amplitude-Limiter (RFU). */
 } ptx_NSC_RfDiscover_Param_Poll_t;
 
 /**
@@ -455,8 +465,9 @@ typedef struct ptx_NSC_RfDiscover_Param_Poll_F
     uint8_t             BailOut;                                            /**< Enable/disable bail out when technology is found. */
     uint8_t             DevicesLimit;                                       /**< Maximum number of devices resolved during anticollision. */
     uint8_t             SystemCode[PTX_NSC_RF_DISCOVER_SENSFREQ_SC_LEN];	/**< 16-Bit System Code according to FeliCa/T3T. */
-    uint8_t             RequestCode;					                    /**<  8-Bit Requested Code according to FeliCa/T3T. */
-    uint8_t             InitialTimeSlotNr;				                    /**<  8-Bit Timeslot-Number according to FeliCa/T3T - used only during initial Polling. */
+    uint8_t             RequestCode;					                    /**< 8-Bit Requested Code according to FeliCa/T3T. */
+    uint8_t             InitialTimeSlotNr;				                    /**< 8-Bit Timeslot-Number according to FeliCa/T3T - used only during initial Polling. */
+    uint8_t             FieldReset;				                            /**< Performs a reset of the RF-Field before sending the SENSF_REQ (RFU). */
 } ptx_NSC_RfDiscover_Param_Poll_F_t;
 
 /**

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -92,12 +92,12 @@ extern "C" {
  * \brief Polling starts initially with given timeslot number and in case of a collision (2 or more responses in same timeslot),
  *        one additional polling cycle with timeslot number = 16 gets performed (2nd cycle is according to [NFC Forum Activity]).
  *        In case of many cards present, it can still happen that even with the 2nd cycle, that not all cards can be resolved.
- *        The define below can be used to perform an additional polling cycles a backup solution to increase the likelihood
+ *        The define below can be used to perform additional polling cycles as a backup solution to increase the likelihood
  *        that really all cards get resolved. The default value must at least be set to 1 or higher.
  *        Examples:
  *        o) The application always just uses a single card - then the value can be set to 1.
  *           Only a single cycle will be performed anyway because there's no collision.
- *        o) The application always uses an inital timeslot value of 16, the likelihood of getting a collision increases with
+ *        o) The application always uses an initial timeslot value of 16, the likelihood of getting a collision increases with
  *           an increased number of present cards. An additional cycle may be recommended i.e. setting the define to 2.
  */
 #define PTX_FELICA_ADDITIONAL_POLLING_CYCLES                (uint8_t)1
@@ -137,8 +137,8 @@ typedef enum ptx_FeliCa_TimeslotNr
  */
 typedef struct ptx_FeliCa_CardData
 {
-    uint8_t                 IDm[PTX_FELICA_IDM_MAX_LENGTH];                 /**< Manufacture ID */
-    uint8_t                 PMm[PTX_FELICA_PMM_MAX_LENGTH];                 /**< Manufacture Parameter */
+    uint8_t                 IDm[PTX_FELICA_IDM_MAX_LENGTH];                 /**< Manufacturer ID */
+    uint8_t                 PMm[PTX_FELICA_PMM_MAX_LENGTH];                 /**< Manufacturer Parameter */
     uint8_t                 RD[PTX_FELICA_RD_MAX_LENGTH];                   /**< Request Data */
     uint8_t                 RDLength;                                       /**< Request Data Length (2 = Present, 0 = Not Present) */
 
@@ -162,7 +162,7 @@ typedef struct ptx_FeliCa_CardParam
 typedef struct ptx_FeliCa
 {
     ptx_Comps_t             CompId;                                 /**< Component ID. */
-    ptx_RUL_t               *Rul;                                   /**< Pointer to initialised RUL component. */
+    ptx_RUL_t               *Rul;                                   /**< Pointer to initialized RUL component. */
 
     ptx_FeliCa_CardParam_t  CardParams;                             /**< FeliCa Card Parameters */
     uint16_t                LastStatus;                             /**< Status of previously/last executed FeliCa-Read/-Write command */
@@ -182,9 +182,9 @@ typedef struct ptx_FeliCa_InitParams
 {
     ptx_RUL_t               *Rul;               /**< Pointer to initialised RUL component. */
     uint8_t                 *TxBuffer;          /**< Pointer to temporary Tx work-buffer allocated at application level */
-    uint32_t                TxBufferSize;     /**< Size of temporary Tx work-buffer allocated at application level */
+    uint32_t                TxBufferSize;       /**< Size of temporary Tx work-buffer allocated at application level */
     uint8_t                 *RxBuffer;          /**< Pointer to temporary Rx work-buffer allocated at application level */
-    uint32_t                RxBufferSize;     /**< Size of temporary Rx work-buffer allocated at application level */
+    uint32_t                RxBufferSize;       /**< Size of temporary Rx work-buffer allocated at application level */
 } ptx_FeliCa_InitParams_t;
 
 /*

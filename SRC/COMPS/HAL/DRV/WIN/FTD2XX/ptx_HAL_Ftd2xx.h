@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -88,7 +88,19 @@ extern "C"
  * bit0: SCK    output
  */
 #define FT_DIRECTION_CONFIG_DEFAULT_SPI_PINS 0x0B
-/* #define FT_DIRECTION_CONFIG_DEFAULT_SPI_PINS 0xFB */
+
+/** Initial direction of high pins 
+ * all configured as ouptut for gpio control except 
+ * C0 is input (used for IRQ)
+ * 1111 1110
+*/
+#define FT_DIRECTION_CONFIG_HIGH_PINS_DEFAULT 0xFE
+
+/**
+ * Initial state/level of HIGH Pins 
+ * all low except C1 (used as Reset Pin)
+ * */ 
+#define FT_INIT_CONFIG_HIGH_PINS_VALUE 0x02
 
 #define FT_NSS_PIN_VAL_DISABLE_PIN      0x08
 
@@ -120,6 +132,7 @@ typedef enum ptx_HAL_FTD2XX_GPIO
     //GPIOL1 = 0x20, // pin D5
     //GPIOL2 = 0x40, // pin D6
     //GPIOL3 = 0x80, // pin D7
+    GPIOH_MAX = 0xFF,
 } ptx_HAL_FTD2XX_GPIO_t;
 
 #define FT_IRQ_LINE_GPIO_BIT    GPIOH0 /* Pin C0 on FTDI board connected to IRQ line on PTX2xxR/W side */
@@ -271,7 +284,7 @@ extern const char InterfaceNameAppendSoftI2c[3];
 * FUNCTIONS LIBRARY.
 * ####################################################################################################################
 */
-ptx_Status_t ptx_HAL_FTD2XX_LibOpen(void **ftd2xxCtx, char *InterfaceName, char *devSerialNumber);
+ptx_Status_t ptx_HAL_FTD2XX_LibOpen(void **ftd2xxCtx, char *InterfaceName, char *devSerialNumber, ptx_Log_t *log);
 ptx_Status_t ptx_HAL_FTD2XX_LibClose(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx);
 ptx_Status_t ptx_HAL_FTD2XX_SingleDeviceOpen(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL_FTD2XX_Device_Interface_t deviceChannel);
 ptx_Status_t ptx_HAL_FTD2XX_CheckOpening(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL_FTD2XX_Device_Interface_t intfType, uint32_t busSpeed);
@@ -281,9 +294,6 @@ ptx_Status_t ptx_HAL_FTD2XX_CheckOpening(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL
 * FUNCTIONS - COMMON: I2C & SPI.
 * ####################################################################################################################
 */
-ptx_Status_t ptx_HAL_FTD2XX_CancelWaitIrq(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx);
-ptx_Status_t ptx_HAL_FTD2XX_StartWaitIrq(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx);
-ptx_Status_t ptx_HAL_FTD2XX_WaitForInterrupt(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx);
 ptx_Status_t ptx_HAL_FTD2XX_GetGPIOLevel(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL_FTD2XX_GPIO_t gpio, uint16_t *level);
 ptx_Status_t ptx_HAL_FTD2XX_SetGPIOLevel(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL_FTD2XX_GPIO_t gpio, uint16_t level);
 ptx_Status_t ptx_HAL_FTD2XX_GetHighPinsState(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t *current_state);

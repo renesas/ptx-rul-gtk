@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -72,6 +72,7 @@ ptx_Status_t ptx_RUL_LLCP_MessageBuffer_Init(ptx_RUL_LLCP_MessageBuffer_t *ctx)
 
     if (NULL != ctx)
     {
+
         /* Set the component ID. */
         ctx->CompId = Comp_LLCP_MessageBuffer;
 

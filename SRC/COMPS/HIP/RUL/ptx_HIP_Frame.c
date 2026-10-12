@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -115,8 +115,10 @@ ptx_Status_t ptx_HIP_Frame_Open (ptx_HIP_Frame_t *frame, ptx_HIP_Frame_InitParam
      *  return error status if they are not valid.
      */
 
-    if ((NULL != frame) && (NULL != initParams) && (NULL != initParams->Hal) && (NULL != initParams->EncodeCb))
+    if ((NULL != frame) && (NULL != initParams) && (NULL != initParams->Hal) && (NULL != initParams->EncodeCb) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HIP_Frame_Open");
+
         frame->CompId = Comp_HIP;
 
         frame->ReqAck = 0u;
@@ -124,10 +126,11 @@ ptx_Status_t ptx_HIP_Frame_Open (ptx_HIP_Frame_t *frame, ptx_HIP_Frame_InitParam
 
         frame->Hal            = initParams->Hal;
         frame->Encode         = initParams->EncodeCb;
+        frame->Log            = initParams->Log;
 
         frame->ScratchPadSize = PTX_HIP_MAX_FRAME_LENGTH;
         memset(frame->ScratchPad, 0, sizeof(uint8_t)*PTX_HIP_MAX_FRAME_LENGTH);
-
+        
         status = PTX_STATUS_SUCCESS;
     }
 
@@ -140,6 +143,8 @@ ptx_Status_t ptx_HIP_Frame_Close (ptx_HIP_Frame_t *frame)
 
     if (PTX_COMP_CHECK(frame, Comp_HIP))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_Close");
+
         frame->CompId = 0;
         status = PTX_STATUS_SUCCESS;
     }
@@ -153,6 +158,8 @@ ptx_Status_t ptx_HIP_Frame_TRx (ptx_HIP_Frame_t *frame, ptx_HIP_FrameData_t *dat
 
     if (PTX_COMP_CHECK(frame, Comp_HIP) && (NULL != frame->Encode) && (HIP_Cmd_Rst <= data->Cmd) && (HIP_Cmd_MAX > data->Cmd))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_TRx");
+
         uint16_t tx_frame_len = 0;
         uint16_t rx_frame_len = ptx_HIP_Frame_CalcRxFrameLen(frame, data);
 
@@ -184,6 +191,8 @@ ptx_Status_t ptx_HIP_Frame_Cfg (ptx_HIP_Frame_t *frame, ptx_HIP_Frame_Cfg_t *var
 
     if (PTX_COMP_CHECK(frame, Comp_HIP) && (NULL != var) && (NULL != val))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_Cfg");
+
         for (uint32_t i = 0; i < cnt; ++i)
         {
             switch (var[i])
@@ -221,6 +230,8 @@ ptx_Status_t ptx_HIP_Frame_Encode_SPI (ptx_HIP_Frame_t *frame, ptx_HIP_Cmd_t cmd
 
     if (PTX_COMP_CHECK(frame, Comp_HIP))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_Encode_SPI");
+
         uint16_t scratchPadPos = 0;
         status = ptx_HIP_Frame_Encode(frame, cmd, addr, addrLen, txBuf, txLen, scratchPadPos, len);
 
@@ -242,6 +253,8 @@ ptx_Status_t ptx_HIP_Frame_Encode_UART (ptx_HIP_Frame_t *frame, ptx_HIP_Cmd_t cm
 
     if (PTX_COMP_CHECK(frame, Comp_HIP))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_Encode_UART");
+
         // UART SoF
         uint16_t scratchPadPos = 0;
         frame->ScratchPad[scratchPadPos] = PTX_HIP_FRAME_UART_SOF;
@@ -260,6 +273,8 @@ ptx_Status_t ptx_HIP_Frame_Encode_I2C (ptx_HIP_Frame_t *frame, ptx_HIP_Cmd_t cmd
 
     if (PTX_COMP_CHECK(frame, Comp_HIP))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_Encode_I2C");
+
         uint16_t scratchPadPos = 0;
         status = ptx_HIP_Frame_Encode(frame, cmd, addr, addrLen, txBuf, txLen, scratchPadPos, len);
     }
@@ -316,6 +331,8 @@ static ptx_Status_t ptx_HIP_Frame_Encode(ptx_HIP_Frame_t *frame, ptx_HIP_Cmd_t c
 
     if (PTX_COMP_CHECK(frame, Comp_HIP))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_Encode");
+
         uint8_t *frame_ptr = &frame->ScratchPad[scratchPadStartPos];
 
         uint32_t frame_length = PTX_HIP_FRAME_LEN_SIZE;
@@ -393,6 +410,8 @@ static ptx_Status_t ptx_HIP_Frame_Decode (ptx_HIP_Frame_t *frame, uint8_t *buf, 
 
     if (PTX_COMP_CHECK(frame, Comp_HIP) && (NULL != buf) && (NULL != data))
     {
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_Decode");
+
         uint16_t frame_len = (uint16_t) ( (buf[PTX_HIP_FRAME_LEN_OFFSET_HI] << 8) | (buf[PTX_HIP_FRAME_LEN_OFFSET_LO]) );
 
         if (frame_len == (len - PTX_HIP_FRAME_LEN_SIZE))
@@ -535,19 +554,25 @@ static uint16_t ptx_HIP_Frame_CalcRxFrameLen(ptx_HIP_Frame_t *frame, ptx_HIP_Fra
 {
     uint32_t frame_rx_len = 0;
 
-    if ((PTX_HIP_FRAME_CMD_IS_WRITE == frameData->IsWriteCmd) && (1 == frame->ReqAck))
-    {
-        frame_rx_len += PTX_HIP_FRAME_LEN_SIZE + PTX_HIP_FCB_LEN + PTX_HIP_ACK_LEN;
-    }
+    if (PTX_COMP_CHECK(frame, Comp_HIP))
+    {        
+        PTX_LOG_V(frame->Log, "ptx_HIP_Frame_CalcRxFrameLen");
 
-    if (PTX_HIP_FRAME_CMD_IS_READ == frameData->IsWriteCmd)
-    {
-        frame_rx_len += PTX_HIP_FRAME_LEN_SIZE + PTX_HIP_FCB_LEN + frameData->RxBufLen;
-    }
 
-    if (( (PTX_HIP_FRAME_CMD_IS_READ == frameData->IsWriteCmd) || (1 == frame->ReqAck) ) && (1 == frame->AddCrc))
-    {
-        frame_rx_len += PTX_HIP_CRC_LEN;
+        if ((PTX_HIP_FRAME_CMD_IS_WRITE == frameData->IsWriteCmd) && (1 == frame->ReqAck))
+        {
+            frame_rx_len += PTX_HIP_FRAME_LEN_SIZE + PTX_HIP_FCB_LEN + PTX_HIP_ACK_LEN;
+        }
+
+        if (PTX_HIP_FRAME_CMD_IS_READ == frameData->IsWriteCmd)
+        {
+            frame_rx_len += PTX_HIP_FRAME_LEN_SIZE + PTX_HIP_FCB_LEN + frameData->RxBufLen;
+        }
+
+        if (( (PTX_HIP_FRAME_CMD_IS_READ == frameData->IsWriteCmd) || (1 == frame->ReqAck) ) && (1 == frame->AddCrc))
+        {
+            frame_rx_len += PTX_HIP_CRC_LEN;
+        }
     }
 
     return (uint16_t)frame_rx_len;

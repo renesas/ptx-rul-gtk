@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -72,6 +72,12 @@ extern "C" {
  * \brief Forward declaration of ptx_NSC structure.
  */
 struct ptx_NSC;
+
+/**
+ * \brief Search filter for the Routing List.
+ */
+#define PTX_NSC_ROUTINGENTRY_ALL_TYPES                      (0xFFu)     /**< Flag searching for all types of entries. */
+
 
 /*
  * ####################################################################################################################
@@ -204,38 +210,26 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_AddEntryAPDU(struct ptx_NSC *nscCtx, uint
 ptx_Status_t ptx_NSC_RfSetRoutingTable_ClearEntries(struct ptx_NSC *nscCtx);
 
 /**
- * \brief Function that let's NSC to re-start the getting entries mechanism.
- *        This function shall be called before the first entry in the routing table is going to be read out.
- *        Not mandatory for the first time that the routing table is read out.
- *
- * \param[in]    nscCtx                Pointer to the component structure.
- *
- * \return Status of the operation. See definition of \ref ptx_Status_t.
- */
-ptx_Status_t ptx_NSC_RfSetRoutingTable_GetEntryStart(struct ptx_NSC *nscCtx);
-
-/**
- * \brief Function that gets following available entry in the routing table.
- *        This function shall be called as many times as entries stored in the routing table.
- *        \ref ptx_NSC_RfSetRoutingTable_GetEntryStart shall be called before getting the first entry.
- *
- * \param[in]    nscCtx                Pointer to the component structure.
- * \param[out]   entry                 Pointer to an allocated instance of an entry that will be filled in by this function.
- * \param[out]   entryType             Pointer to an allocated instance of an entryType that will be filled in by this function.
- *
- * \return Status of the operation. See definition of \ref ptx_Status_t.
- */
-ptx_Status_t ptx_NSC_RfSetRoutingTable_GetEntry(struct ptx_NSC *nscCtx, ptx_NSC_RoutingEntry_t *entry, ptx_NSC_RoutingType_t *entryType);
-
-/**
- * \brief Function that gets the number of entries that the routing table has currently.
+ * \brief Gets the number of entries that the routing table currently has.
  *
  * \param[in]    nscCtx                Pointer to the component structure.
  * \param[in]    numOfItems            Pointer where number of entries is filled in by this function.
  *
  * \return Status of the operation. See definition of \ref ptx_Status_t.
  */
-ptx_Status_t ptx_NSC_RfSetRoutingTable_GetNumOfEntries(struct ptx_NSC *nscCtx, uint32_t *numOfItems);
+ptx_Status_t ptx_NSC_RfSetRoutingTable_GetNumOfEntries(struct ptx_NSC *nscCtx, uint8_t *numOfItems);
+
+/**
+ * \brief Gets the entry data of the requested entry type, starting from the given index in the list.
+ *
+ * \param[in]     nscCtx               Pointer to the component structure.
+ * \param[in]     entryType            The type of entry to search for.
+ * \param[out]    rtEntry              Storage for the retreived entry data.
+ * \param[in,out] itemIdx              [IN] RT list index to start searching from. [OUT] the index of the found entry.
+ *
+ * \return Status of the operation. See definition of \ref ptx_Status_t.
+ */
+ptx_Status_t ptx_NSC_RfSetRoutingTable_GetEntry(struct ptx_NSC *nscCtx, uint8_t entryType, ptx_NSC_RoutingList_t *rtEntry, uint8_t *itemIdx);
 
 /**
  * \brief Enables / Disables Forced-Routing Mode.

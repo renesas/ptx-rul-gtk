@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -133,8 +133,7 @@ typedef enum ptx_TransparentMode_RF_Bitrate
     ptx_TransparentMode_RF_Bitrate_212 = 0x01,
     ptx_TransparentMode_RF_Bitrate_424 = 0x02,
     ptx_TransparentMode_RF_Bitrate_848 = 0x03,
-    ptx_TransparentMode_RF_Bitrate_26  = 0x06,
-    ptx_TransparentMode_RF_Bitrate_53  = 0x07
+    ptx_TransparentMode_RF_Bitrate_26  = 0x06
 
 } ptx_TransparentMode_RF_Bitrate_t;
 

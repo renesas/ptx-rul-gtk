@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -72,14 +72,19 @@ ptx_Status_t ptx_HAL_Tmr_Init (ptx_HAL_Tmr_t *ctx, ptx_HAL_Tmr_InitParams_t *ini
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_Tmr_Init");
+
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Tmr_t));
 
         ptx_HAL_DRV_Tmr_InitParams_t tmr_init_params;
         memset(&tmr_init_params, 0, sizeof(ptx_HAL_DRV_Tmr_InitParams_t));
+        
+        ctx->Log = initParams->Log;
+        tmr_init_params.Log = initParams->Log;
 
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
         /* ExtCtx only available for Win / Lin Tmr InitParams*/
         tmr_init_params.Osal = initParams->Osal;
 #endif
@@ -110,6 +115,8 @@ ptx_Status_t ptx_HAL_Tmr_DeInit (ptx_HAL_Tmr_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_DeInit");
+
         status = ptx_HAL_DRV_Tmr_DeInit(&ctx->Drv);
 
         if (PTX_STATUS_SUCCESS == status)

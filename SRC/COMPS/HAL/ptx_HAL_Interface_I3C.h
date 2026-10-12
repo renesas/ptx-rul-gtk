@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -79,34 +79,15 @@ extern "C" {
   */
  
  /**
-  * \brief Async Receive Callback Type
-  *
-  * This callback must be implemented if async communication from the PTX2xxR/Ws to the host MCU is required.
-  * Usually this callback will be implemented by the HIP layer.
-  *
-  * \param[in]   ctx             Initialised context for the callback
-  */
- typedef void (*ptx_HAL_Interface_I3C_AsyncRxCb_t)(void *ctx);
- 
- /**
-  * \brief Async Rx Context
-  *
-  * This context must for the requirements for the \ref ptx_HAL_DevAsyncRxCb_t callback!
-  *
-  * \note This callback must be at least \ref ptx_HAL_t!
-  */
- typedef void* ptx_HAL_Interface_I3C_AsyncRxCbCtx_t;
- 
- /**
-  * \brief Main Component Struture
+  * \brief Main Component Structure
   */
  typedef struct ptx_HAL_Interface_I3C
  {
    ptx_Comps_t                                 CompId;        /**< Component ID */
    ptx_HAL_DRV_Interface_I3C_t                 Drv;           /**< Device Hardware Driver */
 
-   ptx_HAL_Interface_I3C_AsyncRxCb_t           AsyncRxCb;      /**< Async Receive Callback */
-   ptx_HAL_Interface_I3C_AsyncRxCbCtx_t        AsyncRxCbCtx;   /**< Async Receive Callback Context */
+   ptx_Log_t                                   *Log;           /**< Initialised Logger Context */
+
  } ptx_HAL_Interface_I3C_t;
  
  /**
@@ -120,7 +101,7 @@ extern "C" {
    uint32_t                            Speed;          /**< Communication Interface Speed */
    ptx_Log_t                           *Log;           /**< Initialised Logger Context */
    ptx_HAL_GPIO_t                      *Gpio;          /**< Initialized GPIO Context. */
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
     void                                *OS;            /**< Pointer to initialized Osal context. */
 #endif
  } ptx_HAL_Interface_I3C_InitParams_t;
@@ -145,7 +126,7 @@ ptx_Status_t ptx_HAL_Interface_I3C_Init(ptx_HAL_Interface_I3C_t *ctx, ptx_HAL_In
  /**
   * \brief I3C Device De-Initialization.
   *
-  * \param[in]      ctx             Pointer to I3C device component structure.
+  * \param[in,out]      ctx             Pointer to I3C device component structure.
   *
   * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
   */
@@ -156,7 +137,7 @@ ptx_Status_t ptx_HAL_Interface_I3C_Init(ptx_HAL_Interface_I3C_t *ctx, ptx_HAL_In
   *
   * Opens the initialised device.
   *
-  * \param[in]       ctx             Pointer to component.
+  * \param[in,out]       ctx             Pointer to component.
   *
   * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
   */
@@ -167,7 +148,7 @@ ptx_Status_t ptx_HAL_Interface_I3C_Init(ptx_HAL_Interface_I3C_t *ctx, ptx_HAL_In
   *
   * Closes the initialised device.
   *
-  * \param[in]       ctx             Pointer to component.
+  * \param[in,out]       ctx             Pointer to component.
   *
   * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
   */
@@ -184,50 +165,14 @@ ptx_Status_t ptx_HAL_Interface_I3C_Init(ptx_HAL_Interface_I3C_t *ctx, ptx_HAL_In
   * \param[in]       txBuf           Pointer to array of data to be transmitted.
   * \param[in]       txLen           Length of each of the arrays in \see txBuf.
   * \param[in]       txBufferCnt     Number of buffers to be transmitted.
-  * \param[inout]    rxBuf           Pointer to array of data to be received. The array must have the right size!
-  * \param[inout]    rxLen           Length of each array to be received.
-  * \param[in]       rxBufferCnt     Number of buffers to be transmitted.
+  * \param[out]      rxBuf           Pointer to array of data to be received. The array must have the right size!
+  * \param[in]       rxLen           Length of each array to be received.
+  * \param[in]       rxBufferCnt     Number of buffers to be received.
   *
   * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
   */
  ptx_Status_t ptx_HAL_Interface_I3C_TRx (void *ctx, uint8_t *txBuf[], uint32_t txLen[], uint32_t txBufferCnt,
          uint8_t *rxBuf[], uint32_t rxLen[], uint32_t rxBufferCnt);
- 
- /**
-  * \brief Device Enable Async Rx
-  *
-  * Enables the async rx functionality.
-  *
-  * \param[in]       ctx             Pointer to component.
-  *
-  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
-  */
- ptx_Status_t ptx_HAL_Interface_I3C_EnableAsyncRx (void *ctx);
- 
- /**
-  * \brief Device Disable Async Rx
-  *
-  * Disables the async rx functionality.
-  *
-  * \param[in]       ctx             Pointer to component.
-  *
-  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
-  */
- ptx_Status_t ptx_HAL_Interface_I3C_DisableAsyncRx (void *ctx);
- 
- /**
-  * \brief Device Register Async Rx Callback.
-  *
-  * Registers the callback \see rxCb. The callback is called if \see ptx_HAL_DevAsyncRx detects an transfer.
-  * \see rxCbCtx is the corresponding context for the callback to work with.
-  *
-  * \param[in]       ctx             Pointer to component.
-  * \param[in]       rxCb            Callback function.
-  * \param[in]       rxCbCtx         Callback context.
-  *
-  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
-  */
- ptx_Status_t ptx_HAL_Interface_I3C_RegAsyncRxCb(void *ctx, ptx_HAL_Interface_I3C_AsyncRxCb_t rxCb, ptx_HAL_Interface_I3C_AsyncRxCbCtx_t rxCbCtx);
  
  /**
   * \brief Device Rx Pending.
@@ -241,31 +186,6 @@ ptx_Status_t ptx_HAL_Interface_I3C_Init(ptx_HAL_Interface_I3C_t *ctx, ptx_HAL_In
   * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
   */
  ptx_Status_t ptx_HAL_Interface_I3C_RxPending(void* ctx, uint8_t* rxPending);
- 
- /**
-  * \brief Device Async Rx Function. NoN Blocking.
-  *
-  * Checks if the attached device wants to communicate with the host. The device signals this by either an
-  * GPIO pin, or RTS, etc. If this function detects the signal, it executes a \see ptx_HAL_DevAsyncRxCb_t
-  * callback.
-  *
-  * \param[in]       ctx             Pointer to component.
-  *
-  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
-  */
- ptx_Status_t ptx_HAL_Interface_I3C_AsyncRxNonBlocking(void *ctx);
- 
- /**
-  * \brief Device Async Rx Function. Blocking.
-  *
-  * Checks if the attached device wants to communicate with the host. The device signals this by either an
-  * callback.
-  *
-  * \param[in]       ctx             Pointer to component.
-  *
-  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
-  */
- ptx_Status_t ptx_HAL_Interface_I3C_AsyncRxBlocking(void *ctx);
  
  /**
   * \brief HAL I3C Device Set Parameter function.

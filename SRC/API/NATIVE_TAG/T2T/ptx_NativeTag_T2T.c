@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -292,7 +292,7 @@ static ptx_Status_t ptx_NativeTag_T2T_Transceive(ptx_NativeTag_T2T_t *t2t, uint3
     uint32_t timeout_value = msTimeout;
 
     /* Aside from actual Tag-component, remaining parameters are checked within Data-Exchange function */
-    if ((PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T)) && (NULL != rx) && (NULL != rxLen))
+    if (PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T) && (NULL != rx) && (NULL != rxLen))
     {
         /* send command */
         status = ptx_RUL_Exchange (t2t->rul, &t2t->TxBuffer[0], txLen, rx, rxLen, timeout_value);

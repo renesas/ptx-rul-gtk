@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -59,6 +59,7 @@
 #include "ptx_Components.h"
 #include "ptx_HAL_DRV_Timer_Int.h"
 #include "ptx_OSAL.h"
+#include "ptx_Log.h"
 #include <stddef.h>
 
 #if defined(__cplusplus)
@@ -88,7 +89,7 @@ extern "C" {
  */
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_DRV_Tmr
 {
@@ -101,6 +102,7 @@ typedef struct ptx_HAL_DRV_Tmr
     ptx_HAL_DRV_Tmr_ExecCb_t            ExecCb;             /**< Timer callback registered by the timer user (upper layer routine).
                                                                  Called within Internal timer callback. */
     ptx_HAL_DRV_Tmr_ExecCbCtx_t         ExecCbCtx;          /**< Timer callback ctx used in the registered timer callback. */
+    ptx_Log_t                           *Log;               /**< Pointer to logger context. */
 } ptx_HAL_DRV_Tmr_t;
 
 /**
@@ -110,6 +112,8 @@ typedef struct ptx_HAL_DRV_Tmr_InitParams
 {
     uint8_t     Id;             /**< Timer ID. */
     void        *Osal;          /**< Pointer to initialised Osal context. */
+    ptx_Log_t   *Log;           /**< Pointer to logger context. */
+
 } ptx_HAL_DRV_Tmr_InitParams_t;
 
 /*
@@ -121,100 +125,139 @@ typedef struct ptx_HAL_DRV_Tmr_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx             Pointer to component.
+ * Initializes the Timer driver component. Validates OSAL context and sets up
+ * component references. The OSAL context must be a valid, initialized OSAL instance.
+ *
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Init (ptx_HAL_DRV_Tmr_t *ctx, ptx_HAL_DRV_Tmr_InitParams_t *initParams);
 
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx   Pointer to component.
+ * Closes any open timer resources and clears all component data.
+ * Resets component ID to Comp_None.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \param[in,out]       ctx   Pointer to component.
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_DeInit (ptx_HAL_DRV_Tmr_t *ctx);
 
 /**
  * \brief Timer Open.
  *
- * \param[in]       ctx   Pointer to function context.
+ * Creates and initializes the underlying OSAL timer with the internal thread procedure
+ * as callback. Must be called before starting the timer.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \param[in,out]       ctx   Pointer to function context.
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Open (void *ctx);
 
 /**
  * \brief Timer Close.
  *
- * \param[in]       ctx   Pointer to function context.
+ * Closes and releases the underlying OSAL timer resource.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \param[in,out]       ctx   Pointer to function context.
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Close (void *ctx);
 
 /**
  * \brief Timer Start.
  *
+ * Starts the timer with the configured period. Resets the IsElapsed flag to false
+ * before starting. Timer mode (periodic or single-shot) must be configured
+ * before calling this function.
+ *
  * \param[in]       ctx   Pointer to function context.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Start (void *ctx);
 
 /**
  * \brief Timer Stop.
  *
+ * Cancels/stops the running timer. Does not reset the IsElapsed flag.
+ *
  * \param[in]       ctx   Pointer to function context.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Stop (void *ctx);
 
 /**
  * \brief Timer IsElapsed request.
  *
- * \param[in]       ctx         Pointer to function context.
- * \param[in]       isElapsed   Pointer to variable for storing status information.
+ * Checks if the timer has elapsed. For single-shot timers, provides special handling:
+ * if the timer is not already marked as elapsed, not in periodic mode, and not running,
+ * the IsElapsed flag is set to true (synchronization mechanism).
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \param[in]       ctx         Pointer to function context.
+ * \param[out]      isElapsed   Pointer to variable for storing elapsed status (0 or 1).
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_IsElapsed (void *ctx, uint8_t *isElapsed);
 
 /**
  * \brief Timer Execution callback registration.
  *
- * \param[in]       ctx   Pointer to function context.
- * \param[in]       cb    Callback function to be registered.
- * \param[in]       cbCtx Context for Callback function.
+ * Registers a callback function and its context to be invoked when the timer elapses.
+ * The callback is called from within the internal timer thread procedure.
+ * Both cb and cbCtx must be non-NULL.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \param[in]       ctx   Pointer to function context.
+ * \param[in]       cb    Callback function to be registered (must be non-NULL).
+ * \param[in]       cbCtx Context for callback function (must be non-NULL).
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_RegExecCb (void *ctx, ptx_HAL_DRV_Tmr_ExecCb_t cb, ptx_HAL_DRV_Tmr_ExecCbCtx_t cbCtx);
 
 /**
  * \brief Timer Configuration.
  *
- * \param[in]       ctx   Pointer to function context.
- * \param[in]       cfg   Array of configurations to be set.
- * \param[in]       len   Length of configuration array.
+ * Applies timer configuration parameters. Supports the following configuration types:
+ * - HAL_DRV_Tmr_CfgType_Period: Sets timer period with TimeUnit conversion
+ *   - HAL_DRV_Tmr_Unit_Sec: Period is multiplied by 1000 to convert to milliseconds
+ *   - HAL_DRV_Tmr_Unit_mSec: Period is used as-is
+ *   - Period must be non-zero
+ * - HAL_DRV_Tmr_CfgType_Mode: Sets timer mode
+ *   - HAL_DRV_Tmr_Mode_Periodic: Timer repeats after each interval
+ *   - HAL_DRV_Tmr_Mode_SingleShot: Timer fires once and stops
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * Configuration is applied to both the driver context and the underlying OSAL timer.
+ * Processing stops on first error.
+ *
+ * \param[in]       ctx   Pointer to function context.
+ * \param[in]       cfg   Array of configurations to be set (must be non-NULL).
+ * \param[in]       len   Length of configuration array (must be > 0).
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Cfg (void *ctx, ptx_HAL_DRV_Tmr_Cfg_t cfg[], uint32_t len);
 
 /**
  * \brief Sleep/Delay functionality.
  *
- * \param[in]       ctx         Pointer to function context.
- * \param[in]       timeout     Time to sleep, in milliseconds.
+ * Blocks the calling thread for the specified timeout duration using OSAL thread sleep.
+ * If timeout is 0, returns immediately without sleeping.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ * \param[in]       ctx         Pointer to function context.
+ * \param[in]       timeout     Time to sleep, in milliseconds. If 0, no sleep occurs.
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Sleep (void *ctx, uint32_t timeout);
-
 
 #if defined(__cplusplus)
 }

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -108,7 +108,9 @@ ptx_Status_t ptx_RUL_LLCP_Init(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_InitParameters_
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if ((NULL != ctx) && (NULL != initParameters) && PTX_COMP_CHECK(initParameters->Rul, Comp_RUL))
-    {
+    {        
+        PTX_LOG_I(&initParameters->Rul->Log, "ptx_RUL_LLCP_Init");
+
         /* Initialize the main message buffer */
         status = ptx_RUL_LLCP_MessageBuffer_Init(&ctx->TxBuffer);
 
@@ -154,16 +156,17 @@ ptx_Status_t ptx_RUL_LLCP_Init(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_InitParameters_
         {
             /* Initialize the rest of the internal variables  */
             ctx->CompId = Comp_LLCP;
-            ctx->SentI = 0;
-            ctx->SentUI = 0;
+            ctx->SentI = 0u;
+            ctx->SentUI = 0u;
             ctx->Running = 0u;
             ctx->Initiate = 0u;
-            ctx->RxDataIntLen = 0;
+            ctx->RxDataIntLen = 0u;
             ctx->SapList = 0x0000;
-            ctx->LinkTimeoutOccured = 0;
+            ctx->LinkTimeoutOccured = 0u;
+            ctx->LastDisconnectReason = 0u;
             ctx->Rul = initParameters->Rul;
             ctx->State = Link_Layer_Activated;
-            ctx->ApplicationTimerTimeout = 5000;
+            ctx->ApplicationTimerTimeout = 5000u;
             ctx->TargetLinkTimeout = PTX_LLCP_DEFAULT_GEN_BYTES_LTO;
 
             /* Set LINK_MGMT & SERVICE_DISC in SAP list to "in use" */
@@ -197,6 +200,8 @@ ptx_Status_t ptx_RUL_LLCP_SetApplicationTimeout(ptx_RUL_LLCP_t *ctx, uint32_t ap
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_SetApplicationTimeout");
+
         ctx->ApplicationTimerTimeout = applicationTimeout;
         status = PTX_STATUS_SUCCESS;
     }
@@ -210,6 +215,8 @@ ptx_Status_t ptx_RUL_LLCP_SetCustomGeneralBytes(ptx_RUL_LLCP_t *ctx, uint8_t *ge
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != generalBytes) && (PTX_LLCP_GENERAL_BYTES_MAX_LEN >= generalBytesLen))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_SetCustomGeneralBytes");
+
         /* First, clear the general bytes array. */
         memset(ctx->GeneralBytes, 0, PTX_LLCP_GENERAL_BYTES_MAX_LEN);
         /* Set the general bytes to the desired value. */
@@ -225,6 +232,8 @@ ptx_Status_t ptx_RUL_LLCP_GenerateDefaultGeneralBytes(ptx_RUL_LLCP_t *ctx, uint8
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != generalBytes) && (NULL != generalBytesLen) && (PTX_LLCP_GENERAL_BYTES_MAX_LEN == *generalBytesLen))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_GenerateDefaultGeneralBytes");
+
         /* Clear the general bytes array. */
         memset(generalBytes, 0, *generalBytesLen);
 
@@ -278,6 +287,8 @@ ptx_Status_t ptx_RUL_LLCP_StartDefaultDiscovery(ptx_RUL_LLCP_t *ctx, uint32_t id
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_StartDefaultDiscovery");
+
         /* Prepare the . */
         ptx_RUL_DiscoverConfig_t config;
         memset(&config, 0, sizeof(ptx_RUL_DiscoverConfig_t));
@@ -333,6 +344,8 @@ ptx_Status_t ptx_RUL_LLCP_DeInit(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_DeInit");
+
         /* Deinitialize the main message buffer. */
         status = ptx_RUL_LLCP_MessageBuffer_DeInit(&ctx->TxBuffer);
 
@@ -380,6 +393,8 @@ ptx_Status_t ptx_RUL_LLCP_RegisterSap(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t *
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_RegisterSap");
+
         uint8_t free = 0;
 
         /* Check if the SAP is still unused. */
@@ -413,6 +428,8 @@ ptx_Status_t ptx_RUL_LLCP_ConnectSap(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t *l
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_ConnectSap");
+
         /* Check if we are in the correct state to establish a new connection. */
         if (Link_Layer_Activated == ctx->State)
         {
@@ -473,6 +490,8 @@ ptx_Status_t ptx_RUL_LLCP_ConnectSapByName(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Lin
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_ConnectSapByName");
+
         /* Check if we are in the correct state to establish a new connection. */
         if (Link_Layer_Activated == ctx->State)
         {
@@ -539,6 +558,8 @@ ptx_Status_t ptx_RUL_LLCP_DisconnectSap(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_DisconnectSap");
+
         /* Check if we are in the correct state to terminate the connection. */
         if ((Link_Layer_Activated == ctx->State) && (LinkState_Connected == link->LinkState))
         {
@@ -596,6 +617,8 @@ ptx_Status_t ptx_RUL_LLCP_SendInfo(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t *lin
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link) && (NULL != payload))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_SendInfo");
+
         /* Check if we are in the correct state to send the information PDU. */
         if ((Link_Layer_Activated == ctx->State) && (LinkState_Connected == link->LinkState))
         {
@@ -698,6 +721,8 @@ ptx_Status_t ptx_RUL_LLCP_WaitForActivation(ptx_RUL_LLCP_t *ctx, uint8_t *activa
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != activated))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_WaitForActivation");
+
         uint32_t start_tick = ctx->TimerTicks;
         do
         {
@@ -730,6 +755,8 @@ ptx_Status_t ptx_RUL_LLCP_Handle(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_Handle");
+
         ptx_RUL_Status_Params_t status_params;
         status_params.Type = ptx_RUL_StatusType_System;
         status = ptx_RUL_GetStatusInfo(ctx->Rul, &status_params);
@@ -750,6 +777,8 @@ ptx_Status_t ptx_RUL_LLCP_WaitForAnyConnection(ptx_RUL_LLCP_t *ctx, uint32_t tim
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_WaitForAnyConnection");
+
         if (Link_Layer_Activated == ctx->State)
         {
             uint8_t timeout = 0;
@@ -793,6 +822,8 @@ ptx_Status_t ptx_RUL_LLCP_WaitForConnection(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Li
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_WaitForConnection");
+
         uint32_t application_timeout = ctx->ApplicationTimerTimeout;
         ctx->ApplicationTimerTimeout = timeoutMs;
 
@@ -847,6 +878,8 @@ ptx_Status_t ptx_RUL_LLCP_SendUInfo(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t *li
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link) && (NULL != payload) && (0 != payloadLength))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_SendUInfo");
+
         /* Check if we are in the correct state to send the unnumbered information PDU. */
         if (Link_Layer_Activated == ctx->State)
         {
@@ -907,6 +940,8 @@ ptx_Status_t ptx_RUL_LLCP_DiscoverService(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Para
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != service) && (NULL != dSap))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_DiscoverService");
+
         /* Check if we are in the correct state to do a SNL request. */
         if (Link_Layer_Activated == ctx->State)
         {
@@ -971,6 +1006,8 @@ ptx_Status_t ptx_RUL_LLCP_ReceiveFromLink(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_ReceiveFromLink");
+
         /* Check if we are in the correct state to receive something. */
         if (Link_Layer_Activated == ctx->State)
         {
@@ -1016,6 +1053,8 @@ ptx_Status_t ptx_RUL_LLCP_SetupReceiveStatusHandler(ptx_RUL_LLCP_t *ctx, ptx_RUL
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_SetupReceiveStatusHandler");
+
         ctx->ReceiveLink = NULL;
         ctx->LastLlcpStatus = PTX_STATUS_SUCCESS;
         /* Get the current timestamp. */
@@ -1037,6 +1076,8 @@ ptx_Status_t ptx_RUL_LLCP_CheckReceiveStatusHandler(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_CheckReceiveStatusHandler");
+
         status = PTX_STATUS_SUCCESS;
 
         if (Role_Target == ctx->Role)
@@ -1112,6 +1153,8 @@ ptx_Status_t ptx_RUL_LLCP_GetFreeSapAddress(ptx_RUL_LLCP_t *ctx, uint8_t wellKno
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != foundAddress))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_GetFreeSapAddress");
+
         /* Check in which range of SAPs we have to search. The first 16 SAPs are well known. */
         uint8_t start_address = ((0 == wellKnown) ? PTX_LLCP_WELLKNOWN_SIZE : PTX_LLCP_SAP_ADDRESS_SNEP);
         uint8_t end_address = ((0 == wellKnown) ? PTX_LLCP_SAP_ADDRESS_MAX : PTX_LLCP_WELLKNOWN_SIZE);
@@ -1143,6 +1186,8 @@ ptx_Status_t ptx_RUL_LLCP_EnableSnep(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_EnableSnep");
+
         /* Sets the bit in the WKS list for SNEP. */
         status = ptx_RUL_LLCP_ReserveSap(ctx, PTX_LLCP_SAP_ADDRESS_SNEP);
     }
@@ -1156,8 +1201,26 @@ ptx_Status_t ptx_RUL_LLCP_DisableSnep(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_DisableSnep");
+
         /* Clears the bit in the WKS list for SNEP. */
         status = ptx_RUL_LLCP_FreeSap(ctx, PTX_LLCP_SAP_ADDRESS_SNEP);
+    }
+
+    return status;
+}
+
+ptx_Status_t ptx_RUL_LLCP_GetDisconnectReason(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_DisconnectReason_t *reason)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != reason))
+    {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_GetDisconnectReason");
+
+        *reason = ctx->LastDisconnectReason;
+        
+        status = PTX_STATUS_SUCCESS;
     }
 
     return status;
@@ -1169,6 +1232,8 @@ ptx_Status_t ptx_RUL_LLCP_IsLlcpSupported(ptx_RUL_LLCP_t *ctx, uint8_t *supporte
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != supported))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_IsLlcpSupported");
+
         status = PTX_STATUS_SUCCESS;
 
         *supported = 0;
@@ -1210,6 +1275,8 @@ ptx_Status_t ptx_RUL_LLCP_DisconnectLink(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_DisconnectLink");
+
         /* Triggers the disconnection of the whole physical link. */
         ctx->State = Link_Layer_Deactivation_Pending_Local;
         status = PTX_STATUS_SUCCESS;
@@ -1224,6 +1291,8 @@ ptx_Status_t ptx_RUL_LLCP_IsLinkDown(ptx_RUL_LLCP_t *ctx, uint8_t *isDown)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != isDown))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_IsLinkDown");
+
         /* Check if the state machine is still running. */
         if (0 == ctx->Running)
         {
@@ -1266,6 +1335,8 @@ ptx_Status_t ptx_RUL_LLCP_AllocateLink(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_AllocateLink");
+
         status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
 
         for (uint8_t i = 0; (i < PTX_LLCP_MAX_LINKS) && (PTX_STATUS_SUCCESS != status); ++i)
@@ -1287,6 +1358,8 @@ ptx_Status_t ptx_RUL_LLCP_GetLinkFromUri(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link_
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link) && (NULL != name))
     {
+        PTX_LOG_I(&(ctx->Rul->Log), "ptx_RUL_LLCP_GetLinkFromUri");
+
         *link = NULL;
         for (uint32_t i = 0; (i < PTX_LLCP_MAX_LINKS) && (PTX_STATUS_SUCCESS != status); ++i)
         {
@@ -1314,6 +1387,8 @@ ptx_Status_t ptx_RUL_LLCP_RegisterExtension (ptx_RUL_LLCP_t *ctx)
     ptx_RUL_Extension_Endpoints_t endpoints;
     memset(&endpoints, 0, sizeof(ptx_RUL_Extension_Endpoints_t));
 
+    PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_RegisterExtension");
+
     endpoints.Extension = ctx;
     endpoints.CompId = Comp_LLCP;
     endpoints.ProcessRfActivate = ptx_RUL_LLCP_CB_ProcessActivateNtf;
@@ -1330,6 +1405,8 @@ ptx_Status_t ptx_RUL_LLCP_CB_ProcessActivateNtf(void *ctx, ptx_NSC_RfActivate_Nt
     ptx_RUL_LLCP_t *llcp = ctx;
     if (PTX_COMP_CHECK(llcp, Comp_LLCP) && (NULL != ntf) && (NULL != ntf_used))
     {
+        PTX_LOG_V(&(llcp->Rul->Log), "ptx_RUL_LLCP_RegisterExtension");
+
         memcpy(&llcp->ActivateNtf, ntf, sizeof(ptx_NSC_RfActivate_Ntf_t));
 
         uint8_t supported = 0;
@@ -1337,6 +1414,7 @@ ptx_Status_t ptx_RUL_LLCP_CB_ProcessActivateNtf(void *ctx, ptx_NSC_RfActivate_Nt
 
         if ((PTX_STATUS_SUCCESS == status) && (0 != supported))
         {
+
             llcp->Initiate = 1u;
             llcp->LastSymmPdu = llcp->TimerTicks;
             *ntf_used = 1;
@@ -1395,6 +1473,8 @@ ptx_Status_t ptx_RUL_LLCP_CB_ProcessDeactivateNtf(void *ctx, ptx_NSC_RfDeactivat
 
     if (PTX_COMP_CHECK(llcp, Comp_LLCP) && (NULL != ntf) && (NULL != ntf_used))
     {
+        PTX_LOG_V(&(llcp->Rul->Log), "ptx_RUL_LLCP_CB_ProcessDeactivateNtf");
+
         llcp->Initiate = 0u;
         if ((NSC_ErrorCode_NoErr == ntf->Error) && ((ptx_NSC_RfDeactivate_Reason_RF_Field == ntf->Reason) || (ptx_NSC_RfDeactivate_Reason_Deselect == ntf->Reason)))
         {
@@ -1413,6 +1493,9 @@ ptx_Status_t ptx_RUL_LLCP_CB_ProcessRfFieldNtf(void *ctx, uint8_t field, uint8_t
 
     if (PTX_COMP_CHECK(llcp, Comp_LLCP) && (NULL != ntf_used))
     {
+        
+        PTX_LOG_V(&(llcp->Rul->Log), "ptx_RUL_LLCP_CB_ProcessDeactivateNtf");
+
         llcp->RfFieldPresent = field;
         status = PTX_STATUS_SUCCESS;
     }
@@ -1427,6 +1510,8 @@ static ptx_Status_t ptx_RUL_LLCP_CB_ProcessDataMsg(void *ctx, ptx_NSC_RfData_Msg
 
     if (PTX_COMP_CHECK(llcp_ctx, Comp_LLCP) && (NULL != msg))
     {
+        PTX_LOG_V(&(llcp_ctx->Rul->Log), "ptx_RUL_LLCP_CB_ProcessDeactivateNtf");
+
         if ((llcp_ctx->RxDataIntLen + msg->CtrlLen.DataLen) <= PTX_LLCP_FRAME_BUFFER_LEN)
         {
             memcpy(&llcp_ctx->RxData[llcp_ctx->RxDataIntLen], msg->Data, msg->CtrlLen.DataLen);
@@ -1452,6 +1537,8 @@ ptx_Status_t ptx_RUL_LLCP_CB_Timer(ptx_HAL_DRV_Tmr_ExecCbCtx_t ctx)
 
     if (PTX_COMP_CHECK(llcp, Comp_LLCP))
     {
+        PTX_LOG_V(&(llcp->Rul->Log), "ptx_RUL_LLCP_CB_ProcessDeactivateNtf");
+
         ++llcp->TimerTicks;
         status = PTX_STATUS_SUCCESS;
     }
@@ -1464,8 +1551,10 @@ ptx_Status_t ptx_RUL_LLCP_ConfigureTimer(ptx_RUL_LLCP_t *ctx)
 
     status = ptx_HAL_Tmr_RegExecCb (&(ctx->Rul->Hal), HAL_Tmr_Id_1, ptx_RUL_LLCP_CB_Timer, ctx);
 
-    if (PTX_STATUS_SUCCESS == status)
+    if ((PTX_STATUS_SUCCESS == status))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_ConfigureTimer");
+
         ptx_HAL_DRV_Tmr_Cfg_t cfg[1];
 
         cfg[0].CfgType = HAL_DRV_Tmr_CfgType_Mode;
@@ -1488,6 +1577,8 @@ ptx_Status_t ptx_RUL_LLCP_IsSapFree(ptx_RUL_LLCP_t *ctx, uint8_t address, uint8_
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (PTX_LLCP_SAP_ADDRESS_MAX > address) && (NULL != free))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_IsSapFree");
+
         *free =  (0 == (ctx->SapList & (1 << address)) ? 1 : 0);
         status = PTX_STATUS_SUCCESS;
     }
@@ -1501,6 +1592,8 @@ ptx_Status_t ptx_RUL_LLCP_ReserveSap(ptx_RUL_LLCP_t *ctx, uint8_t address)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (PTX_LLCP_SAP_ADDRESS_MAX > address))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_ReserveSap");
+
         ctx->SapList |= 1 << address;
         status = PTX_STATUS_SUCCESS;
     }
@@ -1514,6 +1607,8 @@ ptx_Status_t ptx_RUL_LLCP_FreeSap(ptx_RUL_LLCP_t *ctx, uint8_t address)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (PTX_LLCP_SAP_ADDRESS_MAX > address))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_FreeSap");
+
         ctx->SapList &= ~((uint64_t)(1 << address));
         status = PTX_STATUS_SUCCESS;
     }
@@ -1527,6 +1622,8 @@ ptx_Status_t ptx_RUL_LLCP_SendMessageBuffer(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Me
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != buffer))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_SendMessageBuffer");
+
         uint8_t tx_data[PTX_LLCP_MESSAGEBUFFER_MESSAGELENGTH];
         uint32_t tx_length = sizeof(tx_data);
         status = ptx_RUL_LLCP_MessageBuffer_Read(buffer, tx_data, &tx_length, 1u);
@@ -1592,6 +1689,8 @@ ptx_Status_t ptx_RUL_LLCP_DisconnectServiceLayer(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_DisconnectServiceLayer");
+
         status = PTX_STATUS_SUCCESS;
 
         for (uint8_t i = 0; (i < PTX_LLCP_MAX_LINKS) && (PTX_STATUS_SUCCESS == status); ++i)
@@ -1612,6 +1711,8 @@ ptx_Status_t ptx_RUL_LLCP_ValidateServiceName(ptx_RUL_LLCP_t *ctx, char* name, u
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != name) && (NULL != valid))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_ValidateServiceName");
+
         const char *prefix_1 = "urn:nfc:sn";
         const char *prefix_2 = "urn:nfc:xsn";
         const char postfix = ':';
@@ -1645,6 +1746,8 @@ ptx_Status_t ptx_RUL_LLCP_ProcessRxPdu(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_PDU_t *
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_ProcessRxPdu");
+
         if ((Link_Layer_Deactivated_Remote == ctx->State) && (Role_Target == ctx->Role))
         {
             ptx_RUL_LLCP_MessageBuffer_Clear(&ctx->TxBuffer);
@@ -1735,6 +1838,8 @@ ptx_Status_t ptx_RUL_LLCP_GetLinkFromDestination(ptx_RUL_LLCP_t *ctx, ptx_RUL_LL
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu) && (NULL != link))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_GetLinkFromDestination");
+
         status = PTX_STATUS_E_GEN_NOT_FOUND;
 
         *link = NULL;
@@ -1757,6 +1862,8 @@ ptx_Status_t ptx_RUL_LLCP_AssembleRejectFrame(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_AssembleRejectFrame");
+
         ptx_RUL_LLCP_RejectReport_t report;
         report.W = w;
         report.I = i;
@@ -1795,6 +1902,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_Symm(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_PDU_t
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_Symm");
+
         if ((NULL != ctx->ActiveLink) && (0 == ctx->ActiveLink->Local.Busy) && (0 == ctx->ActiveLink->BusyReleased))
         {
             uint32_t pending_messages;
@@ -1825,6 +1934,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_Ui(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_PDU_t *
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_Ui");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         status = ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -1859,6 +1970,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_Connect(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_PD
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_Connect");
+
         uint32_t tlvs_len = PTX_LLCP_MAX_TLV_PARAMS;
         ptx_RUL_LLCP_TLV_Data_t tlvs[PTX_LLCP_MAX_TLV_PARAMS];
 
@@ -2007,6 +2120,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_Disconnect(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_Disconnect");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2061,6 +2176,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_ConnectionComplete(ptx_RUL_LLCP_t *ctx, ptx_
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_ConnectionComplete");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2114,6 +2231,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_DisconnectMode(ptx_RUL_LLCP_t *ctx, ptx_RUL_
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_DisconnectMode");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2133,6 +2252,10 @@ ptx_Status_t ptx_RUL_LLCP_Processor_DisconnectMode(ptx_RUL_LLCP_t *ctx, ptx_RUL_
             {
                 if ((LinkState_ConnectionPending == link->LinkState) || (LinkState_DisconnectionPending == link->LinkState))
                 {
+                    if(PTX_LLCP_PDU_MINIMUM_LEN == pdu->InformationLen)
+                    {
+                        ctx->LastDisconnectReason = pdu->Information[0];
+                    }
                     /* OK - mark Data Link Connection as Disconnected now */
                     link->LinkState = LinkState_Disconnected;
                 }
@@ -2160,6 +2283,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_FrameReject(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLC
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_FrameReject");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2196,6 +2321,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_ServiceNameLookup(ptx_RUL_LLCP_t *ctx, ptx_R
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_ServiceNameLookup");
+
         if ((PTX_LLCP_SAP_ADDRESS_SERVICE_DISCOVERY == pdu->Sap.Destination) && (PTX_LLCP_SAP_ADDRESS_SERVICE_DISCOVERY == pdu->Sap.Source))
         {
             uint32_t tlvs_len = LLCP_SNL_TLVS;
@@ -2276,6 +2403,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_Information(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLC
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_Information");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         status = ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2364,6 +2493,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_ReceiveReady(ptx_RUL_LLCP_t *ctx, ptx_RUL_LL
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_ReceiveReady");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         status = ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2413,6 +2544,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_ReceiveNotReady(ptx_RUL_LLCP_t *ctx, ptx_RUL
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_ReceiveNotReady");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         status = ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2468,6 +2601,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_RFU(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_PDU_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != pdu))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_RFU");
+
         ptx_RUL_LLCP_Link_t *link = NULL;
         ptx_RUL_LLCP_GetLinkFromDestination(ctx, pdu, &link);
 
@@ -2496,6 +2631,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_HandleInitialCondition(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_HandleInitialCondition");
+
         if (Role_Initiator == ctx->Role)
         {
             ptx_RUL_LLCP_PDU_Sym(&ctx->LlcpFrame);
@@ -2527,6 +2664,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_ValidateLinkTimeout(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_ValidateLinkTimeout");
+
         if (Role_Target == ctx->Role)
         {
             if (0 == ctx->RfFieldPresent)
@@ -2552,6 +2691,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_CheckRfErrors(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_CheckRfErrors");
+
         if (Role_Initiator == ctx->Role)
         {
             if (ptx_RUL_StatusInfoRfError_ErrorNone != ctx->Rul->RfErrorStatus)
@@ -2571,6 +2712,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_ConnectionTeardown(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_ConnectionTeardown");
+
         ctx->Running = 0;
 
         ptx_RUL_DeactivateParams_t deact_params;
@@ -2595,6 +2738,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor_HandleStates(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor_HandleStates");
+
         switch (ctx->State)
         {
             case MAC_Layer_Activated:
@@ -2669,6 +2814,8 @@ ptx_Status_t ptx_RUL_LLCP_Processor(ptx_RUL_LLCP_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_Processor");
+
         if (0 != ctx->Initiate)
         {
             status = ptx_RUL_LLCP_Processor_HandleInitialCondition(ctx);
@@ -2773,6 +2920,8 @@ ptx_Status_t ptx_RUL_LLCP_WaitForAcknowledge(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_L
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link))
     {
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_WaitForAcknowledge");
+
         if (Link_Layer_Activated == ctx->State)
         {
             status = PTX_STATUS_SUCCESS;
@@ -2836,6 +2985,8 @@ ptx_Status_t ptx_RUL_LLCP_IsLinkConnected(ptx_RUL_LLCP_t *ctx, ptx_RUL_LLCP_Link
     if (PTX_COMP_CHECK(ctx, Comp_LLCP) && (NULL != link) && (NULL != connected))
     {
         *connected = 0;
+
+        PTX_LOG_V(&(ctx->Rul->Log), "ptx_RUL_LLCP_IsLinkConnected");
 
         if (LinkType_ConnectionOriented == link->Type)
         {

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -138,6 +138,8 @@ ptx_Status_t ptx_NSC_GetRfDiscoveryParam_Listen(ptx_NSC_t *nsc, ptx_NSC_RfDiscov
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != cfg) && (NULL != params))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_GetRfDiscoveryParam_Listen");
+
         switch (type)
         {
             case NSC_RfDiscover_Param_Type_Listen:

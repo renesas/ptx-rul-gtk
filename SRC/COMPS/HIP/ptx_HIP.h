@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -98,21 +98,24 @@ typedef enum ptx_HIP_FrameEncodeInterface
 } ptx_HIP_FrameEncodeInterface_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HIP
 {
     ptx_Comps_t         CompId; /**< Component ID */
 
     ptx_HIP_Frame_t     Frame;  /**< Pointer to HIP frame structure */
-} ptx_HIP_t;
+    ptx_Log_t           *Log;   /**< Pointer to logger context. */
 
+} ptx_HIP_t;
 /**
  * \brief Main Component Initialization Parameters
  */
 typedef struct ptx_HIP_InitParams
 {
     ptx_HAL_t                       *Hal;               /**< Pointer to HAL */
+    ptx_Log_t                       *Log;               /**< Pointer to logger context. */
+
 } ptx_HIP_InitParams_t;
 
 /*

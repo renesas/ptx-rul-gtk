@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -73,8 +73,10 @@ ptx_Status_t ptx_NSC_WLC_WptStart(ptx_NSC_t *nsc, ptx_NSC_WLC_WptOptions_t* opti
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != options) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != options))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_WLC_WptStart");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_WptStart, NULL);
     }
 
@@ -141,8 +143,10 @@ ptx_Status_t ptx_NSC_WLC_WptStop(ptx_NSC_t *nsc, uint8_t wptPostPowerLevel)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) )
+    if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_WLC_WptStop");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_WptStop, NULL);
     }
 

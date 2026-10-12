@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -61,6 +61,7 @@
 #include "ptx_NSC_SystemConfig.h"
 #include "ptx_NSC_CmdProcessor.h"
 #include "ptx_Components.h"
+#include "ptx_Log.h"
 #include <string.h>
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)
@@ -81,7 +82,8 @@ extern "C" {
  * \name Length and timing definitions.
  * @{
  */
-#define PTX_NSC_TIMEOUT_DEFAULT                     (5000u)     /**< Default timeout in milliseconds for NSC responses. */
+#define PTX_NSC_TIMEOUT_DEFAULT                     (1000u)     /**< Default timeout in milliseconds for NSC responses. */
+#define PTX_NSC_DATA_TIMEOUT_DEFAULT                (5000u)     /**< Default timeout in milliseconds for NSC data acknowledgements. */
 
 #define PTX_NSC_TYPES_ATTRIBINF_LEN                 (15U)       /**< NSC Type ATTRIBINF length */
 #define PTX_NSC_TYPES_ATRREQGEN_LEN                 (15U)       /**< NSC Type ATR REQ GEN length */
@@ -95,9 +97,6 @@ extern "C" {
 #define PTX_NSC_TYPES_SENSFREQ_SYS_CODE_LEN         (2U)        /**< NSC Type F SENSRREQ System Code length */
 #define PTX_NSC_TYPES_INVENTORYRES_LEN              (10U)       /**< NSC Type V INVENTORYRES length */
 
-#define PTX_NSC_FWI_UNSET                           (0xFF)      /**< Default value for FWI in NSC component in case it is not set by card activation */
-#define PTX_NSC_FWI_MICROSECOND_STEP_SIZE           (302u)      /**< FWI step size in microseconds */
-#define PTX_NSC_FWI_T4T_DEFAULT                     (49000u)    /**< Default FWI value to be added on to calculated FWI value */
 #define PTX_NSC_MAX_TRANSFER_UNIT_SIZE              255u        /**< Max. Message transfer Unit size */
 #define PTX_NSC_DEFAULT_NUMOF_RESIDUAL_BITS         0u          /**< Residual bits for T2T, etc. */
 /** @} */
@@ -165,7 +164,6 @@ typedef enum ptx_NSC_InfoType
     ptx_NSC_Info_Rf_Config,         /**< RF-Config mapping version */
     ptx_NSC_Info_Derivate,          /**< Commercial derivate. */
     ptx_NSC_Info_MtuSize,           /**< NSC MTU (max. transfer unit) size. */
-    ptx_NSC_Info_Temperature,       /**< Current chip temperature. */
     ptx_NSC_Info_Platform_Revision, /**< Git hash of current version. */
     ptx_NSC_Info_MAX                /**< Max, Undefined. */
 } ptx_NSC_InfoType_t;
@@ -225,13 +223,6 @@ typedef struct ptx_NSC
     uint8_t                                 ResidualTxBits; /**< Residual Tx bits for T2T, etc. */
     uint8_t                                 MtU;            /**< Max. Message transfer Unit size */
 
-    /*
-     * RFU
-     */
-    #if 0
-    uint8_t                                 FWI;            /**< Current Frame Waiting time Integer */
-    #endif
-
     void                                    *Extension;     /**< Specific parameters, used and defined by any of the variants (AIS or RUL). */
 
     uint32_t                                NscSpeed;       /**< NSC Application Speed, i.e. target NFC chip interface speed. */
@@ -243,10 +234,14 @@ typedef struct ptx_NSC
     uint8_t                                 HwVersion;      /**< Device HW version. */
     uint16_t                                FwVersion;      /**< Device FW version. */
     uint16_t                                Derivate;       /**< Device commercial derivate. */
+    uint16_t                                RomVersion;     /**< Device ROM version. */
 
     uint8_t                                 PollMode;       /**< Keep track of current poll mode. */
     ptx_NSC_ExtendDiscoveryParametersCb_t   ExtendDiscoveryParametersCb;    /**< Discovery command extension callback. */
     void                                    *ExtendDiscoveryParametersCtx;  /**< Discovery command extension context. */
+
+    ptx_Log_t                               *Log;            /**< Pointer to logger context. */
+
 
 } ptx_NSC_t;
 
@@ -258,6 +253,8 @@ typedef struct ptx_NSC_InitParams
     ptx_HIP_t                           *Hip;           /**< Pointer to HIP component. */
     ptx_HAL_t                           *Hal;           /**< Pointer to HAL component. */
     void                                *ExtParams;     /**< Reference to Extension specific initialization parameters. Used and defined by any of the variants (AIS or RUL). */
+    ptx_Log_t                           *Log;           /**< Pointer to logger context. */
+
 } ptx_NSC_InitParams_t;
 
 

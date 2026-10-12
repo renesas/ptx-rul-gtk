@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -95,7 +95,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessListenEvents(ptx_NFCForumDTA_t *dta, ptx_NFC
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA)) && (PTX_COMP_CHECK(&dta->hce, Comp_HCE)) && (NULL != testCfg))
+    if (PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA) && (PTX_COMP_CHECK(&dta->hce, Comp_HCE)) && (NULL != testCfg))
     {
 
         uint8_t deactivated = 0;

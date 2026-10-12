@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -77,7 +77,7 @@ extern "C" {
  */
 
 /**
- * \brief FeliCa-DTE Test Type
+ * \brief FeliCa-DTE Bit Rate
  */
 typedef enum ptx_FeliCaDTE_BitRate
 {
@@ -137,7 +137,7 @@ typedef struct ptx_FeliCaDTE_RWDigProtTest
 {
     ptx_FeliCaDTE_RWDigProt_TestID_t    SubTestID;           /**< Sub-test Identifier (Reader / Writer Digital Protocol sequence ID) */
     const uint32_t                      *T_OffGuardTime;     /**< Guard Time between Field-Off and Field-On (default value = 30ms) */
-    const uint32_t                      *T_OnGuardTime;      /**< Guard Time between Field-On first Command (default value = 25ms) */
+    const uint32_t                      *T_OnGuardTime;      /**< Guard Time between Field-On and first command (default value = 25ms) */
     uint8_t                             *GenericCmdBuffer;   /**< Pointer to Buffer containing generic (application-)command */
     uint32_t                            GenericCmdBufferLen; /**< Length of generic (application-)command */
     uint32_t                            TimeOutMS;           /**< Timeout value in [ms] for a single RF data exchange (MUST be set to a value != 0!) */

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -67,12 +67,14 @@
  * API FUNCTIONS
  * ####################################################################################################################
  */
-ptx_Status_t ptx_HAL_GPIO_Init (ptx_HAL_GPIO_t *ctx, ptx_HAL_GPIO_InitParams_t *initParams)
+ptx_Status_t ptx_HAL_GPIO_Init(ptx_HAL_GPIO_t *ctx, ptx_HAL_GPIO_InitParams_t *initParams)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_GPIO_Init");
+
         memset(ctx, 0, sizeof(ptx_HAL_GPIO_t));
 
         /* Currently, only one GPIO type supported. */
@@ -99,18 +101,20 @@ ptx_Status_t ptx_HAL_GPIO_Init (ptx_HAL_GPIO_t *ctx, ptx_HAL_GPIO_InitParams_t *
             ctx->CompId     = Comp_HAL;
         }
 
-
     }
+    
 
     return status;
 }
 
-ptx_Status_t ptx_HAL_GPIO_DeInit (ptx_HAL_GPIO_t *ctx)
+ptx_Status_t ptx_HAL_GPIO_DeInit(ptx_HAL_GPIO_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Drv.Log, "ptx_HAL_GPIO_DeInit");
+
         memset(ctx, 0, sizeof(ptx_HAL_GPIO_t));
         ctx->CompId = Comp_None;
         status = PTX_STATUS_SUCCESS;

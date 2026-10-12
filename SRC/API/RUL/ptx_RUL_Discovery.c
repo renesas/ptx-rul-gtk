@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -88,6 +88,7 @@ ptx_Status_t ptx_RUL_InitiateDiscovery(ptx_RUL_t *rul, ptx_RUL_DiscoverConfig_t 
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_InitiateDiscovery");
         if (NULL != cfg)
         {
             ptx_NSC_RfDiscovery_Cfg_t nsc_cfg;
@@ -122,11 +123,15 @@ ptx_Status_t ptx_RUL_InitiateDiscovery(ptx_RUL_t *rul, ptx_RUL_DiscoverConfig_t 
                 status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
             }
 
-            if ((0 != cfg->EnablePolling) && (PTX_STATUS_SUCCESS == status))
+            /* Always load generic Poll-Mode parameters as they also contain common applicable parameters for Listen-Mode (e.g. Standby-Cfg, IDLE_Time, etc.) */
+            if (PTX_STATUS_SUCCESS == status)
             {
                 status = ptx_NSC_GetRfDiscoveryParam(&(rul->Nsc), NSC_RfDiscover_Param_Type_Poll, &nsc_cfg, &discoverParams[discoverParamsSize]);
                 discoverParamsSize++;
+            }
 
+            if ((0 != cfg->EnablePolling) && (PTX_STATUS_SUCCESS == status))
+            {
                 if ((0 != cfg->PollTypeA) && (PTX_STATUS_SUCCESS == status))
                 {
                     status = ptx_NSC_GetRfDiscoveryParam(&(rul->Nsc), NSC_RfDiscover_Param_Type_PollA, &nsc_cfg, &discoverParams[discoverParamsSize]);

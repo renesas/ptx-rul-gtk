@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -104,13 +104,13 @@ typedef enum ptx_NativeTag_MFCC_KeyType
 } ptx_NativeTag_MFCC_KeyType_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_NativeTag_MFCC
 {
     ptx_Comps_t                         CompId;                                             /**< Component Id */
-    ptx_RUL_t                           *Rul;                                               /**< Initialized RUL component. */
-    ptx_NativeTag_MFCCCrypto1_t         Crypto1Params;                                      /**< Crypto1 specific Parameters (dependant on implementation) */
+    ptx_RUL_t                           *Rul;                                               /**< Pointer to the initialized RUL component. */
+    ptx_NativeTag_MFCCCrypto1_t         Crypto1Params;                                      /**< Crypto1 specific Parameters (dependent on implementation) */
     ptx_RUL_BitsExchangeParams_t        RxData;                                             /**< Container for Rx-Data and -Parity. */
     uint8_t                             RxByteBuffer[PTX_MFCC_BITS_EXCHANGE_BUFFER_SIZE];   /**< Rx-Buffer to store received Bytes. */
     uint8_t                             RxBitBuffer[PTX_MFCC_BITS_EXCHANGE_BUFFER_SIZE];    /**< Rx-Buffer to store received Bits. */
@@ -125,7 +125,7 @@ typedef struct ptx_NativeTag_MFCC
  */
 typedef struct ptx_NativeTag_MFCC_InitParams
 {
-    ptx_RUL_t                           *Rul;                                               /**< Initialised RUL component. */
+    ptx_RUL_t                           *Rul;                                               /**< Pointer to the initialized RUL component. */
     void                                *UserContextCrypto1;                                /**< Custom/User-specific Crypto State (potentially 3rd party). */
 
 } ptx_NativeTag_MFCC_InitParams_t;
@@ -212,8 +212,8 @@ ptx_Status_t ptx_NativeTag_MFCC_Read (ptx_NativeTag_MFCC_t *mfcc, uint8_t addres
  *
  * \param[in]     mfcc          Pointer to an existing instance of the Mifare Compatibility.
  * \param[in]     address       Address used for operation.
- * \param[out]    blockData     Pointer to block-data to be written.
- * \param[out]    blockDataLen  Length of block-data (must be 16 Bytes).
+ * \param[in]     blockData     Pointer to block-data to be written.
+ * \param[in]     blockDataLen  Length of block-data (must be 16 Bytes).
  *
  * \return Status, indicating whether the operation was successful.
  */
@@ -224,7 +224,7 @@ ptx_Status_t ptx_NativeTag_MFCC_Write (ptx_NativeTag_MFCC_t *mfcc, uint8_t addre
  *
  * \param[in]     mfcc          Pointer to an existing instance of the Mifare Compatibility.
  * \param[in]     address       Address used for operation.
- * \param[out]    value         4-Byte Operand / Value.
+ * \param[in]     value         4-Byte Operand / Value.
  *
  * \return Status, indicating whether the operation was successful.
  */
@@ -235,7 +235,7 @@ ptx_Status_t ptx_NativeTag_MFCC_Increment (ptx_NativeTag_MFCC_t *mfcc, uint8_t a
  *
  * \param[in]     mfcc          Pointer to an existing instance of the Mifare Compatibility.
  * \param[in]     address       Address used for operation.
- * \param[out]    value         4-Byte Operand / Value.
+ * \param[in]     value         4-Byte Operand / Value.
  *
  * \return Status, indicating whether the operation was successful.
  */
@@ -256,7 +256,7 @@ ptx_Status_t ptx_NativeTag_MFCC_Transfer (ptx_NativeTag_MFCC_t *mfcc, uint8_t ad
  *
  * \param[in]     mfcc          Pointer to an existing instance of the Mifare Compatibility.
  * \param[in]     address       Address used for operation.
- * \param[out]    value         4-Byte Operand / Value.
+ * \param[in]     value         4-Byte Operand / Value.
  *
  * \return Status, indicating whether the operation was successful.
  */
@@ -276,7 +276,7 @@ ptx_Status_t ptx_NativeTag_MFCC_Restore (ptx_NativeTag_MFCC_t *mfcc, uint8_t add
 ptx_Status_t ptx_NativeTag_MFCC_GetFormattedValueBlock (ptx_NativeTag_MFCC_t *mfcc, uint8_t address, uint32_t value, uint8_t *buffer, uint8_t bufferSize);
 
 /**
- * \brief Performs a ISO/IEC 14443-3A HALT-command
+ * \brief Performs an ISO/IEC 14443-3A HALT-command
  *
  * \param[in]     mfcc          Pointer to an existing instance of the Mifare Compatibility.
  *

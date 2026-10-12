@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -302,7 +302,7 @@ ptx_Status_t ptx_NDEF_T4T_ReadMessage (ptx_NDEF_T4T_t *ndefT4T, uint8_t *msgBuff
 
     uint32_t msg_buffer_size;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen))
+    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
         msg_buffer_size = (uint32_t)(*msgLen);
 
@@ -881,7 +881,7 @@ static ptx_Status_t ptx_NDEF_T4T_ReadFileContent (ptx_NDEF_T4T_t *ndefT4T, uint8
     uint32_t bytes_read = 0;
     uint32_t msg_len = 0;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen))
+    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
         msg_len = *msgLen;
 

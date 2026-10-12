@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -111,7 +111,7 @@ typedef struct ptx_HAL_DRV_Interface_UART_PortConfig
 } ptx_HAL_DRV_Interface_UART_PortConfig_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_DRV_Interface_UART
 {
@@ -149,21 +149,29 @@ typedef struct ptx_HAL_DRV_Interface_UART_InitParams
 /**
  * \brief Driver UART Init
  *
- * Initializes the Windows Default Uart driver according to the given parameters.
+ * Initializes the Windows UART driver by opening the FTDI library context and configuring
+ * the component with the provided initialization parameters. The driver supports a single
+ * default UART port (FT232H module).
  *
- * \param[in]       ctx             Pointer to pointer of the component (The address of the component will be replaced by one allocated by OS)
- * \param[in]       initParams      Pointer to initialization parameters.
+ * \param[in]       ctx             Pointer to the component structure to be initialized.
+ *                                  Will be populated with driver context and configuration.
+ * \param[in]       initParams      Pointer to initialization parameters containing port type,
+ *                                  port ID, communication speed, OS context, logger, and GPIO context.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ *
+ * \note The Speed field in initParams defaults to PTX_HAL_DRV_INTERFACE_UART_DEFAULT_BAUDRATE
+ *       (115200 baud) if set to 0.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Init(ptx_HAL_DRV_Interface_UART_t *ctx, ptx_HAL_DRV_Interface_UART_InitParams_t *initParams);
 
 /**
  * \brief Driver UART DeInit
  *
- * De-Initializes the Windows Default Uart driver.
+ * De-initializes the Windows UART driver by closing the FTDI library context and
+ * clearing the component structure.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in]       ctx             Pointer to an initialized component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -172,9 +180,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_DeInit(ptx_HAL_DRV_Interface_UART_t *ctx
 /**
  * \brief Driver UART Open
  *
- * Opens the Windows UART Default interface and configures it according to the parameters in \see ptx_HAL_DRV_Interface_UART.Port.
+ * Opens and configures the UART interface using the FTDI library. Applies the configured
+ * communication speed to the UART port.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in]       ctx             Pointer to an initialized component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -183,132 +192,95 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Open(ptx_HAL_DRV_Interface_UART_t *ctx);
 /**
  * \brief Driver UART Close
  *
- * Closes the Windows UART Default interface.
+ * Closes the UART interface and releases the FTDI device handle.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in]       ctx             Pointer to an initialized component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Close(ptx_HAL_DRV_Interface_UART_t *ctx);
 
 /**
- * \brief Driver UART Activate Rx IRQ.
+ * \brief Driver UART Tx (Transmit only)
  *
- * \param[in]       ctx             Pointer to component.
+ * Sends data to the UART interface.
  *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_ActivateRxIrq(ptx_HAL_DRV_Interface_UART_t *ctx);
-
-/**
- * \brief Driver UART Deactivate Rx IRQ.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_DeactivateRxIrq(ptx_HAL_DRV_Interface_UART_t *ctx);
-
-/**
- * \brief Driver Rx IRQ Level Callback Datatype
- *
- * Checks if any bytes have been received since the last Reading operation.
- *
- * \param[in]       ctx          Pointer to component.
- * \param[out]      level        Pointer to level value.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_RxIrqLevel(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *level);
-
-/**
- * \brief Driver UART Wait for IRQ to be triggered
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_WaitForIRQ(ptx_HAL_DRV_Interface_UART_t *ctx);
-
-/**
- * \brief Driver UART TRx
- *
- * Sends and/or receives data to/from the UART interface, to communicate with an endpoint.
- *
- * \param[in]       ctx           Pointer to component.
- * \param[in]       txBuf         Array of bytes to be transmitted.
- * \param[in]       txLen         Length of \see tx.
- * \param[in]       rxBuf         Array of bytes to be received.
- * \param[in]       rxLen         Length of \see rxBuf. Must match the bytes received!
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_DRV_Interface_UART_TRx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *txBuf, uint32_t *txLen, uint8_t *rxBuf, uint32_t *rxLen);
-
-/**
- * \brief Driver UART Tx
- *
- * Sends data to the UART interface, to communicate with an endpoint.
- *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       txBuf           Array of bytes to be transmitted.
- * \param[in]       txLen           Length of \see txBuf.
+ * \param[in]       ctx             Pointer to an initialized component.
+ * \param[in]       txBuf           Pointer to array of bytes to be transmitted.
+ * \param[in]       txLen           Length of txBuf in bytes.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *txBuf, uint32_t txLen);
 
 /**
- * \brief Driver UART Rx
+ * \brief Driver UART Rx (Receive only)
  *
  * Receives data from the UART interface.
  *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       rxBuf           Array of bytes to be received.
- * \param[in]       rxLen           Length of \see rxBuf. Must match the bytes received!
+ * \param[in]       ctx             Pointer to an initialized component.
+ * \param[in]       rxBuf           Pointer to array of bytes to receive data into.
+ * \param[in]       rxLen           Length of rxBuf in bytes. Must match the number of bytes expected.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_Rx(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *rxBuf, uint32_t rxLen);
 
 /**
- * \brief Driver UART Set Parameter function.
+ * \brief Driver UART Rx IRQ Level
  *
- * Sets a HAL UART Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Checks the Clear-To-Send (CTS) modem status line to determine if data is available
+ * for reception. The CTS line level is inverted (active low).
  *
- * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      parameter (type, value) struct.
+ * \param[in]       ctx             Pointer to an initialized component.
+ * \param[out]      level           Pointer to level value. Set to 1 if CTS is active (low),
+ *                                  0 if CTS is inactive (high).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ */
+ptx_Status_t ptx_HAL_DRV_Interface_UART_RxIrqLevel(ptx_HAL_DRV_Interface_UART_t *ctx, uint8_t *level);
+
+/**
+ * \brief Driver UART Set Parameter
+ *
+ * Sets a UART communication interface parameter selected by type. Supported parameters include
+ * transmission speed and other interface-specific settings.
+ *
+ * \param[in]       ctx             Pointer to an initialized component.
+ * \param[in]       parameter       Pointer to parameter structure containing type and value.
+ *                                  See \ref ptx_HAL_DRV_Interface_Parameter_t.
+ *
+ * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ *
+ * \note Supported parameter types:
+ *       - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Updates UART baud rate
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_SetParameter(ptx_HAL_DRV_Interface_UART_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
 
 /**
- * \brief Driver UART Get Parameter function.
+ * \brief Driver UART Get Parameter
  *
- * Gets a HAL UART Communication Interface parameter selected by a type ( \see ptx_HAL_DRV_Interface_Parameter_Type_t) with the corresponding data value
- * ( \see ptx_HAL_DRV_Interface_Parameter_Value_t) through the input value parameter ( \see ptx_HAL_DRV_Interface_Parameter_t).
+ * Retrieves a UART communication interface parameter selected by type. Supported parameters include
+ * transmission speed and other interface-specific settings.
  *
- * \param[in]       ctx            Pointer to component.
- * \param[in]       parameter      Parameter (type, value) struct.
+ * \param[in]       ctx             Pointer to an initialized component.
+ * \param[in,out]   parameter       Pointer to parameter structure. Type field specifies which parameter
+ *                                  to retrieve; value field is populated with the result.
+ *                                  See \ref ptx_HAL_DRV_Interface_Parameter_t.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
+ *
+ * \note Supported parameter types:
+ *       - HAL_DRV_Interface_Parameter_Type_Transmission_Speed: Returns current UART baud rate
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_GetParameter(ptx_HAL_DRV_Interface_UART_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter);
-
-/*
- * ####################################################################################################################
- * INTERNAL FUNCTIONS
- * ####################################################################################################################
- */
 
 /**
  * \brief Driver UART Discard Data
  *
- * Discards data currently held in buffer.
+ * Discards any data currently held in the UART receive buffer.
  *
- * \param[in]       ctx         Pointer to component.
+ * \param[in]       ctx             Pointer to an initialized component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -317,9 +289,9 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_DiscardData(ptx_HAL_DRV_Interface_UART_t
 /**
  * \brief Driver UART Cancel
  *
- * Cancels the current Uart event.
+ * Cancels the current UART operation (transmission or reception).
  *
- * \param[in]       ctx         Pointer to component.
+ * \param[in]       ctx             Pointer to an initialized component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -328,9 +300,9 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Cancel(ptx_HAL_DRV_Interface_UART_t *ctx
 /**
  * \brief Driver UART Clear Cancel
  *
- * Cancels the Uart event and clears the buffer.
+ * Cancels the current UART operation and clears the receive buffer.
  *
- * \param[in]       ctx         Pointer to component.
+ * \param[in]       ctx             Pointer to an initialized component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -339,26 +311,15 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_ClearCancel(ptx_HAL_DRV_Interface_UART_t
 /**
  * \brief Driver UART Init Comport
  *
- * Initializes the comport to use for Uart communication.
+ * Initializes the COM port for UART communication. This is an internal helper function
+ * called during driver initialization to configure the serial port parameters.
  *
- * \param[in]       ctx         Pointer to component.
- * \param[in]       initParams      Pointer to Parameters.
+ * \param[in]       ctx             Pointer to the component structure.
+ * \param[in]       initParams      Pointer to initialization parameters containing port configuration.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Interface_UART_InitComPort(ptx_HAL_DRV_Interface_UART_t *ctx, ptx_HAL_DRV_Interface_UART_InitParams_t *initParams);
-
-/**
- * \brief Driver UART Baudrate conversion
- *
- * Converts int to Windows internal speed definitions.
- *
- * \param[in]       rawBaud         speed as integer
- *
- * \return Speed, passable to WinAPI.
- */
-uint32_t ptx_HAL_DRV_Interface_UART_UartBaudrateConv(uint32_t rawBaud);
-
 
 
 #if defined(__cplusplus)

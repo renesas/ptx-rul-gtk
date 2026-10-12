@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -81,9 +81,11 @@ ptx_Status_t ptx_NSC_RfPresenceCheck_EmptyFrame (ptx_NSC_t* nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfPresenceCheck_EmptyFrame");
+
         uint8_t dummy = 0;
 
-        status = ptx_NSC_DataTx(nsc, &dummy, 0, 0);
+        status = ptx_NSC_DataTx(nsc, &dummy, 0, 0, 0);
         if (PTX_STATUS_SUCCESS == status)
         {
             status = ptx_NSC_RfPresenceCheck_CheckResponseEmpty(nsc);
@@ -99,6 +101,8 @@ ptx_Status_t ptx_NSC_RfPresenceCheck_RNak (ptx_NSC_t* nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfPresenceCheck_RNak");
+
         status = ptx_NSC_CtrlTx(nsc, PTX_NSC_DATA_MSG_NACK);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -115,6 +119,8 @@ ptx_Status_t ptx_NSC_RfPresenceCheck_AttentionCmd (ptx_NSC_t* nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfPresenceCheck_AttentionCmd");
+
         status = ptx_NSC_CtrlTx(nsc, PTX_NSC_DATA_MSG_NACK);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -131,6 +137,8 @@ ptx_Status_t ptx_NSC_RfPresenceCheck_FrameRf (ptx_NSC_t* nsc, ptx_NSC_PresCheck_
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfPresenceCheck_FrameRf");
+
         /* Maximum size of the data buffer is defined by the longest protocol message, which is in this case T3T.
          * T2T := 2 Bytes
          * T3T := 16 Bytes
@@ -216,7 +224,7 @@ ptx_Status_t ptx_NSC_RfPresenceCheck_FrameRf (ptx_NSC_t* nsc, ptx_NSC_PresCheck_
         {
             /* Clean residual bit setting because it might influence NSC Data message. */
             nsc->ResidualTxBits = 0;
-            status = ptx_NSC_DataTx(nsc, frame_rf_buf, frame_rf_buf_len, 0);
+            status = ptx_NSC_DataTx(nsc, frame_rf_buf, frame_rf_buf_len, 0, PTX_NSC_DATA_TIMEOUT_DEFAULT);
         }
 
         if (PTX_STATUS_SUCCESS == status)
@@ -250,6 +258,8 @@ static ptx_Status_t ptx_NSC_RfPresenceCheck_CheckResponseAck(ptx_NSC_t* nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfPresenceCheck_CheckResponseAck");
+
         status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp_buf, &rsp_buf_len, PTX_NSC_TIMEOUT_DEFAULT, 0);
 
         if ((PTX_STATUS_SUCCESS == status) && (0 != rsp_buf_len))
@@ -291,6 +301,8 @@ static ptx_Status_t ptx_NSC_RfPresenceCheck_CheckResponseEmpty(ptx_NSC_t* nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfPresenceCheck_CheckResponseEmpty");
+
         status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp_buf, &rsp_buf_len, PTX_NSC_TIMEOUT_DEFAULT, 0);
 
         /* If presence check was successful, we shall get empty NSC_RF_DATA_MSG or with a payload. */
@@ -333,6 +345,8 @@ static ptx_Status_t ptx_NSC_RfPresenceCheck_CheckResponseRfFrame(ptx_NSC_t* nsc,
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (0 != min_expected_rsp_len) && (0 != timeout))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfPresenceCheck_CheckResponseRfFrame");
+
         status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp_buf, &rsp_buf_len, timeout, 0);
 
         if ((PTX_STATUS_SUCCESS == status) && (0 != rsp_buf_len))

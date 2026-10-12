@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -85,7 +85,7 @@ typedef void *ptx_HAL_DRV_GPIO_IrqCbCtx_t;
 typedef ptx_Status_t (*ptx_HAL_DRV_GPIO_IrqCb_tx_t) (ptx_HAL_DRV_GPIO_IrqCbCtx_t ctx);
 
 /**
- * \brief HAL GPIO Configuration Struture
+ * \brief HAL GPIO Configuration Structure
  */
 typedef enum ptx_HAL_DRV_GPIO_CfgParam
 {
@@ -95,7 +95,7 @@ typedef enum ptx_HAL_DRV_GPIO_CfgParam
 } ptx_HAL_DRV_GPIO_CfgParam_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_DRV_GPIO_Cfg
 {

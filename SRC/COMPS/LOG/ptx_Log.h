@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -63,8 +63,31 @@
 
 #if !defined(PTX_LOG_DISABLED)
     /* Note: zf_log specific defines need to be set before the inclusion of the Header to become effective.  "*/
-    #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_VERBOSE                      /**< Default Log Output Level */
-    #define ZF_LOG_LEVEL        ZF_LOG_VERBOSE                      /**< Default Log Level */
+    
+    // Set current log level based on CMake definitions
+    #if defined(PTX_LOG_LVL_VERBOSE)
+        #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_VERBOSE       /**< VERBOSE Log Level */                      
+        #define ZF_LOG_LEVEL        ZF_LOG_VERBOSE       /**< VERBOSE Log Level */
+    #elif defined(PTX_LOG_LVL_DEBUG)
+        #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_DEBUG         /**< DEBUG Log Level */                      
+        #define ZF_LOG_LEVEL        ZF_LOG_DEBUG         /**< DEBUG Log Level */
+    #elif defined(PTX_LOG_LVL_INFO)
+        #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_INFO          /**< INFO  Log Level */                     
+        #define ZF_LOG_LEVEL        ZF_LOG_INFO          /**< INFO  Log Level */
+    #elif defined(PTX_LOG_LVL_WARN)
+        #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_WARN          /**< WARN  Log Level */                     
+        #define ZF_LOG_LEVEL        ZF_LOG_WARN          /**< WARN  Log Level */
+    #elif defined(PTX_LOG_LVL_ERROR)
+        #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_ERROR         /**< ERROR Log Level */                 
+        #define ZF_LOG_LEVEL        ZF_LOG_ERROR         /**< ERROR Log Level */
+    #elif defined(PTX_LOG_LVL_FATAL)
+        #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_FATAL         /**< FATAL Log Level */                  
+        #define ZF_LOG_LEVEL        ZF_LOG_FATAL         /**< FATA  Log Level */
+    #else                                               
+        #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_INFO          /**< Default Log Level */
+        #define ZF_LOG_LEVEL        ZF_LOG_INFO          /**< Default Log Level */
+    #endif
+
     #include "zf_log.h"
 #endif
 
@@ -86,65 +109,93 @@ extern "C" {
 /**
  * \brief Write String using Logging-Level I = Info.
  */
-#define  PTX_LOG_I(logCtx, ...) \
-    ptx_Log_SetLevelChar(logCtx, 'I');  \
-    ZF_LOGI( __VA_ARGS__);
+#define  PTX_LOG_I(logCtx, ...)\
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'I');  \
+        ZF_LOGI( __VA_ARGS__);\
+    }
+
 
 /**
  * \brief Write String using Logging-Level V = Verbose.
  */
 #define  PTX_LOG_V(logCtx, ...) \
-    ptx_Log_SetLevelChar(logCtx, 'V');  \
-    ZF_LOGV( __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'V');  \
+        ZF_LOGV( __VA_ARGS__);\
+    }
 
 /**
  * \brief Write String using Logging-Level D = Debug.
  */
 #define  PTX_LOG_D(logCtx, ...) \
-    ptx_Log_SetLevelChar(logCtx, 'D');  \
-    ZF_LOGD( __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'D');  \
+        ZF_LOGD( __VA_ARGS__);\
+    }
 
 /**
  * \brief Write String using Logging-Level W = Warning.
  */
 #define  PTX_LOG_W(logCtx, ...) \
-    ptx_Log_SetLevelChar(logCtx, 'W');  \
-    ZF_LOGW( __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'W');  \
+        ZF_LOGW( __VA_ARGS__);\
+    }
 
 /**
  * \brief Write String using Logging-Level E = Error.
  */
 #define  PTX_LOG_E(logCtx, ...) \
-    ptx_Log_SetLevelChar(logCtx, 'E');  \
-    ZF_LOGE( __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'E');  \
+        ZF_LOGE( __VA_ARGS__);\
+    }
 
 /**
  * \brief Write String using Logging-Level F = Fatal.
  */
 #define  PTX_LOG_F(logCtx, ...) \
-    ptx_Log_SetLevelChar(logCtx, 'F');  \
-    ZF_LOGF( __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'F');  \
+        ZF_LOGF( __VA_ARGS__);\
+    }
 
 /**
  * \brief Write Memory Space / Data and String using Logging-Level I = Info.
  */
 #define  PTX_LOG_I_MEM(logCtx, memBuffer, memBufferSize,...) \
-    ptx_Log_SetLevelChar(logCtx, 'I');  \
-    ZF_LOGI_MEM(memBuffer, (unsigned int)memBufferSize, __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'I');  \
+        ZF_LOGI_MEM(memBuffer, (unsigned int)memBufferSize, __VA_ARGS__);\
+    }
 
 /**
  * \brief Write Memory Space / Data and String using Logging-Level V = Verbose.
  */
 #define  PTX_LOG_V_MEM(logCtx, memBuffer, memBufferSize,...) \
-    ptx_Log_SetLevelChar(logCtx, 'V');  \
-    ZF_LOGV_MEM(memBuffer, (unsigned int)memBufferSize, __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'V');  \
+        ZF_LOGV_MEM(memBuffer, (unsigned int)memBufferSize, __VA_ARGS__);\
+    }
 
 /**
  * \brief Write Memory Space / Data and String using Logging-Level D = Debug.
  */
 #define  PTX_LOG_D_MEM(logCtx, memBuffer, memBufferSize,...) \
-    ptx_Log_SetLevelChar(logCtx, 'D');  \
-    ZF_LOGD_MEM(memBuffer, (unsigned int)memBufferSize, __VA_ARGS__);
+    if(PTX_COMP_CHECK(logCtx, Comp_LOG))\
+    {\
+        ptx_Log_SetLevelChar(logCtx, 'D');  \
+        ZF_LOGD_MEM(memBuffer, (unsigned int)memBufferSize, __VA_ARGS__);\
+    }
 
 #else
 
@@ -228,7 +279,7 @@ typedef struct ptx_Log_InitParams
 } ptx_Log_InitParams_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_Log
 {

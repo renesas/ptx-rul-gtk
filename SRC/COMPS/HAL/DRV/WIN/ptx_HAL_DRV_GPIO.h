@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -81,37 +81,27 @@ extern "C" {
  */
 
 /**
- * \brief Forward declaration for GPIO component.
+ * \brief Main Component Structure
  */
-typedef struct ptx_HAL_DRV_GPIO ptx_HAL_DRV_GPIO_t;
-
-/**
- * \brief Forward declaration for GPIO component initialization parameters.
- */
-typedef struct ptx_HAL_DRV_GPIO_InitParams ptx_HAL_DRV_GPIO_InitParams_t;
-
-/**
- * \brief Main Component Struture
- */
-struct ptx_HAL_DRV_GPIO
+typedef struct ptx_HAL_DRV_GPIO
 {
     ptx_Comps_t                         CompId;         /**< Component ID */
     ptx_HAL_FTD2XXCtx_t                 *Ftd2xx_ctx;    /**< FTDI context */
-    struct ptx_Log                      *Log;           /**< Pointer to an initialized logger. */
+    ptx_Log_t                           *Log;           /**< Pointer to an initialized logger. */
     uint8_t                             Gpio_only;      /**< Flag to indicate if GPIO interface is used standalone or in combination with communication driver (SPI/ I2C) */
-};
+}ptx_HAL_DRV_GPIO_t;
 
 /**
  * \brief Main Component Initialization Parameters
  */
-struct ptx_HAL_DRV_GPIO_InitParams
+typedef struct ptx_HAL_DRV_GPIO_InitParams
 {
     ptx_HAL_DRV_GPIO_Cfg_t  *Cfg;           /**< GPIO configuration */
     uint32_t                CfgLen;         /**< GPIO configuration size */
     ptx_HAL_FTD2XXCtx_t     *Ftd2xx_ctx;    /**< FTDI context */
     ptx_Log_t               *Log;           /**< Pointer to an initialized logger. */
     uint8_t                 Gpio_only;      /**< Flag to indicate if GPIO interface is used standalone or in combination with communication driver (SPI/ I2C) */
-};
+}ptx_HAL_DRV_GPIO_InitParams_t;
 
 /*
  * ####################################################################################################################
@@ -122,7 +112,10 @@ struct ptx_HAL_DRV_GPIO_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx             Pointer to component.
+ * Initializes the GPIO driver component. Sets up the component ID, logger reference,
+ * and GPIO usage mode (standalone or combined with communication driver).
+ *
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -132,7 +125,9 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Init (ptx_HAL_DRV_GPIO_t *ctx, ptx_HAL_DRV_GPIO_In
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx   Pointer to component.
+ * Clears all component data and resets component ID to Comp_None.
+ *
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -141,7 +136,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_DeInit (ptx_HAL_DRV_GPIO_t *ctx);
 /**
  * \brief Opens the GPIO device.
  *
- * \param[in]       ctx   Pointer to component.
+ * Opens the FTDI device for GPIO operations. Behavior depends on platform and Gpio_only flag:
+ * - On non-UART platforms: Opens FTDI library and MPSSE engine
+ * - On UART platforms: Only succeeds if Gpio_only == 0 (GPIO-only mode not supported)
+ *
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -150,7 +149,10 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx);
 /**
  * \brief Closes the GPIO device.
  *
- * \param[in]       ctx   Pointer to component.
+ * Closes the FTDI device. On non-UART platforms, only closes if Gpio_only flag is set.
+ * On UART platforms, this is a no-op.
+ *
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -159,20 +161,28 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Close (void *ctx);
 /**
  * \brief Reads the value of a given GPIO pin.
  *
+ * Reads the current level of a specified GPIO pin (0-7).
+ * Not available on UART platform.
+ *
  * \param[in]       ctx   Pointer to component.
- * \param[in]       pin   Pin number to read.
- * \param[out]      level Read GPIO pin value.
+ * \param[in]       pin   Pin number to read (0-7).
+ * \param[out]      level Read GPIO pin value (0 or 1).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_ReadPin (void *ctx, uint16_t pin, uint8_t *level);
 
 /**
- * \brief Reads the value of a given GPIO pin.
+ * \brief Writes a value to a given GPIO pin.
+ *
+ * Sets the output level of a specified GPIO pin (0-7).
+ * On UART platform, only pin 1 (reset pin) is supported via RTS control:
+ * - level 0: Sets RTS (reset active)
+ * - level 1: Clears RTS (reset inactive)
  *
  * \param[in]       ctx   Pointer to component.
- * \param[in]       pin   Pin number to write.
- * \param[in]       level GPIO pin value to write.
+ * \param[in]       pin   Pin number to write (0-7, or 1 for reset on UART).
+ * \param[in]       level GPIO pin value to write (0 or 1).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -181,21 +191,29 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePin (void *ctx, uint16_t pin, uint8_t level);
 /**
  * \brief Reads a complete GPIO port.
  *
+ * Reads all GPIO pins in a single port operation. Note: There is only one port
+ * containing all 8 available GPIO pins (port parameter is ignored).
+ * Not available on UART platform.
+ *
  * \param[in]       ctx   Pointer to component.
- * \param[in]       port  Port number to read.
- * \param[out]      data  Read port data.
+ * \param[in]       port  Port number to read (ignored, only one port available).
+ * \param[out]      data  Read port data (8-bit GPIO state).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_ReadPort (void *ctx, uint32_t port, uint16_t *data);
 
 /**
- * \brief Reads a complete GPIO port.
+ * \brief Writes to a complete GPIO port.
+ *
+ * Writes to all GPIO pins in a single port operation with optional mask.
+ * Note: There is only one port containing all 8 available GPIO pins (port parameter is ignored).
+ * Not available on UART platform.
  *
  * \param[in]       ctx   Pointer to component.
- * \param[in]       port  Port number to write.
- * \param[in]       data  Port data to write.
- * \param[in]       mask  Write mask.
+ * \param[in]       port  Port number to write (ignored, only one port available).
+ * \param[in]       data  Port data to write (8-bit GPIO values).
+ * \param[in]       mask  Write mask (selects which pins to update).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -204,9 +222,12 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePort (void *ctx, uint32_t port, uint16_t data
 /**
  * \brief Apply GPIO pin configuration.
  *
+ * Applies GPIO pin configuration. Currently not used and always returns
+ * PTX_STATUS_E_GEN_NOT_AVAILABLE on all platforms.
+ *
  * \param[in]       ctx     Pointer to component.
- * \param[in]       cfg     GPIO configuration array.
- * \param[in]       cfgLen  Size of GPIO configuration array.
+ * \param[in]       cfg     GPIO configuration array (currently unused).
+ * \param[in]       cfgLen  Size of GPIO configuration array (currently unused).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -98,7 +98,7 @@ typedef struct ptx_HAL_DRV_GPIO_PortConfig
 
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_DRV_GPIO
 {
@@ -125,7 +125,11 @@ typedef struct ptx_HAL_DRV_GPIO_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx            Pointer to component.
+ * Initializes the GPIO driver component. Validates input parameters and sets up
+ * component references. The Log context must be a valid logger instance.
+ * Configures the internal port configuration structure to reference the ioport instance.
+ *
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -135,81 +139,115 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Init (ptx_HAL_DRV_GPIO_t *ctx, ptx_HAL_DRV_GPIO_In
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx   Pointer to component.
+ * Closes any open GPIO resources and clears all component data.
+ * Resets component ID to Comp_None. Calls ptx_HAL_DRV_GPIO_Close internally
+ * to ensure proper resource cleanup.
+ *
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_DeInit (ptx_HAL_DRV_GPIO_t *ctx);
 
 /**
- * \brief Opens a GPIO device
+ * \brief Opens a GPIO device.
  *
- * \param[in]       ctx     Pointer to component
+ * Opens the ioport interface using the configured ioport instance. If the port is already
+ * open (FSP_ERR_ALREADY_OPEN), it will be closed first and then reopened. This ensures
+ * a clean state for GPIO operations.
+ *
+ * \param[in,out]       ctx     Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx);
 
 /**
- * \brief Closes a GPIO device
+ * \brief Closes a GPIO device.
  *
- * \param[in]       ctx     Pointer to component
+ * Closes the ioport interface and releases associated resources. Returns success
+ * if the port is successfully closed or if it was not open (FSP_ERR_NOT_OPEN).
+ *
+ * \param[in,out]       ctx     Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_Close (void *ctx);
 
 /**
- * \brief Reads a pin
+ * \brief Reads a GPIO pin level.
+ *
+ * Reads the current logic level of the specified pin using the ioport interface.
+ * The pin parameter should be a valid pin identifier for the target MCU.
  *
  * \param[in]       ctx     Pointer to component.
  * \param[in]       pin     Pin to read from.
- * \param[out]      level   Level of the current pin.
+ * \param[out]      level   Pointer to variable for storing pin level (0 = LOW, 1 = HIGH).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_ReadPin (void *ctx, uint16_t pin, uint8_t *level);
 
 /**
- * \brief Write a pin
+ * \brief Writes a GPIO pin level.
+ *
+ * Sets the logic level of the specified pin using the ioport interface.
+ * Any non-zero level value sets the pin HIGH; zero sets it LOW.
  *
  * \param[in]       ctx     Pointer to component.
- * \param[in]       pin     Pin to read from.
- * \param[in]       level   Level to set the pin to.
+ * \param[in]       pin     Pin to write to.
+ * \param[in]       level   Level to set the pin to (0 = LOW, non-zero = HIGH).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_WritePin (void *ctx, uint16_t pin, uint8_t level);
 
 /**
- * \brief Reads data from port
+ * \brief Reads data from GPIO port.
+ *
+ * Reads the current state of all pins in the specified port using the ioport interface.
+ * The port parameter should be a valid port identifier for the target MCU.
  *
  * \param[in]       ctx     Pointer to component.
- * \param[in]       port    Port to read from
- * \param[out]      data    Port data
+ * \param[in]       port    Port to read from.
+ * \param[out]      data    Pointer to variable for storing port data.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_ReadPort (void *ctx, uint32_t port, uint16_t *data);
 
 /**
- * \brief Writes data port
+ * \brief Writes data to GPIO port.
+ *
+ * Sets the logic levels of pins in the specified port according to the data and mask parameters.
+ * Only pins corresponding to set bits in the mask are affected. The mask allows selective
+ * pin updates without affecting other pins in the port.
  *
  * \param[in]       ctx     Pointer to component.
- * \param[in]       port    Port to read from
- * \param[in]       data    Port data
- * \param[in]       mask    Mask of pins to read from
+ * \param[in]       port    Port to write to.
+ * \param[in]       data    Port data to write.
+ * \param[in]       mask    Mask of pins to write (1 = write, 0 = no change).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_GPIO_WritePort (void *ctx, uint32_t port, uint16_t data, uint16_t mask);
 
 /**
- * \brief Sets configuration for a pin
+ * \brief Sets configuration for GPIO pins.
+ *
+ * Configures one or more GPIO pins with the specified parameters. Supports configuration
+ * of pin direction (input/output), external interrupt enable, and pull-up settings.
+ * Configuration is applied sequentially; if any configuration fails, the operation aborts
+ * and returns an error status.
+ *
+ * Supported configuration keys:
+ * - HAL_DRV_GPIO_CfgParam_PinDirection: Set pin as input or output
+ * - HAL_DRV_GPIO_CfgParam_EnableExtIrq: Enable external interrupt on pin
+ * - HAL_DRV_GPIO_CfgParam_PinPullUpEnable: Enable pull-up resistor on pin
  *
  * \param[in]       ctx     Pointer to component.
- * \param[in]       cfg     Array of configurations.
- * \param[in]       cfgLen  Length of configuration array.
+ * \param[in]       cfg     Array of pin configurations.
+ * \param[in]       cfgLen  Length of configuration array (must be > 0).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */

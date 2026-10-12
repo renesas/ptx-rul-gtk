@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -202,7 +202,7 @@ ptx_Status_t ptx_NFCForumDTA_T5TMode(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_Tes
 
     if (PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA) && (NULL != testCfg) && (NULL != ndefInitParams))
     {
-        if ((0x0021 == testCfg->PATTERN_NUMBER) || (0x0012 == testCfg->PATTERN_NUMBER))
+        if ((0x0021 == testCfg->PATTERN_NUMBER) || (0x0012 == testCfg->PATTERN_NUMBER) || (0x0001 == testCfg->PATTERN_NUMBER) || (0x0002 == testCfg->PATTERN_NUMBER) || (0x0003 == testCfg->PATTERN_NUMBER))
         {
             ndefInitParams->t5tMode = ptx_NDEF_T5T_Mode_Addressed;
         }

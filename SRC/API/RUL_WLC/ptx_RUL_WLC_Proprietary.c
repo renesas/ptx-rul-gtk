@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -74,8 +74,10 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_ReadT2T(ptx_RUL_WLC_t *ctx, uint8_t block, 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != rxData) && (NULL != rxLen) && (PTX_WLC_PROPRIETARY_T2T_MAX_PAYLOAD_LEN >= *rxLen) )
+    if (PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != rxData) && (NULL != rxLen) && (PTX_WLC_PROPRIETARY_T2T_MAX_PAYLOAD_LEN >= *rxLen))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_ReadT2T");
+
         uint8_t tx_buffer[PTX_WLC_PROPRIETARY_T2T_READ_CMD_LEN];
         uint32_t tx_buffer_len = sizeof(tx_buffer);
 
@@ -93,8 +95,10 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_WriteT2T(ptx_RUL_WLC_t *ctx, uint8_t block,
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != txData) && (PTX_WLC_PROPRIETARY_T2T_MAX_PAYLOAD_LEN >= txDataLen) )
+    if (PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != txData) && (PTX_WLC_PROPRIETARY_T2T_MAX_PAYLOAD_LEN >= txDataLen))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_WriteT2T");
+
         uint8_t rx_buffer[PTX_WLC_PROPRIETARY_T2T_WRITE_RSP_LEN];
         uint32_t rx_buffer_len = sizeof(rx_buffer);
 
@@ -138,6 +142,8 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_SetListenerGpios(ptx_RUL_WLC_t *ctx, uint8_
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_SetListenerGpios");
+
         /* Read back Block content to not overwrite the remaining content. */
         uint8_t rx_buffer[PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN];
         uint32_t rx_buffer_len = sizeof(rx_buffer);
@@ -169,6 +175,8 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_SetListenerShippingModeEnable(ptx_RUL_WLC_t
 
     if (PTX_COMP_CHECK(ctx, Comp_WLC))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_SetListenerShippingModeEnable");
+
         /* Read back Block content to not overwrite the remaining content. */
         uint8_t rx_buffer[PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN];
         uint32_t rx_buffer_len = sizeof(rx_buffer);
@@ -197,8 +205,10 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_GetListenerSystemStatus(ptx_RUL_WLC_t *ctx,
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (NULL != statusInfo)
+    if ((NULL != statusInfo))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_GetListenerSystemStatus");
+
         uint8_t rx_buffer[PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN];
         uint32_t rx_buffer_len = sizeof(rx_buffer);
 
@@ -217,8 +227,10 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_Write(ptx_RUL_WLC_t *ctx, uint8_t *txDa
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != txData) && (PTX_WLC_PROPRIETARY_TDC_MAX_PAYLOAD_LEN >= txDataLen) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != txData) && (PTX_WLC_PROPRIETARY_TDC_MAX_PAYLOAD_LEN >= txDataLen))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_TDC_Write");
+
 #if defined(PTX_ENABLE_PROPRIETARY_TDC_NFC_FORUM)
         /*< Start with second data block and write the first one at last. */
         uint32_t buffer_pos = PTX_T2T_BLOCK_SIZE - PTX_WLC_PROPRIETARY_TDC_HEADER_LEN;
@@ -320,8 +332,10 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_IsReceived(ptx_RUL_WLC_t *ctx, uint8_t 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != received) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != received))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_TDC_IsReceived");
+
         /* Explicitly set "received" variable to zero. */
         *received = 0;
 
@@ -354,8 +368,10 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_Read(ptx_RUL_WLC_t *ctx, uint8_t *rxDat
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != rxData) && (NULL != rxLen) )
+    if ( PTX_COMP_CHECK(ctx, Comp_WLC) && (NULL != rxData) && (NULL != rxLen))
     {
+        PTX_LOG_I(ctx->Log, "ptx_RUL_WLC_Proprietary_TDC_Read");
+
         uint8_t rx_data[PTX_WLC_PROPRIETARY_TDC_MAX_MESSAGE_LEN];
 
         if (0 != rxTimeoutMs)

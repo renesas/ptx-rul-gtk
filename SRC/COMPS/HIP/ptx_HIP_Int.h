@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -76,7 +76,7 @@ extern "C" {
  * | B0 | B1 | -> | B1 | B0 |
  * +----+----+    +----+----+
  *
- * \param[inout]   x    (u)int16_t bytes to be swapped
+ * \param[in,out]   x    (u)int16_t bytes to be swapped
  */
 #define PTX_HIP_BSWAP16(x) x = __builtin_bswap16(x)
 
@@ -86,7 +86,7 @@ extern "C" {
  * The macro iterates over the array in x and swaps the two bytes the (u)int16_t.
  * The macro uses the \see PTX_HIP_BSWAP16 macro to swap the actual data.
  *
- * \param[inout]    x      array of (u)int16_t
+ * \param[in,out]   x      array of (u)int16_t
  * \param[in]       l      length of the array x
  */
 #define PTX_HIP_BSWAP16_ARRAY(x,l)        \

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -82,7 +82,7 @@
 
 /* Helper functions to control the Dscope block. */
 static ptx_Status_t ptx_PSL_DScopeConfigureSigDetMeas(ptx_PSL_t *psl);
-static ptx_Status_t ptx_PSL_DscopeCaptureImmediate(ptx_PSL_t *psl, uint16_t *data);
+static ptx_Status_t ptx_PSL_DScopeCaptureImmediate(ptx_PSL_t *psl, uint16_t *data);
 
 /* Helper functions for the analog and digital block configuration. */
 static ptx_Status_t ptx_PSL_ConfigureFrontEnd(ptx_PSL_t *psl, ptx_PSL_NfcType_t nfc_type);
@@ -98,9 +98,9 @@ static ptx_Status_t ptx_PSL_DScopeCaptureOffset(ptx_PSL_t *psl, ptx_PSL_DScopeCa
 static ptx_Status_t ptx_PSL_DScopeDeInit(ptx_PSL_t *psl);
 static ptx_Status_t ptx_PSL_DScopeStartSampling(ptx_PSL_t *psl, uint8_t startCh0, uint8_t startCh1);
 static ptx_Status_t ptx_PSL_DScopeStopSampling(ptx_PSL_t *psl, uint8_t stopCh0, uint8_t stopCh1);
-static uint16_t ptx_PSL_DscopeCaptureSizeToCmemWords(ptx_PSL_DScopeCaptureSize_t size);
-static ptx_Status_t ptx_PSL_DscopeReadCapture(ptx_PSL_t *psl, uint16_t *destinationData, ptx_PSL_DScopeRamModule_t module, ptx_PSL_DScopeCaptureOffset_t offset, ptx_PSL_DScopeCaptureSize_t size);
-static ptx_Status_t ptx_PSL_DscopeCaptureImmediate(ptx_PSL_t *psl, uint16_t *data);
+static uint16_t     ptx_PSL_DScopeCaptureSizeToCmemWords(ptx_PSL_DScopeCaptureSize_t size);
+static ptx_Status_t ptx_PSL_DScopeReadCapture(ptx_PSL_t *psl, uint16_t *destinationData, ptx_PSL_DScopeRamModule_t module, ptx_PSL_DScopeCaptureOffset_t offset, ptx_PSL_DScopeCaptureSize_t size);
+static ptx_Status_t ptx_PSL_DScopeCaptureImmediate(ptx_PSL_t *psl, uint16_t *data);
 
 /*
  * ####################################################################################################################
@@ -187,7 +187,7 @@ ptx_Status_t ptx_PSL_SigDetMeasurement(ptx_PSL_t *psl, ptx_PSL_SigDet_InParams_t
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    status = ptx_PSL_DscopeCaptureImmediate(psl, (uint16_t*) & (channel_data[channel_idx][0]));
+                    status = ptx_PSL_DScopeCaptureImmediate(psl, (uint16_t*) & (channel_data[channel_idx][0]));
                 }
             }
         }
@@ -287,48 +287,43 @@ ptx_Status_t ptx_PSL_SigDetMeasurement(ptx_PSL_t *psl, ptx_PSL_SigDet_InParams_t
  */
 static ptx_Status_t ptx_PSL_StartTx(ptx_PSL_t *psl, uint8_t txMultiplier)
 {
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    /* Set multiplier */
+    ptx_Status_t status = ptx_PSL_WriteRegister(psl, TX_WAVE_CW_REG, txMultiplier);
 
-    if (txMultiplier <= PTX_PSL_MAX_CW_MULTIPLIER)
+    if (PTX_STATUS_SUCCESS == status)
     {
-        /* Set multiplier */
-        status = ptx_PSL_WriteRegister(psl, TX_WAVE_CW_REG, txMultiplier);
+        /* Enable PA block */
+        status =  ptx_PSL_ModifyRegister(psl, ANA_TX_PA_REG, 1u, ANA_TX_PA_REG_TX_PA_BIAS_EN_MASK);
+    }
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* Enable PA block */
-            status =  ptx_PSL_ModifyRegister(psl, ANA_TX_PA_REG, 1u, ANA_TX_PA_REG_TX_PA_BIAS_EN_MASK);
-        }
+    if (PTX_STATUS_SUCCESS == status)
+    {
+        /* Enable standard mode (3V - 5.5V) */
+        status = ptx_PSL_WriteRegister(psl, ANA_TX_PA_CONTROL_REG, 0x00);
+    }
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* Enable standard mode (3V - 5.5V) */
-            status = ptx_PSL_WriteRegister(psl, ANA_TX_PA_CONTROL_REG, 0x00);
-        }
+    if (PTX_STATUS_SUCCESS == status)
+    {
+        /* Enable PA block */
+        status = ptx_PSL_ModifyRegister(psl, ANA_TX_PA_REG, 3u, ANA_TX_PA_REG_TX_PA_EN_MASK);
+    }
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* Enable PA block */
-            status = ptx_PSL_ModifyRegister(psl, ANA_TX_PA_REG, 3u, ANA_TX_PA_REG_TX_PA_EN_MASK);
-        }
+    if (PTX_STATUS_SUCCESS == status)
+    {
+        /* Enable the TX CLOCK */
+        status = ptx_PSL_ModifyRegister(psl, SYS_CLOCK_CONTROL0_REG, 1u, SYS_CLOCK_CONTROL0_REG_CLOCK_TX_EN_MASK);
+    }
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* Enable the TX CLOCK */
-            status = ptx_PSL_ModifyRegister(psl, SYS_CLOCK_CONTROL0_REG, 1u, SYS_CLOCK_CONTROL0_REG_CLOCK_TX_EN_MASK);
-        }
+    if (PTX_STATUS_SUCCESS == status)
+    {
+        /* Enable TX WAVEGEN */
+        status = ptx_PSL_ModifyRegister(psl, TX_WAVEGEN_CONFIG_REG, 1u, TX_WAVEGEN_CONFIG_REG_TX_WAVEGEN_EN_MASK);
+    }
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* Enable TX WAVEGEN */
-            status = ptx_PSL_ModifyRegister(psl, TX_WAVEGEN_CONFIG_REG, 1u, TX_WAVEGEN_CONFIG_REG_TX_WAVEGEN_EN_MASK);
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* Enable RF Field */
-            status = ptx_PSL_WriteRegister(psl, CL_RF_FIELD_REG, CL_RF_FIELD_REG_RFF_ACT_EN_MASK);
-        }
+    if (PTX_STATUS_SUCCESS == status)
+    {
+        /* Enable RF Field */
+        status = ptx_PSL_WriteRegister(psl, CL_RF_FIELD_REG, CL_RF_FIELD_REG_RFF_ACT_EN_MASK);
     }
 
     return status;
@@ -602,7 +597,7 @@ static ptx_Status_t ptx_PSL_DScopeStopSampling(ptx_PSL_t *psl, uint8_t stopCh0, 
     return ptx_PSL_WriteRegister(psl, DSCOPE_CTRL_CONTROL_REG, (uint8_t)(0x01 | (stopCh1 != 0 ? 0x10 : 0) | (stopCh0 != 0 ? 0x08 : 0)));
 }
 
-static uint16_t ptx_PSL_DscopeCaptureSizeToCmemWords(ptx_PSL_DScopeCaptureSize_t size)
+static uint16_t ptx_PSL_DScopeCaptureSizeToCmemWords(ptx_PSL_DScopeCaptureSize_t size)
 {
     uint16_t words = 0;
 
@@ -661,12 +656,12 @@ static uint16_t ptx_PSL_DscopeCaptureSizeToCmemWords(ptx_PSL_DScopeCaptureSize_t
     return words;
 }
 
-static ptx_Status_t ptx_PSL_DscopeReadCapture(ptx_PSL_t *psl, uint16_t *destinationData, ptx_PSL_DScopeRamModule_t module, ptx_PSL_DScopeCaptureOffset_t offset, ptx_PSL_DScopeCaptureSize_t size)
+static ptx_Status_t ptx_PSL_DScopeReadCapture(ptx_PSL_t *psl, uint16_t *destinationData, ptx_PSL_DScopeRamModule_t module, ptx_PSL_DScopeCaptureOffset_t offset, ptx_PSL_DScopeCaptureSize_t size)
 {
     ptx_Status_t status = PTX_STATUS_SUCCESS;
 
     uint16_t start_address = (uint16_t)((module == DScopeRamModule0 ? PTX_PSL_RAM0_START_ADDRESS : PTX_PSL_RAM1_START_ADDRESS) +  (offset * 512));
-    uint16_t words_to_read = ptx_PSL_DscopeCaptureSizeToCmemWords(size);
+    uint16_t words_to_read = ptx_PSL_DScopeCaptureSizeToCmemWords(size);
 
     uint16_t full_chunks = words_to_read / PTX_PSL_CMEM_CHUNK_SIZE;
     uint16_t partial_chunk_len = words_to_read % PTX_PSL_CMEM_CHUNK_SIZE;
@@ -687,7 +682,7 @@ static ptx_Status_t ptx_PSL_DscopeReadCapture(ptx_PSL_t *psl, uint16_t *destinat
     return status;
 }
 
-static ptx_Status_t ptx_PSL_DscopeCaptureImmediate(ptx_PSL_t *psl, uint16_t *data)
+static ptx_Status_t ptx_PSL_DScopeCaptureImmediate(ptx_PSL_t *psl, uint16_t *data)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -701,21 +696,21 @@ static ptx_Status_t ptx_PSL_DscopeCaptureImmediate(ptx_PSL_t *psl, uint16_t *dat
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            /* Stop capturing to DSCOPE_CTRL_CONTROL_REG. */
+            /* Stop capturing by writing to DSCOPE_CTRL_CONTROL_REG. */
             status = ptx_PSL_DScopeStopSampling(psl, 1, 1);
         }
 
         if (PTX_STATUS_SUCCESS == status)
         {
             /* Read data from RAM and return raw data. */
-            status = ptx_PSL_DscopeReadCapture(psl, data, DScopeRamModule0, DScopeCaptureOffset_0KB, DScopeCaptureSize_256B);
+            status = ptx_PSL_DScopeReadCapture(psl, data, DScopeRamModule0, DScopeCaptureOffset_0KB, DScopeCaptureSize_256B);
         }
 
         if (PTX_STATUS_SUCCESS == status)
         {
             /* Read data from RAM and return raw data. */
-            uint16_t words_to_read = ptx_PSL_DscopeCaptureSizeToCmemWords(DScopeCaptureSize_256B);
-            status = ptx_PSL_DscopeReadCapture(psl, &data[words_to_read], DScopeRamModule1, DScopeCaptureOffset_15KB, DScopeCaptureSize_256B);
+            uint16_t words_to_read = ptx_PSL_DScopeCaptureSizeToCmemWords(DScopeCaptureSize_256B);
+            status = ptx_PSL_DScopeReadCapture(psl, &data[words_to_read], DScopeRamModule1, DScopeCaptureOffset_15KB, DScopeCaptureSize_256B);
         }
     }
 

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -61,11 +61,11 @@
  *
  *
  */
-#define PTX_NSC_RF_DISCOVER_PARAM_POLL_LENGTH               (12u)   /* Length of the General Poll Config parameter. */
+#define PTX_NSC_RF_DISCOVER_PARAM_POLL_LENGTH               (13u)   /* Length of the General Poll Config parameter. */
 #define PTX_NSC_RF_DISCOVER_PARAM_POLL_ACM_LENGTH           (2u)    /* Length of the NFC-ACM Poll Config parameter. */
 #define PTX_NSC_RF_DISCOVER_PARAM_POLL_A_LENGTH             (3u)    /* Length of the NFC-A Poll Config parameter. */
 #define PTX_NSC_RF_DISCOVER_PARAM_POLL_B_LENGTH             (5u)    /* Length of the NFC-B Poll Config parameter. */
-#define PTX_NSC_RF_DISCOVER_PARAM_POLL_F_LENGTH             (8u)    /* Length of the NFC-F Poll Config parameter. */
+#define PTX_NSC_RF_DISCOVER_PARAM_POLL_F_LENGTH             (9u)    /* Length of the NFC-F Poll Config parameter. */
 #define PTX_NSC_RF_DISCOVER_PARAM_POLL_V_LENGTH             (3u)    /* Length of the NFC-V Poll Config parameter. */
 #define PTX_NSC_RF_DISCOVER_PARAM_POLL_PA_LENGTH            (22u)   /* Length of the proprietary NFC-A Poll Config parameter. */
 #define PTX_NSC_RF_DISCOVER_PARAM_POLL_ISODEP_LENGTH        (18u)   /* Length of the Poll ISO_DEP parameter. */
@@ -115,6 +115,8 @@ ptx_Status_t ptx_NSC_GetRfDiscoveryParam_Poll(ptx_NSC_t *nsc, ptx_NSC_RfDiscover
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != cfg) && (NULL != params))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_GetRfDiscoveryParam_Poll");
+
         switch (type)
         {
             case NSC_RfDiscover_Param_Type_Poll:
@@ -199,6 +201,17 @@ ptx_Status_t ptx_NSC_ParamParser_Poll(uint8_t **bufferPos, uint32_t *availableLe
         (*bufferPos)[cmd_idx] = param_poll->DevicesLimit;
         cmd_idx++;
 
+        if (0 != param_poll->RFAmplitudeLimiterEnable)
+        {
+            /* Implicitly enable RF-Limiter + internal Event checking. */
+            (*bufferPos)[cmd_idx] = (uint8_t)0x03u;
+            cmd_idx++;
+        }
+        else
+        {
+            (*bufferPos)[cmd_idx] = 0;
+            cmd_idx++;
+        }
 
         *bufferPos += cmd_idx;
         *availableLen -= cmd_idx;
@@ -383,6 +396,8 @@ ptx_Status_t ptx_NSC_ParamParser_PollF(uint8_t **bufferPos, uint32_t *availableL
         (*bufferPos)[cmd_idx] = param_poll_F->InitialTimeSlotNr;
         cmd_idx++;
 
+        (*bufferPos)[cmd_idx] = param_poll_F->FieldReset;
+        cmd_idx++;
 
         *bufferPos += cmd_idx;
         *availableLen -= cmd_idx;
@@ -553,6 +568,9 @@ static ptx_Status_t ptx_NSC_ConfigurePoll(ptx_NSC_RfDiscovery_Cfg_t *cfg, ptx_NS
                 case NSC_RfDiscover_PollMode_Lpcd:
                     pollParams->PollMode = NSC_RfDiscover_PollMode_Lpcd;
                     break;
+                case NSC_RfDiscover_PollMode_TypeFPropr:
+                    pollParams->PollMode = NSC_RfDiscover_PollMode_TypeFPropr;
+                    break;
                 default:
                     pollParams->PollMode = NSC_RfDiscover_PollMode_Disable;
                     break;
@@ -600,6 +618,7 @@ static ptx_Status_t ptx_NSC_ConfigurePoll(ptx_NSC_RfDiscovery_Cfg_t *cfg, ptx_NS
             pollParams->StdbyWuCfg[1] = (uint8_t)((cfg->StdbyWuCfg >> 8) & (uint8_t)0xFF);
 
             pollParams->DevicesLimit = cfg->PollDevicesLimit;
+            pollParams->RFAmplitudeLimiterEnable = cfg->PollRFAmplitudeLimiterEnable;
         }
     }
     else
@@ -805,6 +824,11 @@ static ptx_Status_t ptx_NSC_ConfigurePollF(ptx_NSC_RfDiscovery_Cfg_t *cfg, ptx_N
                 pollFParams->BitRate = NSC_BitRate_424;
             }
 
+            if (0 != cfg->PollTypeFFieldReset)
+            {
+                pollFParams->FieldReset = cfg->PollTypeFFieldReset;
+            }
+
             if ((1 == cfg->PollTypeF212) || (1 == cfg->PollTypeF424))
             {
                 if (0 != cfg->PollTypeFCmdParams.OverwriteDefaultParams)
@@ -966,6 +990,7 @@ static ptx_Status_t ptx_NSC_SetDefaultDiscParams(ptx_NSC_RfDiscovery_Cfg_t *cfg,
                 pollParams->DevicesLimit            = PTX_NSC_RF_DISCOVER_POLL_NO_DEVICE_LIMIT;
                 pollParams->NtfEnable               = (uint8_t)(PTX_NSC_RF_DISCOVER_POLL_LPCD_NTF_ENABLE +
                                                                 PTX_NSC_RF_DISCOVER_POLL_ERROR_NTF_ENABLE);
+                pollParams->RFAmplitudeLimiterEnable = 0;
 
                 status = PTX_STATUS_SUCCESS;
 
@@ -1064,6 +1089,7 @@ static ptx_Status_t ptx_NSC_SetDefaultDiscParams(ptx_NSC_RfDiscovery_Cfg_t *cfg,
                 pollFParams->SystemCode[1]          = 0xFFu;
                 pollFParams->RequestCode            = 0x00u;
                 pollFParams->InitialTimeSlotNr      = 0x03u;
+                pollFParams->FieldReset             = 0x00u;
 
                 status = PTX_STATUS_SUCCESS;
 

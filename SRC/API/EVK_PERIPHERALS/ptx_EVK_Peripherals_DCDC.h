@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -72,7 +72,7 @@ extern "C" {
  * \name Generic DC/DC Converter defines.
  * @{
  */
-#define PTX_EVK_PERIPHERALS_DCDC_I2C_ADDRESS    (0x69)   /**< Default I2C address of DC/DC converter. */
+#define PTX_EVK_PERIPHERALS_DCDC_I2C_ADDRESS    (0x60)   /**< Default I2C address of DC/DC converter. */
 /** @} */
 
 /*

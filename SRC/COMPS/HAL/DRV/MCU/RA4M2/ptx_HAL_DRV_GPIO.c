@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -77,8 +77,10 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Init (ptx_HAL_DRV_GPIO_t *ctx, ptx_HAL_DRV_GPIO_In
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (NULL != ctx)
-    {
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
+    {        
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_GPIO_Init");
+
         (void)memset(ctx, 0, sizeof(ptx_HAL_DRV_GPIO_t));
 
         ctx->CompId    = Comp_HAL;
@@ -98,6 +100,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_DeInit (ptx_HAL_DRV_GPIO_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_GPIO_DeInit");
+
         (void)ptx_HAL_DRV_GPIO_Close (ctx);
         memset(ctx, 0, sizeof(ptx_HAL_DRV_GPIO_t));
         status = PTX_STATUS_SUCCESS;
@@ -111,8 +115,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)(ctx);
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Open");
+
         fsp_err_t r_status = R_IOPORT_Open(gpio->Port->Instance->p_ctrl, gpio->Port->Instance->p_cfg);
         if (FSP_ERR_ALREADY_OPEN == r_status)
         {
@@ -150,8 +157,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Close (void *ctx)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)(ctx);
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Close");
+
         fsp_err_t r_status = R_IOPORT_Close(gpio->Port->Instance->p_ctrl);
         if ((FSP_SUCCESS == r_status) || (FSP_ERR_NOT_OPEN == r_status))
         {
@@ -171,8 +181,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPin (void *ctx, uint16_t pin, uint8_t *level)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)(ctx);
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL) && (NULL != level))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPin");
+
         fsp_err_t r_status = R_IOPORT_PinRead(gpio->Port->Instance->p_ctrl, pin, level);
         if (FSP_SUCCESS == r_status)
         {
@@ -192,8 +205,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePin (void *ctx, uint16_t pin, uint8_t level)
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)(ctx);
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_WritePin");
+
         fsp_err_t r_status = R_IOPORT_PinWrite(gpio->Port->Instance->p_ctrl, pin, level);
         if (FSP_SUCCESS == r_status)
         {
@@ -213,8 +229,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPort (void *ctx, uint32_t port, uint16_t *data
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)(ctx);
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL) && (NULL != data))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPort");
+
         fsp_err_t r_status = R_IOPORT_PortRead(gpio->Port->Instance->p_ctrl, port, data);
         if (FSP_SUCCESS == r_status)
         {
@@ -234,8 +253,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePort (void *ctx, uint32_t port, uint16_t data
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)(ctx);
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_WritePort");
+
         fsp_err_t r_status = R_IOPORT_PortWrite(gpio->Port->Instance->p_ctrl, port, data, mask);
         if (FSP_SUCCESS == r_status)
         {
@@ -255,8 +277,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_SetCfgPin (void *ctx, ptx_HAL_DRV_GPIO_Cfg_t *cfg,
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)(ctx);
+
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
+        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_SetCfgPin");
+
         for (uint32_t i = 0; i < cfgLen; ++i)
         {
             fsp_err_t r_status = FSP_SUCCESS;

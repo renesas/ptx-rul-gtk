@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corp. and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corp. and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -41,8 +41,8 @@
 */ 
 /**
     BUILD-META-DATA
-    Config Tool version : 1.4.0
-    Date/Time           : 2026-02-02 13:54:03
+    Config Tool version : 1.7.2
+    Date/Time           : 2026-09-15 10:14:51
     Input file          : .renrul
 *//*
  * File Auto-Generated (not modified)
@@ -90,12 +90,6 @@ extern uint8_t ptx_NSC_RfConfig_PollF424[];
 
 extern const uint8_t ptx_NSC_RfConfig_PollV26_5_len;
 extern uint8_t ptx_NSC_RfConfig_PollV26_5[];
-
-extern const uint8_t ptx_NSC_RfConfig_PollV53_len;
-extern uint8_t ptx_NSC_RfConfig_PollV53[];
-
-extern const uint8_t ptx_NSC_RfConfig_PollV106_len;
-extern uint8_t ptx_NSC_RfConfig_PollV106[];
 
 #ifndef PTX_DISABLE_LISTEN_MODE
 extern const uint8_t ptx_NSC_RfConfig_ListenA212_len;

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -129,7 +129,7 @@ ptx_Status_t ptx_RUL_LLCP_TrxState_SetSendAcknowledgeState(ptx_RUL_LLCP_TrxState
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(ctx, Comp_LLCP_TrxState))
-    {
+    {       
         ctx->Vsa = vsa % PTX_LLCP_CONNECTION_STATE_RW;
         status = PTX_STATUS_SUCCESS;
     }

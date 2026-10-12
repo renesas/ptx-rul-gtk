@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -76,6 +76,8 @@ ptx_Status_t ptx_RUL_RegisterExtensionEndpoints(ptx_RUL_t *rul, ptx_RUL_Extensio
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (NULL != endpoint) && (NULL != endpoint->Extension) && (Comp_MAX > endpoint->CompId))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_RegisterExtensionEndpoints");
+
         status = PTX_STATUS_SUCCESS;
         uint8_t index = 0;
         switch (endpoint->CompId)
@@ -117,6 +119,8 @@ ptx_Status_t ptx_RUL_RemoveExtensionEndpoints(ptx_RUL_t *rul, ptx_Comps_t compId
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && (Comp_MAX > compId))
     {
+        PTX_LOG_I(&rul->Log, "ptx_RUL_RemoveExtensionEndpoints");
+        
         for (uint8_t i = 0; i < PTX_RUL_MAX_EXTENSIONS; i++)
         {
             if (rul->ExtensionEndpoints[i].CompId == compId)

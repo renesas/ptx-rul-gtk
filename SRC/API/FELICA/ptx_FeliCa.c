@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -147,7 +147,7 @@ static ptx_Status_t ptx_FeliCa_INT_DataExchange (ptx_FeliCa_t *feliCa, uint32_t 
 static ptx_Status_t ptx_FeliCa_INT_UpdateCardInfo (ptx_FeliCa_t *feliCa);
 
 /*
- *  Calculates the timeout-value in ms for a FeliCa/T3T command based on the commands max. response time parameter.
+ *  Calculates the timeout-value in ms for a FeliCa/T3T command based on the command's max. response time parameter.
  *
  *   maxResponseTimeParam Pointer to an existing instance of the FeliCa component.
  *   commandCode          FeliCa/T3T command-code.
@@ -301,7 +301,7 @@ ptx_Status_t ptx_FeliCa_Polling (ptx_FeliCa_t *feliCa,
     ptx_FeliCa_Polling_State_t poll_state = Polling_State_Reset;
     uint8_t nr_polling_cycles = 0;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != nrAvailableCards) && (NULL != cardData))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != nrAvailableCards) && (NULL != cardData))
     {
         status = PTX_STATUS_SUCCESS;
         while ((Polling_State_Exit != poll_state) && (PTX_STATUS_SUCCESS == status))
@@ -391,7 +391,7 @@ ptx_Status_t ptx_FeliCa_GetCardParameters (ptx_FeliCa_t *feliCa, uint8_t *nrAvai
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != nrAvailableCards) && (NULL != cardData))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != nrAvailableCards) && (NULL != cardData))
     {
         *nrAvailableCards =  feliCa->CardParams.NrAvailableCards;
         *cardData         = &feliCa->CardParams.CardData[0];
@@ -405,7 +405,7 @@ ptx_Status_t ptx_FeliCa_SelectActiveCard (ptx_FeliCa_t *feliCa, uint8_t selected
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (PTX_MAX_SUPPORTED_FELICA_CARDS > selectedCardIndex))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (PTX_MAX_SUPPORTED_FELICA_CARDS > selectedCardIndex))
     {
         feliCa->CardParams.ActiveCardIndex = selectedCardIndex;
         status = PTX_STATUS_SUCCESS;
@@ -421,7 +421,7 @@ ptx_Status_t ptx_FeliCa_RequestResponse (ptx_FeliCa_t *feliCa, uint8_t *currentM
     uint8_t max_response_t_param;
     uint32_t timeout_value;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != currentMode))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != currentMode))
     {
         status = ptx_FeliCa_INT_SetupCommand(feliCa, PTX_FELICA_CMD_REQUEST_RESPONSE);
 
@@ -468,7 +468,7 @@ ptx_Status_t ptx_FeliCa_RequestService (ptx_FeliCa_t *feliCa,
     uint8_t max_response_t_param;
     uint32_t timeout_value;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (32U >= nrServices) && (NULL != serviceList) && (NULL != nrReadServices) && (NULL != readServiceList))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (32U >= nrServices) && (NULL != serviceList) && (NULL != nrReadServices) && (NULL != readServiceList))
     {
         status = ptx_FeliCa_INT_SetupCommand(feliCa, PTX_FELICA_CMD_REQUEST_SERVICE);
 
@@ -534,7 +534,7 @@ ptx_Status_t ptx_FeliCa_Read (ptx_FeliCa_t *feliCa,
     uint32_t max_packet_size;
     uint16_t status_flags = 0;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != serviceList) && (NULL != blockListToRead) && (NULL != blockDataRead) && (NULL != nrBlocksRead))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != serviceList) && (NULL != blockListToRead) && (NULL != blockDataRead) && (NULL != nrBlocksRead))
     {
         max_packet_size = (uint32_t)(PTX_FELICA_COMMAND_CODE_LEN +
                                      PTX_FELICA_IDM_MAX_LENGTH   +
@@ -638,7 +638,7 @@ ptx_Status_t ptx_FeliCa_Write (ptx_FeliCa_t *feliCa,
     uint32_t max_packet_size;
     uint16_t status_flags = 0;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != serviceList) && (NULL != blockListToWrite) && (NULL != blockData))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != serviceList) && (NULL != blockListToWrite) && (NULL != blockData))
     {
         max_packet_size = (uint32_t)(PTX_FELICA_COMMAND_CODE_LEN +
                                      PTX_FELICA_IDM_MAX_LENGTH   +
@@ -981,7 +981,7 @@ static ptx_Status_t ptx_FeliCa_GetNumberCardResponses(ptx_FeliCa_t *feliCa, uint
 
     uint32_t expected_single_response_length = (uint32_t)(PTX_FELICA_SENSF_RES_HEADER_LEN + PTX_FELICA_IDM_MAX_LENGTH + PTX_FELICA_PMM_MAX_LENGTH);
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != nrCardResponses))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != nrCardResponses))
     {
         if (0 != rdPresent)
         {
@@ -1027,7 +1027,7 @@ static ptx_Status_t ptx_FeliCa_ParseCardData(ptx_FeliCa_t *feliCa,
     uint8_t response_code = 0;
     uint8_t rf_status_offset = ((0 == rdPresent) ? VALID_SENSF_RES_MIN_LEN : VALID_SENSF_RES_MAX_LEN);
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != parseIndex) && (NULL != cardData) && (NULL != isCollision))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != parseIndex) && (NULL != cardData) && (NULL != isCollision))
     {
         /* default initialization */
         *isCollision = 0;
@@ -1121,7 +1121,7 @@ static ptx_Status_t ptx_FeliCa_StoreCardData(ptx_FeliCa_t *feliCa, ptx_FeliCa_Ca
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint8_t is_present = 0;
 
-    if ((PTX_COMP_CHECK(feliCa, Comp_FeliCa)) && (NULL != cardData))
+    if (PTX_COMP_CHECK(feliCa, Comp_FeliCa) && (NULL != cardData))
     {
         /* check first if card is already present in internal container */
         for (uint8_t i = 0; i < feliCa->CardParams.NrAvailableCards; i++)

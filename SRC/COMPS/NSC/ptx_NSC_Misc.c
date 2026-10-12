@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -79,12 +79,12 @@
 #define PTX_NSC_GETSTATUS_RSP_DDPC_LEN          1U      /* Length of DDPC_PL parameter. */
 #define PTX_NSC_GETSTATUS_RSP_RSSI_LEN          3U      /* Length of RSSI parameter. */
 #define PTX_NSC_GETSTATUS_RSP_COLL_LEN          1U      /* Length of COLL_INFO parameter. */
+#define PTX_NSC_GETSTATUS_RSP_TEMP_LEN          1U      /* Length of Temperature parameter. */
 
 #define PTX_UINT32_1BY_MASK                     (uint32_t)0x000000FF /* Mask for 1st byte (LSB) of an uint32_t value. */
 #define PTX_UINT32_2BY_MASK                     (uint32_t)0x0000FF00 /* Mask for 2nd byte of an uint32_t value. */
 #define PTX_UINT32_3BY_MASK                     (uint32_t)0x00FF0000 /* Mask for 3rd byte of an uint32_t value. */
 #define PTX_UINT32_SHIFT_LEFT(x, n)             (uint32_t)((uint32_t)x << n)    /* Left shift byte x by n bits and cast to uint32_t */
-
 
 /*
  * ####################################################################################################################
@@ -107,6 +107,8 @@ ptx_Status_t ptx_NSC_Read(ptx_NSC_t *nsc, uint16_t address, uint8_t len, uint8_t
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != data))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_Read");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_Read, NULL);
     }
 
@@ -174,6 +176,8 @@ ptx_Status_t ptx_NSC_Write(ptx_NSC_t *nsc, uint16_t address, uint8_t len, uint8_
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != data) && (0 != len))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_Write");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_Write, NULL);
     }
 
@@ -237,6 +241,8 @@ ptx_Status_t ptx_NSC_Loopback(ptx_NSC_t *nsc, uint8_t len, uint8_t *data)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != data))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_Loopback");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_Loopback, NULL);
     }
 
@@ -308,6 +314,8 @@ ptx_Status_t ptx_NSC_GetStatus(ptx_NSC_t *nsc, ptx_NSC_ParamStatus_t *paramStatu
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != paramStatus))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_GetStatus");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_GetStatus, NULL);
     }
 
@@ -357,12 +365,20 @@ ptx_Status_t ptx_NSC_GetStatus(ptx_NSC_t *nsc, ptx_NSC_ParamStatus_t *paramStatu
 
                 /* Read out the collision information of the last reception. */
                 paramStatus->CollInfo = rsp_buffer[idx];
-                idx++;
+                idx = (uint8_t)(idx + PTX_NSC_GETSTATUS_RSP_COLL_LEN);
 
                 /* Read out the current IC temperature in degree celsius. */
                 paramStatus->Temperature = rsp_buffer[idx];
+                idx = (uint8_t)(idx + PTX_NSC_GETSTATUS_RSP_TEMP_LEN);
 
-                /* TODO add Remote RF field strength parameter (2 bytes) */
+                /* Read out the measured Remote RF field strength. 
+                   Note: for NON-Zero values ALM_PC needs to be enabled in the 
+                   Listen Mode configuration parameters which is not yet supported
+                   (FW v0.47)
+                */
+                paramStatus->RfFieldStrength = 
+                        ((uint16_t)rsp_buffer[idx] << 8) |
+                        ((uint16_t)rsp_buffer[idx + 1]);
             }
         }
     }

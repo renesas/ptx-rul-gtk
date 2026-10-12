@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -75,26 +75,7 @@ extern "C" {
  */
 
 /**
- * \brief Async Receive Callback Type
- *
- * This callback must be implemented if async communication from the PTX2xxR/W to the host MCU is required.
- * Usually this callback will be implemented by the HIP layer.
- *
- * \param[in]   ctx             Initialised context for the callback
- */
-typedef void (*ptx_HAL_Interface_UART_AsyncRxCb_t)(void *ctx);
-
-/**
- * \brief Async Rx Context
- *
- * This context must for the requirements for the \ref ptx_HAL_Interface_AsyncRxCb_t callback!
- *
- * \note This callback must be at least \ref ptx_HAL_t!
- */
-typedef void *ptx_HAL_Interface_UART_AsyncRxCbCtx_t;
-
-/**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HAL_Interface_UART
 {
@@ -102,9 +83,6 @@ typedef struct ptx_HAL_Interface_UART
     ptx_HAL_DRV_Interface_UART_t                 Drv;            /**< Hardware Interface Driver. */
 
     uint32_t                                     CfgBaudrate;    /**< Initial Configured BaudRate. */
-
-    ptx_HAL_Interface_UART_AsyncRxCb_t           AsyncRxCb;      /**< Async Receive Callback. */
-    ptx_HAL_Interface_UART_AsyncRxCbCtx_t        AsyncRxCbCtx;   /**< Async Receive Callback Context. */
 } ptx_HAL_Interface_UART_t;
 
 /**
@@ -119,9 +97,9 @@ typedef struct ptx_HAL_Interface_UART_InitParams
     uint8_t                             PortID;               /**< ID of the hardware interface port implementation. */
 
     uint32_t                            Speed;                /**< Communication interface speed. */
-    ptx_Log_t                           *Log;                 /**< Initialised Logger Context. */
+    ptx_Log_t                           *Log;                 /**< Initialised Log Context. */
     ptx_HAL_GPIO_t                      *Gpio;                /**< Initialized GPIO Context. */
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
     void                                *OS;                  /**< Pointer to initialized Osal context. */
 #endif
 } ptx_HAL_Interface_UART_InitParams_t;
@@ -136,7 +114,7 @@ typedef struct ptx_HAL_Interface_UART_InitParams
 /**
  * \brief UART Communication Interface Initialization.
  *
- * \param[in]       ctx         Pointer to component.
+ * \param[out]      ctx         Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -146,7 +124,7 @@ ptx_Status_t ptx_HAL_Interface_UART_Init (ptx_HAL_Interface_UART_t *ctx, ptx_HAL
 /**
  * \brief UART Communication Interface De-Initialization.
  *
- * \param[in]       ctx   Pointer to component.
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -157,7 +135,7 @@ ptx_Status_t ptx_HAL_Interface_UART_DeInit (ptx_HAL_Interface_UART_t *ctx);
  *
  * Opens the initialised device.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -168,7 +146,7 @@ ptx_Status_t ptx_HAL_Interface_UART_Open (void *ctx);
  *
  * Closes the initialised device.
  *
- * \param[in]       ctx             Pointer to component.
+ * \param[in,out]       ctx             Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -185,9 +163,9 @@ ptx_Status_t ptx_HAL_Interface_UART_Close (void *ctx);
  * \param[in]       txBuf           Pointer to array of data to be transmitted.
  * \param[in]       txLen           Length of each of the arrays in \see txBuf.
  * \param[in]       txBufferCnt     Number of buffers to be transmitted.
- * \param[inout]    rxBuf           Pointer to array of data to be received. The array must have the right size!
- * \param[inout]    rxLen           Length of each array to be received.
- * \param[in]       rxBufferCnt     Number of buffers to be transmitted.
+ * \param[out]      rxBuf           Pointer to array of data to be received. The array must have the right size!
+ * \param[in]       rxLen           Length of each array to be received.
+ * \param[in]       rxBufferCnt     Number of buffers to be received.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -221,42 +199,6 @@ ptx_Status_t ptx_HAL_Interface_UART_Tx (void *ctx, uint8_t *txBuf, uint32_t txLe
 ptx_Status_t ptx_HAL_Interface_UART_Rx (void *ctx, uint8_t *rxBuf, uint32_t rxLen);
 
 /**
- * \brief UART Communication Interface Enable Async Rx
- *
- * Enables the async rx functionality.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_UART_EnableAsyncRx (void *ctx);
-
-/**
- * \brief UART Communication Interface Disable Async Rx
- *
- * Disables the async rx functionality.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_UART_DisableAsyncRx (void *ctx);
-
-/**
- * \brief UART Communication Interface Register Async Rx Callback.
- *
- * Registers the callback \see rxCb. The callback is called if \see ptx_HAL_Interface_AsyncRx detects an transfer.
- * \see rxCbCtx is the corresponding context for the callback to work with.
- *
- * \param[in]       ctx             Pointer to component.
- * \param[in]       rxCb            Callback function.
- * \param[in]       rxCbCtx         Callback context.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_UART_RegAsyncRxCb(void *ctx, ptx_HAL_Interface_UART_AsyncRxCb_t rxCb, ptx_HAL_Interface_UART_AsyncRxCbCtx_t rxCbCtx);
-
-/**
  * \brief UART Communication Interface Rx Pending.
  *
  * Checks if the attached device wants to communicate with the host. The device signals this by either an
@@ -268,32 +210,6 @@ ptx_Status_t ptx_HAL_Interface_UART_RegAsyncRxCb(void *ctx, ptx_HAL_Interface_UA
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_Interface_UART_RxPending(void* ctx, uint8_t* rxPending);
-
-/**
- * \brief UART Communication Interface Async Rx Function. NoN Blocking.
- *
- * Checks if the attached device wants to communicate with the host. The device signals this by either an
- * GPIO pin, or RTS, etc. If this function detects the signal, it executes a \see ptx_HAL_Interface_AsyncRxCb_t
- * callback.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_UART_AsyncRxNonBlocking(void *ctx);
-
-/**
- * \brief UART Communication Interface Async Rx Function. Blocking.
- *
- * Checks if the attached device wants to communicate with the host. The device signals this by either an
- * GPIO pin, or RTS, etc. If this function detects the signal, it executes a \see ptx_HAL_Interface_AsyncRxCb_t
- * callback.
- *
- * \param[in]       ctx             Pointer to component.
- *
- * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
- */
-ptx_Status_t ptx_HAL_Interface_UART_AsyncRxBlocking(void *ctx);
 
 /**
  * \brief HAL UART Communication Interface Set Parameter function.

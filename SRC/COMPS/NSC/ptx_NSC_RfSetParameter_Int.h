@@ -3,7 +3,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -94,7 +94,6 @@ extern "C" {
 #define PTX_NSC_RF_SET_BITRATE_424                        (0x02u)     /**< NSC RF Type bit-rate 424kbps */
 #define PTX_NSC_RF_SET_BITRATE_848                        (0x03u)     /**< NSC RF Type bit-rate 848kbps */
 #define PTX_NSC_RF_SET_BITRATE_26_5                       (0x06u)     /**< NSC RF Type bit-rate 26.5kbps */
-#define PTX_NSC_RF_SET_BITRATE_53                         (0x07u)     /**< NSC RF Type bit-rate 53kbps */
 /** @} */
 
 /**

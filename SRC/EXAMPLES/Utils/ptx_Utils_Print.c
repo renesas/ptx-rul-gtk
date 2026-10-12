@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -137,11 +137,10 @@ void ptx_Utils_Print_Buffer(uint8_t *buffer, uint16_t bufferLength, uint8_t addN
 
     if ((NULL != buffer) && (0 != bufferLength))
     {
-        for (uint16_t i = 0, line_idx = 0; (i < bufferLength) && (i < PTX_MAX_PRINTBUF_SIZE); i++)
+        for (uint16_t i = 0; (i < bufferLength) && (i < PTX_MAX_PRINTBUF_SIZE); i++)
         {
             if ((i > 0) && ((i % (PTX_PRINT_LINE_LENGTH - 5) == 0)))
             {
-                line_idx++;
                 ptx_Utils_Print("\n     ");
             }
 

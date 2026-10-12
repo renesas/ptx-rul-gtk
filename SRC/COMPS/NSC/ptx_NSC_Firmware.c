@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -82,6 +82,8 @@ ptx_Status_t ptx_NSC_Firmware_Download(ptx_NSC_t *nsc, uint8_t forceDownload, pt
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_Firmware_Download");
+
         /* NSC structure holds HW and FW version information retrieved from NSC_RESET_NTF. */
 
         /* Check FW version. */
@@ -146,6 +148,8 @@ ptx_Status_t ptx_NSC_Firmware_Activate(ptx_NSC_t *nsc, ptx_NSC_FwVerifyCb_t fwVe
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_Firmware_Activate");
+
         /* System reset and enable DFY. */
         status = ptx_HIP_SysRst(nsc->HIP, HIP_Cmd_SysRst_RstEnDfy);
 
@@ -224,6 +228,8 @@ static ptx_Status_t ptx_NSC_WriteSection(ptx_NSC_t *nsc, const uint32_t address,
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_WriteSection");
+
         /* System is ready to be flashed. */
         uint16_t write_address = (uint16_t) address;
         uint16_t *write_content = (uint16_t*) data;
@@ -280,6 +286,8 @@ static ptx_Status_t ptx_NSC_PrepareForcedDownload(ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_PrepareForcedDownload");
+
         /* Stop DFY. */
         status = ptx_HIP_SysRst(nsc->HIP, HIP_Cmd_SysRst_NoRstDisDfy);
 

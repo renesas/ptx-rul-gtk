@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -85,7 +85,7 @@ extern "C" {
  */
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_NativeTag_T5T
 {
@@ -141,7 +141,7 @@ ptx_Status_t ptx_NativeTag_T5T_Close (ptx_NativeTag_T5T_t *t5t);
 /**
  * \brief Performs a READ_SINGLE_BLOCK_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Request Block Security Status" for Read-alike commands).
  * \param[in]       blockNr             Number of blocks to read.
  * \param[out]      rx                  Pointer to Rx-buffer where the received data from the card shall be stored.
@@ -160,7 +160,7 @@ ptx_Status_t ptx_NativeTag_T5T_ReadSingleBlock (ptx_NativeTag_T5T_t *t5t,
 /**
  * \brief Performs a WRITE_SINGLE_BLOCK_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Use Special-Framing"-format for Write-alike commands).
  * \param[in]       blockNr             Number of block to write.
  * \param[in]       blockData           Data to write.
@@ -202,7 +202,7 @@ ptx_Status_t ptx_NativeTag_T5T_LockSingleBlock (ptx_NativeTag_T5T_t *t5t,
 /**
  * \brief Performs a READ_MULTIPLE_BLOCK_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Request Block Security Status" for Read-alike commands).
  * \param[in]       blockNr             Number of start-block.
  * \param[in]       nrBlocks            Number of blocks to read.
@@ -223,7 +223,7 @@ ptx_Status_t ptx_NativeTag_T5T_ReadMultipleBlock (ptx_NativeTag_T5T_t *t5t,
 /**
  * \brief Performs an EXTENDED_READ_SINGLE_BLOCK_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Request Block Security Status" for Read-alike commands).
  * \param[in]       blockNr             Number of block to read.
  * \param[out]      rx                  Pointer to Rx-buffer where the received data from the card shall be stored.
@@ -240,9 +240,9 @@ ptx_Status_t ptx_NativeTag_T5T_ExtReadSingleBlock (ptx_NativeTag_T5T_t *t5t,
                                                    uint32_t msTimeout);
 
 /**
- * \brief Performs a EXTENDED_WRITE_SINGLE_BLOCK_REQ-command.
+ * \brief Performs an EXTENDED_WRITE_SINGLE_BLOCK_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Use Special-Framing"-format for Write-alike commands).
  * \param[in]       blockNr             Number of block to write.
  * \param[in]       blockData           Data to write.
@@ -263,9 +263,9 @@ ptx_Status_t ptx_NativeTag_T5T_ExtWriteSingleBlock (ptx_NativeTag_T5T_t *t5t,
                                                     uint32_t msTimeout);
 
 /**
- * \brief Performs a EXTENDED_LOCK_SINGLE_BLOCK_REQ-command.
+ * \brief Performs an EXTENDED_LOCK_SINGLE_BLOCK_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Use Special-Framing"-format for Write-alike commands).
  * \param[in]       blockNr             Number of block to lock.
  * \param[out]      rx                  Pointer to Rx-buffer where the received data from the card shall be stored.
@@ -282,9 +282,9 @@ ptx_Status_t ptx_NativeTag_T5T_ExtLockSingleBlock (ptx_NativeTag_T5T_t *t5t,
                                                    uint32_t msTimeout);
 
 /**
- * \brief Performs a EXTENDED_READ_MULTIPLE_BLOCK_REQ-command.
+ * \brief Performs an EXTENDED_READ_MULTIPLE_BLOCK_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Request Block Security Status" for Read-alike commands).
  * \param[in]       blockNr             Number of start-block.
  * \param[in]       nrBlocks            Number of blocks to read.
@@ -305,7 +305,7 @@ ptx_Status_t ptx_NativeTag_T5T_ExtReadMultipleBlock (ptx_NativeTag_T5T_t *t5t,
 /**
  * \brief Performs a SELECT_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Request Block Security Status" for Read-alike commands).
  * \param[in]       uid                 Pointer to UID of the given Tag.
  * \param[in]       uidLen              Length of UID.
@@ -327,7 +327,7 @@ ptx_Status_t ptx_NativeTag_T5T_Select (ptx_NativeTag_T5T_t *t5t,
 /**
  * \brief Performs a SLPV_REQ-command.
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       optionFlag          Option-flag provided by upper layer ("Request Block Security Status" for Read-alike commands).
  * \param[in]       uid                 Pointer to UID of the given Tag.
  * \param[in]       uidLen              Length of UID.
@@ -346,9 +346,9 @@ ptx_Status_t ptx_NativeTag_T5T_Sleep (ptx_NativeTag_T5T_t *t5t,
                                       uint32_t msTimeout);
 
 /**
- * \brief Sets / Updates the UID to be used (needs to be called after "ptx_NativeTag_T5TSelect() is called and addressed-mode shall be used").
+ * \brief Sets / Updates the UID to be used (needs to be called after "ptx_NativeTag_T5T_Select() is called and addressed-mode shall be used").
  *
- * \param[in]       t5t             Pointer to an existing instance of the T5T component.
+ * \param[in]       t5t                 Pointer to an existing instance of the T5T component.
  * \param[in]       uid                 Pointer to UID of the given Tag.
  * \param[in]       uidLen              Length of UID.
  *

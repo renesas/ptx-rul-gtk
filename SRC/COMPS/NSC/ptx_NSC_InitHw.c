@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -129,8 +129,10 @@ ptx_Status_t ptx_NSC_InitHw(ptx_NSC_t *nsc)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_InitHw");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_Init, NULL);
     }
 
@@ -309,8 +311,10 @@ ptx_Status_t ptx_NSC_CalculatePllParameters(ptx_NSC_t *nsc, ptx_NSC_SystemConfig
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != sysCfg) && (NULL != pllSettings) &&
-        (PTX_PLL_MIN_REFFREQ <= sysCfg->RefFreq) && (PTX_PLL_MAX_REFFREQ >= sysCfg->RefFreq) )
+        (PTX_PLL_MIN_REFFREQ <= sysCfg->RefFreq) && (PTX_PLL_MAX_REFFREQ >= sysCfg->RefFreq))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CalculatePllParameters");
+
         uint32_t internal_fref = sysCfg->RefFreq;
 
         /* Calculate the coarse tuner configuration values based on the reference clock frequency. */
@@ -374,8 +378,10 @@ static ptx_Status_t ptx_NSC_InitUartConfiguration(ptx_NSC_t *nsc, uint8_t *reg0,
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != reg0) && (NULL != reg1) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != reg0) && (NULL != reg1))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_InitUartConfiguration");
+
         status = PTX_STATUS_E_GEN_INVALID_BITRATE;
 
         /** If NscSpeed is set to 0, use the default UART application speed. */
@@ -404,8 +410,10 @@ static ptx_Status_t ptx_NSC_SwitchBaudrate(ptx_NSC_t *nsc)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_SwitchBaudrate");
+
         /** If NscSpeed is set to 0, use the default UART application speed. */
         uint32_t speed = (0 == nsc->NscSpeed) ? PTX_UART_DEFAULT_NSC_SPEED : nsc->NscSpeed;
 

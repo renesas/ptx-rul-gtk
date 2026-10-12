@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -37,7 +37,7 @@
     Module      : PSL
     File        : ptx_PSL_Int.h
 
-    Description : PSL specific datastructures and enumerations.
+    Description : PSL specific data structures and enumerations.
 
 */
 
@@ -68,15 +68,14 @@ extern "C" {
 /**
  *  \brief Internal parameters.
  */
-#define PTX_PSL_MAX_CW_MULTIPLIER       (0xB1)      /**< Maximum CW multiplier. */
 #define PTX_PSL_AMP_MEAS_FACTOR         (1000U)     /**< Amplitude measurement is scaled by a factor of 1000. */
 
 /**
  *  \brief Default Q-Measurement configuration values.
  */
 #define PTX_PSL_QMEAS_CENTER_FREQ       (13560000U) /**< Q-measurement center frequency in Hz (= 13.56MHz). */
-#define PTX_PSL_QMEAS_BUFFERSIZE        (1000U)     /**< Buffer size of uint32_t's for qmeasurement results. */
-#define PTX_PSL_QMEAS_MAX_FREQ_SPAN     (5000000U)  /**< Max frequency span for Q measurement (= 5MHz). */
+#define PTX_PSL_QMEAS_BUFFERSIZE        (1000U)     /**< Buffer size of uint32_t's for Q-measurement results. */
+#define PTX_PSL_QMEAS_MAX_FREQ_SPAN     (5000000U)  /**< Max frequency span for Q-measurement (= 5MHz). */
 
 /**
  *  \brief RAM module addresses
@@ -220,7 +219,7 @@ typedef enum ptx_PSL_TbSwapType
     SwapType_Direct,        /**< Directly, no swapping */
     SwapType_Nibbles,       /**< Full nibble swap*/
     SwapType_TuplePerNibble,/**< Tuple per nibble swap*/
-    SwapType_InvTuple,      /**< Inerse tuple swapping */
+    SwapType_InvTuple,      /**< Inverse tuple swapping */
 } ptx_PSL_TbSwapType_t;
 
 /**
@@ -318,7 +317,7 @@ typedef enum ptx_PSL_NfcType
     NfcType_B106 = 0x20,    /**< NFC-B 106kBit/s  */
     NfcType_B212 = 0x21,    /**< NFC-B 212kBit/s  */
     NfcType_B424 = 0x22,    /**< NFC-B 424kBit/s  */
-    NfcType_B848 = 0x23,    /**< NFC-B 106kBit/s  */
+    NfcType_B848 = 0x23,    /**< NFC-B 848kBit/s  */
     NfcType_F212 = 0x41,    /**< NFC-F 212kBit/s  */
     NfcType_F424 = 0x42,    /**< NFC-F 424kBit/s  */
     NfcType_V026 = 0x80,    /**< NFC-V 26.5kBit/s */

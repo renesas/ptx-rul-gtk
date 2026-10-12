@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -50,6 +50,7 @@
 #include "ptx_NSC_Int.h"
 #include "ptx_NSC_RfActivate.h"
 #include "ptx_NSC_StateMachine.h"
+#include "ptx_Status.h"
 
 /*
  * ####################################################################################################################
@@ -107,6 +108,8 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (uint8_t *buffer, uint32
 static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepB (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data);
 static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data);
 
+static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, ptx_NSC_RfAct_ProtParam_t *data);
+
 
 /*
  * ####################################################################################################################
@@ -118,188 +121,70 @@ ptx_Status_t ptx_NSC_RfActivate(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, pt
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != param) && (NULL != data) )
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != param) && (NULL != data))
     {
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_RfActivate, NULL);
     }
 
     if ( PTX_STATUS_SUCCESS == status )
     {
-        /* For IsoDep and NfcDep protocols, there shall be NSC state transition from RF_POLL to RF_POLL_DEP.
-         * Use this variable to track pending state and assign new state at the end if all went well.
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfActivate");
+
+        /* Special Case: For T2T, always activate from RF_STATE SLEEP, this is required
+         * to handle Multi-card issues for constellations containing T2T and T5T cards. In these scenarios, the FW 
+         * reports the T2T as active even though it is deactivated. An activation from the RF_STATE ACTIVE will 
+         * result in a deactivated T2T card without any NSC error. To solve this, the T2T needs to be 
+         * activated from scratch by forcing the RF_STATE to SLEEP.
          */
-        ptx_NSC_State_t pending_state = ptx_NSC_State_Undefined;
-
-        /* Allocate buffer for the RF-Activate command. */
-        uint8_t nsc_buf[PTX_NSC_RF_ACTIVATE_BUFFER_SIZE];
-        uint8_t *nsc_buf_pos = nsc_buf;
-
-        /* Append RF-Activate command opcode. */
-        *nsc_buf_pos = PTX_NSC_RF_ACTIVATE_CMD_OPCODE;
-        nsc_buf_pos++;
-
-        /* Acceptable RF technologies and mode are NFC-A/B/F/V poll mode. Others are interpreted as INVALID_PARAMETER. */
-        *nsc_buf_pos = param->RfTech;
-        nsc_buf_pos++;
-
-        switch (param->RfTech)
+        if((param->RfTech == ptx_NSC_RfTech_Passive_Poll_A) && (param->RfProt == ptx_NSC_RfProtocol_T2T))
         {
-            /* Add RF technology specific parameters. */
-            case ptx_NSC_RfTech_Passive_Poll_A:
-            {
-                *nsc_buf_pos = param->RfTechParams.RfAct_A.RfState;
-                nsc_buf_pos++;
-
-                uint8_t nfc_id1_len = param->RfTechParams.RfAct_A.NfcId1Len;
-
-                if (PTX_NSC_NFCID1_LEN_3 >= nfc_id1_len)
-                {
-                    *nsc_buf_pos = nfc_id1_len;
-                    nsc_buf_pos++;
-
-                    (void) memcpy(nsc_buf_pos, param->RfTechParams.RfAct_A.NfcId1, nfc_id1_len);
-                    nsc_buf_pos += nfc_id1_len;
-                }
-                else
-                {
-                    status = PTX_STATUS_E_NSC_PROTOCOL;
-                }
-
-                break;
-            }
-
-            case ptx_NSC_RfTech_Passive_Poll_B:
-            {
-                *nsc_buf_pos = param->RfTechParams.RfAct_B.RfState;
-                nsc_buf_pos++;
-
-                const uint8_t rf_tech_params_len = PTX_NSC_RF_DISCOVER_SENSBRES_LEN;
-                (void) memcpy(nsc_buf_pos, param->RfTechParams.RfAct_B.SensBRes, rf_tech_params_len);
-                nsc_buf_pos += rf_tech_params_len;
-
-                break;
-            }
-
-            case ptx_NSC_RfTech_Passive_Poll_F:
-            {
-                *nsc_buf_pos = (uint8_t)param->RfTechParams.RfAct_F.BitRate;
-                nsc_buf_pos++;
-
-                *nsc_buf_pos = param->RfTechParams.RfAct_F.RfState;
-                nsc_buf_pos++;
-
-                const uint8_t rf_tech_params_len = PTX_NSC_NFCID2_LEN;
-                (void) memcpy(nsc_buf_pos, param->RfTechParams.RfAct_F.NfcId2, rf_tech_params_len);
-                nsc_buf_pos += rf_tech_params_len;
-
-                break;
-            }
-
-            case ptx_NSC_RfTech_Passive_Poll_V:
-            {
-                /* No special parameters required for Type V. */
-                break;
-            }
-
-            default:
-            {
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                break;
-            }
+            param->RfTechParams.RfAct_A.RfState = ptx_NSC_RfAct_PollMode_State_A_Sleep;
         }
 
-        if ( PTX_STATUS_SUCCESS == status )
+        status = ptx_NSC_RfActivate_Process(nsc, param, data);
+
+        /* Special Case: If the activation fails, always activate once again from RF_STATE SLEEP, this is required
+         * to handle Multi-card issues for multiple constellations. In these scenarios the FW reports active 
+         * cards even though they are deactivated. An activation from the RF_STATE ACTIVE will 
+         * result in a NSC Error. To solve this, the cards need to be 
+         * activated from scratch by forcing the RF_STATE to SLEEP.
+         */
+        if(PTX_STATUS_SUCCESS != status)
         {
-            *nsc_buf_pos = param->RfProt;
-            nsc_buf_pos++;
+            status = PTX_STATUS_SUCCESS;
 
-            switch (param->RfProt)
+            switch (param->RfTech)
             {
-                case ptx_NSC_RfProtocol_IsoDep:
+                case ptx_NSC_RfTech_Passive_Poll_A:
                 {
-                    *nsc_buf_pos = param->RfProtParams.IsoDep.HbrEnable;
-                    nsc_buf_pos++;
-
-                    uint8_t attrib_inf_len = param->RfProtParams.IsoDep.AttribInfLen;
-
-                    if (PTX_NSC_RFACTIVATE_ATTRIBINF_LEN >= attrib_inf_len)
-                    {
-                        *nsc_buf_pos = attrib_inf_len;
-                        nsc_buf_pos++;
-
-                        (void) memcpy(nsc_buf_pos, param->RfProtParams.IsoDep.AttribInf, attrib_inf_len);
-                        nsc_buf_pos += attrib_inf_len;
-                    }
-                    else
-                    {
-                        status = PTX_STATUS_E_NSC_PROTOCOL;
-                    }
-
-                    pending_state = ptx_NSC_State_Poll_Dep;
+                    param->RfTechParams.RfAct_A.RfState = ptx_NSC_RfAct_PollMode_State_A_Sleep;
                     break;
                 }
-
-                case ptx_NSC_RfProtocol_NfcDep:
+                case ptx_NSC_RfTech_Passive_Poll_B:
                 {
-                    *nsc_buf_pos = param->RfProtParams.NfcDep.HbrEnable;
-                    nsc_buf_pos++;
-
-                    uint8_t general_bytes_len = param->RfProtParams.NfcDep.GeneralBytesLen;
-
-                    if (PTX_NSC_RFACTIVATE_GENBYTES_LEN >= general_bytes_len)
-                    {
-                        *nsc_buf_pos = general_bytes_len;
-                        nsc_buf_pos++;
-
-                        (void) memcpy(nsc_buf_pos, param->RfProtParams.NfcDep.GeneralBytes, general_bytes_len);
-                        nsc_buf_pos += general_bytes_len;
-                    }
-                    else
-                    {
-                        status = PTX_STATUS_E_NSC_PROTOCOL;
-                    }
-
-                    pending_state = ptx_NSC_State_Poll_Dep;
+                    param->RfTechParams.RfAct_B.RfState = ptx_NSC_RfAct_PollMode_State_B_Sleep;
                     break;
                 }
-
+                case ptx_NSC_RfTech_Passive_Poll_F:
+                {
+                    param->RfTechParams.RfAct_F.RfState = ptx_NSC_RfAct_PollMode_State_F_Sleep_Af;
+                    break;
+                }
+                case ptx_NSC_RfTech_Passive_Poll_V:
+                {
+                    /* No special adjustments required for Type V. */
+                    break;
+                }
                 default:
                 {
-                    /* The RF_PROTOCOL specific parameters shall be omitted in case of a T2T, T3T, T5T or an undefined protocol. */
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
                     break;
                 }
             }
-        }
 
-        if ( PTX_STATUS_SUCCESS == status )
-        {
-            /* Valid parameters provided. Send the command. */
-            status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, nsc_buf, (uint32_t)(nsc_buf_pos - nsc_buf));
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            uint8_t nsc_rsp[PTX_NSC_RF_ACTIVATE_RSP_MAXLEN];
-            uint32_t nsc_rsp_len = PTX_NSC_RF_ACTIVATE_RSP_MAXLEN;
-
-            status = ptx_NSC_CmdProcessor_FetchMsg(nsc, nsc_rsp, &nsc_rsp_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSP);
-
-            if (PTX_STATUS_SUCCESS == status)
+            if(PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_NSC_CmdProcessor_ProcessRsp(nsc, ptx_NSC_CmdProcessor_RspId_RfActivate, nsc_rsp, nsc_rsp_len, NULL);
-            }
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* RF Activate RSP successfully received. Check protocol specific parameters, if any. */
-                status = ptx_NSC_RfActivate_ParseRsp(nsc_rsp, nsc_rsp_len, param->RfTech, param->RfProt, data);
-            }
-
-            if ((PTX_STATUS_SUCCESS == status) && (ptx_NSC_State_Poll_Dep == pending_state) &&
-                (ptx_NSC_State_Poll == nsc->State))
-            {
-                /* State changed from  RF_POLL to RF_POLL_DEP. */
-                nsc->State = ptx_NSC_State_Poll_Dep;
+                status = ptx_NSC_RfActivate_Process(nsc, param, data);
             }
         }
     }
@@ -313,6 +198,7 @@ ptx_Status_t ptx_NSC_ProcessRfActivateNtf (uint8_t *buffer, uint32_t bufferLen, 
 
     if ( (NULL != buffer) && (0 != bufferLen) && (NULL != ntf) )
     {
+
         uint8_t idx = 0;
 
         /* Get RF-Tech ID. */
@@ -342,7 +228,6 @@ ptx_Status_t ptx_NSC_ProcessRfActivateNtf (uint8_t *buffer, uint32_t bufferLen, 
                 case ptx_NSC_RfTech_Active_Listen:
                     ntf->RfRoutingAction = buffer[idx];
                     idx++;
-                    // TODO: Check validity of Routing-Action once final definition in NSC-specification is available (must not be 0x00!)
                     break;
 
                 default:
@@ -371,30 +256,222 @@ ptx_Status_t ptx_NSC_ProcessRfActivateNtf (uint8_t *buffer, uint32_t bufferLen, 
  * ####################################################################################################################
  */
 
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data)
+static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, ptx_NSC_RfAct_ProtParam_t *data)
 {
-    ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    const uint8_t brs_size = 1;
-    uint8_t atr_res_len = 0;
+    /* For IsoDep and NfcDep protocols, there shall be NSC state transition from RF_POLL to RF_POLL_DEP.
+     * Use this variable to track pending state and assign new state at the end if all went well.
+     */
+    ptx_NSC_State_t pending_state = ptx_NSC_State_Undefined;
 
-    if ((PTX_NSC_RF_ACTIVATE_RSP_NFCDEP_MINLEN <= bufferLen) &&
-        (PTX_NSC_RF_ACTIVATE_RSP_NFCDEP_MAXLEN >= bufferLen))
+    /* Allocate buffer for the RF-Activate command. */
+    uint8_t nsc_buf[PTX_NSC_RF_ACTIVATE_BUFFER_SIZE];
+    uint8_t *nsc_buf_pos = nsc_buf;
+
+    /* Append RF-Activate command opcode. */
+    *nsc_buf_pos = PTX_NSC_RF_ACTIVATE_CMD_OPCODE;
+    nsc_buf_pos++;
+
+    /* Acceptable RF technologies and mode are NFC-A/B/F/V poll mode. Others are interpreted as INVALID_PARAMETER. */
+    *nsc_buf_pos = param->RfTech;
+    nsc_buf_pos++;
+
+    switch (param->RfTech)
     {
-        uint32_t res_len = PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN + buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX] + brs_size;
-        if (bufferLen == res_len)
+        /* Add RF technology specific parameters. */
+        case ptx_NSC_RfTech_Passive_Poll_A:
         {
-            atr_res_len = buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX];
-            status = PTX_STATUS_SUCCESS;
+            *nsc_buf_pos = param->RfTechParams.RfAct_A.RfState;
+            nsc_buf_pos++;
+
+            uint8_t nfc_id1_len = param->RfTechParams.RfAct_A.NfcId1Len;
+
+            if (PTX_NSC_NFCID1_LEN_3 >= nfc_id1_len)
+            {
+                *nsc_buf_pos = nfc_id1_len;
+                nsc_buf_pos++;
+
+                (void) memcpy(nsc_buf_pos, param->RfTechParams.RfAct_A.NfcId1, nfc_id1_len);
+                nsc_buf_pos += nfc_id1_len;
+                status = PTX_STATUS_SUCCESS;
+            }
+            else
+            {
+                status = PTX_STATUS_E_NSC_PROTOCOL;
+            }
+
+            break;
         }
+
+        case ptx_NSC_RfTech_Passive_Poll_B:
+        {
+            *nsc_buf_pos = param->RfTechParams.RfAct_B.RfState;
+            nsc_buf_pos++;
+
+            const uint8_t rf_tech_params_len = PTX_NSC_RF_DISCOVER_SENSBRES_LEN;
+            (void) memcpy(nsc_buf_pos, param->RfTechParams.RfAct_B.SensBRes, rf_tech_params_len);
+            nsc_buf_pos += rf_tech_params_len;
+            status = PTX_STATUS_SUCCESS;
+
+            break;
+        }
+
+        case ptx_NSC_RfTech_Passive_Poll_F:
+        {
+            *nsc_buf_pos = (uint8_t)param->RfTechParams.RfAct_F.BitRate;
+            nsc_buf_pos++;
+
+            *nsc_buf_pos = param->RfTechParams.RfAct_F.RfState;
+            nsc_buf_pos++;
+
+            const uint8_t rf_tech_params_len = PTX_NSC_NFCID2_LEN;
+            (void) memcpy(nsc_buf_pos, param->RfTechParams.RfAct_F.NfcId2, rf_tech_params_len);
+            nsc_buf_pos += rf_tech_params_len;
+            status = PTX_STATUS_SUCCESS;
+
+            break;
+        }
+
+        case ptx_NSC_RfTech_Passive_Poll_V:
+        {
+            /* No special parameters required for Type V. */
+            status = PTX_STATUS_SUCCESS;
+            break;
+        }
+
+        default:
+        {
+            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+            break;
+        }
+    }
+
+    if ( PTX_STATUS_SUCCESS == status )
+    {
+        *nsc_buf_pos = param->RfProt;
+        nsc_buf_pos++;
+
+        switch (param->RfProt)
+        {
+            case ptx_NSC_RfProtocol_IsoDep:
+            {
+                *nsc_buf_pos = param->RfProtParams.IsoDep.HbrEnable;
+                nsc_buf_pos++;
+
+                uint8_t attrib_inf_len = param->RfProtParams.IsoDep.AttribInfLen;
+
+                if (PTX_NSC_RFACTIVATE_ATTRIBINF_LEN >= attrib_inf_len)
+                {
+                    *nsc_buf_pos = attrib_inf_len;
+                    nsc_buf_pos++;
+
+                    (void) memcpy(nsc_buf_pos, param->RfProtParams.IsoDep.AttribInf, attrib_inf_len);
+                    nsc_buf_pos += attrib_inf_len;
+                }
+                else
+                {
+                    status = PTX_STATUS_E_NSC_PROTOCOL;
+                }
+
+                pending_state = ptx_NSC_State_Poll_Dep;
+                break;
+            }
+
+            case ptx_NSC_RfProtocol_NfcDep:
+            {
+                *nsc_buf_pos = param->RfProtParams.NfcDep.HbrEnable;
+                nsc_buf_pos++;
+
+                uint8_t general_bytes_len = param->RfProtParams.NfcDep.GeneralBytesLen;
+
+                if (PTX_NSC_RFACTIVATE_GENBYTES_LEN >= general_bytes_len)
+                {
+                    *nsc_buf_pos = general_bytes_len;
+                    nsc_buf_pos++;
+
+                    (void) memcpy(nsc_buf_pos, param->RfProtParams.NfcDep.GeneralBytes, general_bytes_len);
+                    nsc_buf_pos += general_bytes_len;
+                }
+                else
+                {
+                    status = PTX_STATUS_E_NSC_PROTOCOL;
+                }
+
+                pending_state = ptx_NSC_State_Poll_Dep;
+                break;
+            }
+
+            default:
+            {
+                /* The RF_PROTOCOL specific parameters shall be omitted in case of a T2T, T3T, T5T or an undefined protocol. */
+                break;
+            }
+        }
+    }
+
+    if ( PTX_STATUS_SUCCESS == status )
+    {
+        /* Valid parameters provided. Send the command. */
+        status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, nsc_buf, (uint32_t)(nsc_buf_pos - nsc_buf));
     }
 
     if (PTX_STATUS_SUCCESS == status)
     {
-        uint8_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX;
-        memcpy(&data->NfcDep.PollAF.AtrRes[0], &buffer[idx], atr_res_len);
-        idx = (uint8_t)(idx + atr_res_len);
-        data->NfcDep.PollAF.Brs = buffer[idx];
+        uint8_t nsc_rsp[PTX_NSC_RF_ACTIVATE_RSP_MAXLEN];
+        uint32_t nsc_rsp_len = PTX_NSC_RF_ACTIVATE_RSP_MAXLEN;
+
+        status = ptx_NSC_CmdProcessor_FetchMsg(nsc, nsc_rsp, &nsc_rsp_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSP);
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            status = ptx_NSC_CmdProcessor_ProcessRsp(nsc, ptx_NSC_CmdProcessor_RspId_RfActivate, nsc_rsp, nsc_rsp_len, NULL);
+        }
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            /* RF Activate RSP successfully received. Check protocol specific parameters, if any. */
+            status = ptx_NSC_RfActivate_ParseRsp(nsc_rsp, nsc_rsp_len, param->RfTech, param->RfProt, data);
+        }
+
+        if ((PTX_STATUS_SUCCESS == status) && (ptx_NSC_State_Poll_Dep == pending_state) &&
+            (ptx_NSC_State_Poll == nsc->State))
+        {
+            /* State changed from  RF_POLL to RF_POLL_DEP. */
+            nsc->State = ptx_NSC_State_Poll_Dep;
+        }
+    }
+
+    return status;
+}
+
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data)
+{
+    ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
+
+    if ( (NULL != buffer) && (0 != bufferLen) && (NULL != data) )
+    {
+        const uint8_t brs_size = 1;
+        uint8_t atr_res_len = 0;
+
+        if ((PTX_NSC_RF_ACTIVATE_RSP_NFCDEP_MINLEN <= bufferLen) &&
+            (PTX_NSC_RF_ACTIVATE_RSP_NFCDEP_MAXLEN >= bufferLen))
+        {
+            uint32_t res_len = PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN + buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX] + brs_size;
+            if (bufferLen == res_len)
+            {
+                atr_res_len = buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX];
+                status = PTX_STATUS_SUCCESS;
+            }
+        }
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            uint8_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX;
+            memcpy(&data->NfcDep.PollAF.AtrRes[0], &buffer[idx], atr_res_len);
+            idx = (uint8_t)(idx + atr_res_len);
+            data->NfcDep.PollAF.Brs = buffer[idx];
+        }
     }
 
     return status;
@@ -404,53 +481,55 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (uint8_t *buffer, uint32
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
-    const uint8_t pps1_size = 1;
-
-    if ((PTX_NSC_RF_ACTIVATE_RSP_ISODEPA_MINLEN <= bufferLen) &&
-        (PTX_NSC_RF_ACTIVATE_RSP_ISODEPA_MAXLEN >= bufferLen))
+    if ( (NULL != buffer) && (0 != bufferLen) && (NULL != data) )
     {
-        uint32_t res_len = PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN + buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX] + pps1_size;
-        if (bufferLen == res_len)
+        const uint8_t pps1_size = 1;
+
+        if ((PTX_NSC_RF_ACTIVATE_RSP_ISODEPA_MINLEN <= bufferLen) &&
+            (PTX_NSC_RF_ACTIVATE_RSP_ISODEPA_MAXLEN >= bufferLen))
         {
-            status = PTX_STATUS_SUCCESS;
+            uint32_t res_len = PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN + buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX] + pps1_size;
+            if (bufferLen == res_len)
+            {
+                status = PTX_STATUS_SUCCESS;
+            }
+        }
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            uint8_t ats_len = buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX];
+
+            if (PTX_NSC_RFACTIVATE_ATS_MIN_LEN == ats_len)
+            {
+                uint32_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX + ats_len;
+                /* Set structure members to a defined state. */
+                (void)memset(data->IsoDep.PollA.ATS, 0, PTX_NSC_RFACTIVATE_POLLA_ATS_LEN);
+                data->IsoDep.PollA.PPS1 = buffer[idx];
+
+                /* 'Empty' ATS, use default values. */
+                data->IsoDep.PollA.FSCI = PTX_NSC_RFACTIVATE_ATS_FSCI_DEFAULT;
+            }
+            else if ( (PTX_NSC_RFACTIVATE_ATS_MIN_LEN < ats_len)
+                    && (PTX_NSC_RFACTIVATE_POLLA_ATS_LEN >= ats_len) )
+            {
+                uint32_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX;
+
+                /* Copy data into structure members. */
+                (void)memcpy(data->IsoDep.PollA.ATS, &buffer[idx], ats_len);
+                idx = (uint8_t)(idx + ats_len);
+
+                data->IsoDep.PollA.PPS1 = buffer[idx];
+                idx++;
+
+                data->IsoDep.PollA.FSCI = data->IsoDep.PollA.ATS[PTX_NSC_RFACTIVATE_ATS_T0_IDX] & PTX_NSC_RF_ACTIVATE_ATS_FSCI_MASK;
+            }
+            else
+            {
+                /* Wrong format */
+                status = PTX_STATUS_E_NSC_PROTOCOL;
+            }
         }
     }
-
-    if (PTX_STATUS_SUCCESS == status)
-    {
-        uint8_t ats_len = buffer[PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX];
-
-        if (PTX_NSC_RFACTIVATE_ATS_MIN_LEN == ats_len)
-        {
-            uint32_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX + ats_len;
-            /* Set structure members to a defined state. */
-            (void)memset(data->IsoDep.PollA.ATS, 0, PTX_NSC_RFACTIVATE_POLLA_ATS_LEN);
-            data->IsoDep.PollA.PPS1 = buffer[idx];
-
-            /* 'Empty' ATS, use default values. */
-            data->IsoDep.PollA.FSCI = PTX_NSC_RFACTIVATE_ATS_FSCI_DEFAULT;
-        }
-        else if ( (PTX_NSC_RFACTIVATE_ATS_MIN_LEN < ats_len)
-                  && (PTX_NSC_RFACTIVATE_POLLA_ATS_LEN >= ats_len) )
-        {
-            uint32_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX;
-
-            /* Copy data into structure members. */
-            (void)memcpy(data->IsoDep.PollA.ATS, &buffer[idx], ats_len);
-            idx = (uint8_t)(idx + ats_len);
-
-            data->IsoDep.PollA.PPS1 = buffer[idx];
-            idx++;
-
-            data->IsoDep.PollA.FSCI = data->IsoDep.PollA.ATS[PTX_NSC_RFACTIVATE_ATS_T0_IDX] & PTX_NSC_RF_ACTIVATE_ATS_FSCI_MASK;
-        }
-        else
-        {
-            /* Wrong format */
-            status = PTX_STATUS_E_NSC_PROTOCOL;
-        }
-    }
-
     return status;
 }
 
@@ -458,34 +537,37 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepB (uint8_t *buffer, uint32
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
-    /* Header (2By) + ATTRIB_PARAM1 (1By) + ATTRIB_PARAM2 (1By) + ATTRIB_RES_LEN (1By) */
-    const uint8_t isodep_b_minlen = PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN + 3;
-    const uint8_t attrib_res_len_idx = 4;
-
-    uint8_t attrib_res_len = 0;
-
-    if ((PTX_NSC_RF_ACTIVATE_RSP_ISODEPB_MINLEN <= bufferLen) &&
-        (PTX_NSC_RF_ACTIVATE_RSP_ISODEPB_MAXLEN >= bufferLen))
+    if ( (NULL != buffer) && (0 != bufferLen) && (NULL != data) )
     {
-        /* Index of ATTRIB_RES_LENGTH */
-        attrib_res_len = buffer[attrib_res_len_idx];
-        if (((uint32_t)(isodep_b_minlen + attrib_res_len) == bufferLen) &&
-            (PTX_NSC_RFACTIVATE_POLLB_ATTRIBRES_LEN >= attrib_res_len))
+        /* Header (2By) + ATTRIB_PARAM1 (1By) + ATTRIB_PARAM2 (1By) + ATTRIB_RES_LEN (1By) */
+        const uint8_t isodep_b_minlen = PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN + 3;
+        const uint8_t attrib_res_len_idx = 4;
+
+        uint8_t attrib_res_len = 0;
+
+        if ((PTX_NSC_RF_ACTIVATE_RSP_ISODEPB_MINLEN <= bufferLen) &&
+            (PTX_NSC_RF_ACTIVATE_RSP_ISODEPB_MAXLEN >= bufferLen))
         {
-            status = PTX_STATUS_SUCCESS;
+            /* Index of ATTRIB_RES_LENGTH */
+            attrib_res_len = buffer[attrib_res_len_idx];
+            if (((uint32_t)(isodep_b_minlen + attrib_res_len) == bufferLen) &&
+                (PTX_NSC_RFACTIVATE_POLLB_ATTRIBRES_LEN >= attrib_res_len))
+            {
+                status = PTX_STATUS_SUCCESS;
+            }
         }
-    }
 
-    if (PTX_STATUS_SUCCESS == status)
-    {
-        uint32_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX;
-        data->IsoDep.PollB.AttribParam1 = buffer[idx];
-        idx++;
-        data->IsoDep.PollB.AttribParam2 = buffer[idx];
-        idx++;
-        data->IsoDep.PollB.AttribResLen = attrib_res_len;
-        idx++;
-        (void)memcpy(&data->IsoDep.PollB.AttribRes[0], &buffer[idx], attrib_res_len);
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            uint32_t idx = PTX_NSC_RF_ACTIVATE_RSP_PAYLOAD_IDX;
+            data->IsoDep.PollB.AttribParam1 = buffer[idx];
+            idx++;
+            data->IsoDep.PollB.AttribParam2 = buffer[idx];
+            idx++;
+            data->IsoDep.PollB.AttribResLen = attrib_res_len;
+            idx++;
+            (void)memcpy(&data->IsoDep.PollB.AttribRes[0], &buffer[idx], attrib_res_len);
+        }
     }
 
     return status;
@@ -495,34 +577,37 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp(uint8_t *buffer, uint32_t buffer
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
-    switch (RfProt)
+    if ( (NULL != buffer) && (0 != bufferLen) && (NULL != data) )
     {
-        case ptx_NSC_RfProtocol_IsoDep:
-            if (ptx_NSC_RfTech_Passive_Poll_A == tech)
-            {
-                status = ptx_NSC_RfActivate_ParseRsp_IsoDepA(buffer, bufferLen, data);
-            }
-            else if (ptx_NSC_RfTech_Passive_Poll_B == tech)
-            {
-                status = ptx_NSC_RfActivate_ParseRsp_IsoDepB(buffer, bufferLen, data);
-            }
-            else
-            {
-                /* Wrong technology. Error already set. */
-            }
-            break;
-        case ptx_NSC_RfProtocol_NfcDep:
-            status = ptx_NSC_RfActivate_ParseRsp_NfcDep(buffer, bufferLen, data);
-            break;
-        default:
-            /* For all other protocols, protocol specific parameters shall be omitted. */
-            if (PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN == bufferLen)
-            {
-                status = PTX_STATUS_SUCCESS;
-            }
-            break;
-    }
 
+        switch (RfProt)
+        {
+            case ptx_NSC_RfProtocol_IsoDep:
+                if (ptx_NSC_RfTech_Passive_Poll_A == tech)
+                {
+                    status = ptx_NSC_RfActivate_ParseRsp_IsoDepA(buffer, bufferLen, data);
+                }
+                else if (ptx_NSC_RfTech_Passive_Poll_B == tech)
+                {
+                    status = ptx_NSC_RfActivate_ParseRsp_IsoDepB(buffer, bufferLen, data);
+                }
+                else
+                {
+                    /* Wrong technology. Error already set. */
+                }
+                break;
+            case ptx_NSC_RfProtocol_NfcDep:
+                status = ptx_NSC_RfActivate_ParseRsp_NfcDep(buffer, bufferLen, data);
+                break;
+            default:
+                /* For all other protocols, protocol specific parameters shall be omitted. */
+                if (PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN == bufferLen)
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+                break;
+        }
+    }
     return status;
 }
 
@@ -530,292 +615,295 @@ static ptx_Status_t ptx_NSC_RfActivateNtf_CheckProtLen (uint8_t *buffer, uint32_
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
-    uint8_t idx = curIdx;
-    uint32_t total_len = curIdx;
-    if (ptx_NSC_RfProtocol_IsoDep == ntf->RfProt)
+    if ( (NULL != buffer) && (0 != bufferLen) && (NULL != ntf) )
     {
-        if (ptx_NSC_RfTech_Passive_Poll_A == ntf->RfTech)
+        uint8_t idx = curIdx;
+        uint32_t total_len = curIdx;
+        if (ptx_NSC_RfProtocol_IsoDep == ntf->RfProt)
         {
-            uint8_t ats_len = buffer[idx];
-            /* ATS len */
-            total_len += ats_len;
-            /* PPS1 */
-            total_len += 1;
-            if (total_len <= bufferLen)
+            if (ptx_NSC_RfTech_Passive_Poll_A == ntf->RfTech)
             {
-                status = PTX_STATUS_SUCCESS;
-            }
-        }
-        else if (ptx_NSC_RfTech_Passive_Poll_B == ntf->RfTech)
-        {
-            uint8_t attrib_res_len = 0;
-            /* Count in ATTRIB_PARAM1 (1By) + ATTRIB_PARAM2 (1By) + ATTRIB_RES_LEN (1By) */
-            total_len += 3u;
-            if (total_len <= bufferLen)
-            {
-                /* Index of ATTRIB_RES_LENGTH */
-                attrib_res_len = buffer[idx + 2];
-                total_len += attrib_res_len;
+                uint8_t ats_len = buffer[idx];
+                /* ATS len */
+                total_len += ats_len;
+                /* PPS1 */
+                total_len += 1;
                 if (total_len <= bufferLen)
                 {
                     status = PTX_STATUS_SUCCESS;
                 }
             }
-        }
-        else if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) || (ptx_NSC_RfTech_Passive_Listen_B == ntf->RfTech))
-        {
-            if (total_len <= bufferLen)
+            else if (ptx_NSC_RfTech_Passive_Poll_B == ntf->RfTech)
             {
-                status = PTX_STATUS_SUCCESS;
+                uint8_t attrib_res_len = 0;
+                /* Count in ATTRIB_PARAM1 (1By) + ATTRIB_PARAM2 (1By) + ATTRIB_RES_LEN (1By) */
+                total_len += 3u;
+                if (total_len <= bufferLen)
+                {
+                    /* Index of ATTRIB_RES_LENGTH */
+                    attrib_res_len = buffer[idx + 2];
+                    total_len += attrib_res_len;
+                    if (total_len <= bufferLen)
+                    {
+                        status = PTX_STATUS_SUCCESS;
+                    }
+                }
+            }
+            else if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) || (ptx_NSC_RfTech_Passive_Listen_B == ntf->RfTech))
+            {
+                if (total_len <= bufferLen)
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+            else
+            {
+                /* No action required: protocol error. */
+            }
+        }
+        else if (ptx_NSC_RfProtocol_NfcDep == ntf->RfProt)
+        {
+            if ( (ptx_NSC_RfTech_Passive_Poll_A == ntf->RfTech) ||
+                (ptx_NSC_RfTech_Passive_Poll_F == ntf->RfTech) ||
+                (ptx_NSC_RfTech_Active_Poll == ntf->RfTech) )
+            {
+                uint8_t atr_res_len = buffer[idx];
+                /* ATR_RES len */
+                total_len += atr_res_len;
+                /* BRS */
+                total_len += 1;
+                if (total_len <= bufferLen)
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+            else if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) ||
+                    (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech) ||
+                    (ptx_NSC_RfTech_Active_Listen == ntf->RfTech) )
+            {
+                uint8_t atr_req_len = buffer[idx];
+                /* ATR_REQ len */
+                total_len += atr_req_len;
+                /* BRS and LR */
+                total_len += 2;
+                if (total_len <= bufferLen)
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+            else
+            {
+                /* No action required: protocol error. */
             }
         }
         else
         {
-            /* No action required: protocol error. */
+            /* Allow any length, protocol bytes will not be checked. Propagate further. */
+            status = PTX_STATUS_SUCCESS;
         }
     }
-    else if (ptx_NSC_RfProtocol_NfcDep == ntf->RfProt)
-    {
-        if ( (ptx_NSC_RfTech_Passive_Poll_A == ntf->RfTech) ||
-             (ptx_NSC_RfTech_Passive_Poll_F == ntf->RfTech) ||
-             (ptx_NSC_RfTech_Active_Poll == ntf->RfTech) )
-        {
-            uint8_t atr_res_len = buffer[idx];
-            /* ATR_RES len */
-            total_len += atr_res_len;
-            /* BRS */
-            total_len += 1;
-            if (total_len <= bufferLen)
-            {
-                status = PTX_STATUS_SUCCESS;
-            }
-        }
-        else if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) ||
-                 (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech) ||
-                 (ptx_NSC_RfTech_Active_Listen == ntf->RfTech) )
-        {
-            uint8_t atr_req_len = buffer[idx];
-            /* ATR_REQ len */
-            total_len += atr_req_len;
-            /* BRS and LR */
-            total_len += 2;
-            if (total_len <= bufferLen)
-            {
-                status = PTX_STATUS_SUCCESS;
-            }
-        }
-        else
-        {
-            /* No action required: protocol error. */
-        }
-    }
-    else
-    {
-        /* Allow any length, protocol bytes will not be checked. Propagate further. */
-        status = PTX_STATUS_SUCCESS;
-    }
-
     return status;
 }
 
 static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams_IsoDep (uint8_t *buffer, uint32_t bufferLen, uint8_t *curIdx, ptx_NSC_RfActivate_Ntf_t *ntf)
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
-    uint8_t idx = *curIdx;
 
-    status = ptx_NSC_RfActivateNtf_CheckProtLen (buffer, bufferLen, idx, ntf);
-    if (PTX_STATUS_SUCCESS == status)
+    if ((NULL != buffer) && (0 != bufferLen)&& (0 != curIdx) && (NULL != ntf) )
     {
-        /* Parsing is not fully completed. Set status error until the message gets completely parsed. */
-        status = PTX_STATUS_E_NSC_PROTOCOL;
+        uint8_t idx = *curIdx;
 
-        switch (ntf->RfTech)
+        status = ptx_NSC_RfActivateNtf_CheckProtLen (buffer, bufferLen, idx, ntf);
+        if (PTX_STATUS_SUCCESS == status)
         {
-            case ptx_NSC_RfTech_Passive_Poll_A:
+            /* Parsing is not fully completed. Set status error until the message gets completely parsed. */
+            status = PTX_STATUS_E_NSC_PROTOCOL;
+
+            switch (ntf->RfTech)
             {
-                uint8_t ats_len = buffer[idx];
-
-                if (PTX_NSC_RFACTIVATE_ATS_MIN_LEN == ats_len)
+                case ptx_NSC_RfTech_Passive_Poll_A:
                 {
-                    /* Set structure members to a defined state. */
-                    (void)memset(ntf->RfProtParams.IsoDep.PollA.ATS, 0, PTX_NSC_RFACTIVATE_POLLA_ATS_LEN);
+                    uint8_t ats_len = buffer[idx];
 
-                    idx = (uint8_t)(idx + ats_len);
+                    if (PTX_NSC_RFACTIVATE_ATS_MIN_LEN == ats_len)
+                    {
+                        /* Set structure members to a defined state. */
+                        (void)memset(ntf->RfProtParams.IsoDep.PollA.ATS, 0, PTX_NSC_RFACTIVATE_POLLA_ATS_LEN);
 
-                    ntf->RfProtParams.IsoDep.PollA.PPS1 = buffer[idx];
+                        idx = (uint8_t)(idx + ats_len);
+
+                        ntf->RfProtParams.IsoDep.PollA.PPS1 = buffer[idx];
+                        idx++;
+
+                        /* 'Empty' ATS, use default values. */
+                        ntf->RfProtParams.IsoDep.PollA.FSCI = PTX_NSC_RFACTIVATE_ATS_FSCI_DEFAULT;
+
+                        status = PTX_STATUS_SUCCESS;
+                    }
+                    else if ( (PTX_NSC_RFACTIVATE_ATS_MIN_LEN < ats_len)
+                            && (PTX_NSC_RFACTIVATE_POLLA_ATS_LEN >= ats_len) )
+                    {
+                        /* Copy data into structure members. */
+                        (void)memcpy(ntf->RfProtParams.IsoDep.PollA.ATS, &buffer[idx], ats_len);
+                        idx = (uint8_t)(idx + ats_len);
+
+                        ntf->RfProtParams.IsoDep.PollA.PPS1 = buffer[idx];
+                        idx++;
+
+                        ntf->RfProtParams.IsoDep.PollA.FSCI = ntf->RfProtParams.IsoDep.PollA.ATS[PTX_NSC_RFACTIVATE_ATS_T0_IDX] & PTX_NSC_RF_ACTIVATE_ATS_FSCI_MASK;
+
+                        status = PTX_STATUS_SUCCESS;
+                    }
+                    else
+                    {
+                        /* Unexpected length. Protocol error already set. */
+                    }
+
+                    break;
+                }
+
+                case ptx_NSC_RfTech_Passive_Poll_B:
+                {
+                    ntf->RfProtParams.IsoDep.PollB.AttribParam1 = buffer[idx];
                     idx++;
 
-                    /* 'Empty' ATS, use default values. */
-                    ntf->RfProtParams.IsoDep.PollA.FSCI = PTX_NSC_RFACTIVATE_ATS_FSCI_DEFAULT;
-
-                    status = PTX_STATUS_SUCCESS;
-                }
-                else if ( (PTX_NSC_RFACTIVATE_ATS_MIN_LEN < ats_len)
-                          && (PTX_NSC_RFACTIVATE_POLLA_ATS_LEN >= ats_len) )
-                {
-                    /* Copy data into structure members. */
-                    (void)memcpy(ntf->RfProtParams.IsoDep.PollA.ATS, &buffer[idx], ats_len);
-                    idx = (uint8_t)(idx + ats_len);
-
-                    ntf->RfProtParams.IsoDep.PollA.PPS1 = buffer[idx];
+                    ntf->RfProtParams.IsoDep.PollB.AttribParam2 = buffer[idx];
                     idx++;
 
-                    ntf->RfProtParams.IsoDep.PollA.FSCI = ntf->RfProtParams.IsoDep.PollA.ATS[PTX_NSC_RFACTIVATE_ATS_T0_IDX] & PTX_NSC_RF_ACTIVATE_ATS_FSCI_MASK;
+                    uint8_t attrib_res_len = buffer[idx];
+                    idx++;
+
+                    if ((0 < attrib_res_len) && (PTX_NSC_RFACTIVATE_POLLB_ATTRIBRES_LEN >= attrib_res_len))
+                    {
+                        ntf->RfProtParams.IsoDep.PollB.AttribResLen = attrib_res_len;
+
+                        (void)memcpy(ntf->RfProtParams.IsoDep.PollB.AttribRes, &buffer[idx], attrib_res_len);
+                        idx = (uint8_t)(idx + attrib_res_len);
+
+                        status = PTX_STATUS_SUCCESS;
+                    }
+
+                    break;
+                }
+
+                case ptx_NSC_RfTech_Passive_Listen_A:
+                {
+                    ntf->RfProtParams.IsoDep.ListenA.Rats = buffer[idx];
+                    idx++;
+
+                    ntf->RfProtParams.IsoDep.ListenA.Pps1 = buffer[idx];
+                    idx++;
 
                     status = PTX_STATUS_SUCCESS;
+                    break;
                 }
-                else
+
+                case ptx_NSC_RfTech_Passive_Listen_B:
                 {
-                    /* Unexpected length. Protocol error already set. */
+                    uint8_t attrib_len = buffer[idx];
+                    idx++;
+
+                    if ((0 < attrib_len) && (PTX_NSC_RFACTIVATE_LISTENB_ATTRIB_LEN >= attrib_len))
+                    {
+                        ntf->RfProtParams.IsoDep.ListenB.AttribLen = attrib_len;
+
+                        (void)memcpy(ntf->RfProtParams.IsoDep.ListenB.Attrib, &buffer[idx], attrib_len);
+                        idx = idx + attrib_len;
+                        status = PTX_STATUS_SUCCESS;
+                    }
+
+                    break;
                 }
 
-                break;
+                default:
+                    /* Undefined. Protocol error already set.*/
+                    break;
             }
-
-            case ptx_NSC_RfTech_Passive_Poll_B:
-            {
-                ntf->RfProtParams.IsoDep.PollB.AttribParam1 = buffer[idx];
-                idx++;
-
-                ntf->RfProtParams.IsoDep.PollB.AttribParam2 = buffer[idx];
-                idx++;
-
-                uint8_t attrib_res_len = buffer[idx];
-                idx++;
-
-                if ((0 < attrib_res_len) && (PTX_NSC_RFACTIVATE_POLLB_ATTRIBRES_LEN >= attrib_res_len))
-                {
-                    ntf->RfProtParams.IsoDep.PollB.AttribResLen = attrib_res_len;
-
-                    (void)memcpy(ntf->RfProtParams.IsoDep.PollB.AttribRes, &buffer[idx], attrib_res_len);
-                    idx = (uint8_t)(idx + attrib_res_len);
-
-                    status = PTX_STATUS_SUCCESS;
-                }
-
-                break;
-            }
-
-            case ptx_NSC_RfTech_Passive_Listen_A:
-            {
-                ntf->RfProtParams.IsoDep.ListenA.Rats = buffer[idx];
-                idx++;
-
-                ntf->RfProtParams.IsoDep.ListenA.Pps1 = buffer[idx];
-                idx++;
-
-                status = PTX_STATUS_SUCCESS;
-                break;
-            }
-
-            case ptx_NSC_RfTech_Passive_Listen_B:
-            {
-                uint8_t attrib_len = buffer[idx];
-                idx++;
-
-                if ((0 < attrib_len) && (PTX_NSC_RFACTIVATE_LISTENB_ATTRIB_LEN >= attrib_len))
-                {
-                    ntf->RfProtParams.IsoDep.ListenB.AttribLen = attrib_len;
-
-                    (void)memcpy(ntf->RfProtParams.IsoDep.ListenB.Attrib, &buffer[idx], attrib_len);
-                    idx = idx + attrib_len;
-                    status = PTX_STATUS_SUCCESS;
-                }
-
-                break;
-            }
-
-            default:
-                /* Undefined. Protocol error already set.*/
-                break;
         }
-    }
 
-    *curIdx = idx;
+        *curIdx = idx;
+    }
     return status;
 }
 
 static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams_NfcDep (uint8_t *buffer, uint32_t bufferLen, uint8_t *curIdx, ptx_NSC_RfActivate_Ntf_t *ntf)
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
-    uint8_t idx = *curIdx;
 
-    status = ptx_NSC_RfActivateNtf_CheckProtLen (buffer, bufferLen, idx, ntf);
-    if (PTX_STATUS_SUCCESS == status)
+    if ((NULL != buffer) && (0 != bufferLen)&& (0 != curIdx) && (NULL != ntf) )
     {
-        /* Parsing is not fully completed. Set status error until the message gets completely parsed. */
-        status = PTX_STATUS_E_NSC_PROTOCOL;
+        uint8_t idx = *curIdx;
 
-        switch (ntf->RfTech)
+        status = ptx_NSC_RfActivateNtf_CheckProtLen (buffer, bufferLen, idx, ntf);
+        if (PTX_STATUS_SUCCESS == status)
         {
-            case ptx_NSC_RfTech_Passive_Poll_A:
-            /* FALL THROUGH */
-            case ptx_NSC_RfTech_Passive_Poll_F:
-            /* FALL THROUGH */
-            case ptx_NSC_RfTech_Active_Poll:
+            /* Parsing is not fully completed. Set status error until the message gets completely parsed. */
+            status = PTX_STATUS_E_NSC_PROTOCOL;
+
+            switch (ntf->RfTech)
             {
-                uint8_t atr_res_len = buffer[idx];
-
-                if (PTX_NSC_RFACTIVATE_ATRRES_LEN >= atr_res_len)
+                case ptx_NSC_RfTech_Passive_Poll_A:
+                /* FALL THROUGH */
+                case ptx_NSC_RfTech_Passive_Poll_F:
+                /* FALL THROUGH */
+                case ptx_NSC_RfTech_Active_Poll:
                 {
-                    (void)memcpy(ntf->RfProtParams.NfcDep.PollAF.AtrRes, &buffer[idx], atr_res_len);
-                    idx = (uint8_t)(idx + atr_res_len);
+                    uint8_t atr_res_len = buffer[idx];
 
-                    ntf->RfProtParams.NfcDep.PollAF.Brs = buffer[idx];
-                    idx++;
-
-                    status = PTX_STATUS_SUCCESS;
-
-                }
-
-                break;
-            }
-
-            case ptx_NSC_RfTech_Passive_Listen_A:
-            /* FALL THROUGH */
-            case ptx_NSC_RfTech_Passive_Listen_F:
-            /* FALL THROUGH */
-            case ptx_NSC_RfTech_Active_Listen:
-            {
-                uint8_t atr_req_len = buffer[idx];
-
-                if (PTX_NSC_RFACTIVATE_ATRREQ_LEN >= atr_req_len)
-                {
-                    (void)memcpy(ntf->RfProtParams.NfcDep.ListenAF.AtrReq, &buffer[idx], atr_req_len);
-                    idx = (uint8_t)(idx + (atr_req_len));
-
-                    ntf->RfProtParams.NfcDep.ListenAF.Brs = buffer[idx];
-                    idx++;
-
-                    ntf->RfProtParams.NfcDep.ListenAF.Lr = buffer[idx];
-                    idx++;
-
-                    if (0xFF == ntf->RfProtParams.NfcDep.ListenAF.Brs)
+                    if (PTX_NSC_RFACTIVATE_ATRRES_LEN >= atr_res_len)
                     {
-                        uint8_t br = (uint8_t)(ntf->RfProtParams.NfcDep.ListenAF.AtrReq[PTX_NSC_RF_ACTIVATE_ATRREQ_BR_IDX] << PTX_NSC_RF_ACTIVATE_ATRREQ_BR_OFFSET) & PTX_NSC_RF_ACTIVATE_ATRREQ_BR_MASK;
-                        uint8_t bs = (uint8_t)(ntf->RfProtParams.NfcDep.ListenAF.AtrReq[PTX_NSC_RF_ACTIVATE_ATRREQ_BS_IDX] & PTX_NSC_RF_ACTIVATE_ATRREQ_BS_MASK);
-                        ntf->RfProtParams.NfcDep.ListenAF.Brs = br | bs;
+                        (void)memcpy(ntf->RfProtParams.NfcDep.PollAF.AtrRes, &buffer[idx], atr_res_len);
+                        idx = (uint8_t)(idx + atr_res_len);
+
+                        ntf->RfProtParams.NfcDep.PollAF.Brs = buffer[idx];
+                        idx++;
+
+                        status = PTX_STATUS_SUCCESS;
+
                     }
 
-                    if (0xFF == ntf->RfProtParams.NfcDep.ListenAF.Lr)
-                    {
-                        ntf->RfProtParams.NfcDep.ListenAF.Lr = ntf->RfProtParams.NfcDep.ListenAF.AtrReq[PTX_NSC_RF_ACTIVATE_ATRREQ_PP_IDX];
-                    }
-
-                    status = PTX_STATUS_SUCCESS;
-
+                    break;
                 }
 
-                break;
-            }
+                case ptx_NSC_RfTech_Passive_Listen_A:
+                /* FALL THROUGH */
+                case ptx_NSC_RfTech_Passive_Listen_F:
+                /* FALL THROUGH */
+                case ptx_NSC_RfTech_Active_Listen:
+                {
+                    uint8_t atr_req_len = buffer[idx];
 
-            default:
-                /* Undefined. Protocol error already set.*/
-                break;
+                    if (PTX_NSC_RFACTIVATE_ATRREQ_LEN >= atr_req_len)
+                    {
+                        (void)memcpy(ntf->RfProtParams.NfcDep.ListenAF.AtrReq, &buffer[idx], atr_req_len);
+                        idx = (uint8_t)(idx + (atr_req_len));
+
+                        ntf->RfProtParams.NfcDep.ListenAF.Brs = buffer[idx];
+                        idx++;
+
+                        ntf->RfProtParams.NfcDep.ListenAF.Lr = buffer[idx];
+                        idx++;
+
+                        if (0xFF == ntf->RfProtParams.NfcDep.ListenAF.Lr)
+                        {
+                            ntf->RfProtParams.NfcDep.ListenAF.Lr = ntf->RfProtParams.NfcDep.ListenAF.AtrReq[PTX_NSC_RF_ACTIVATE_ATRREQ_PP_IDX];
+                        }
+
+                        status = PTX_STATUS_SUCCESS;
+
+                    }
+
+                    break;
+                }
+
+                default:
+                    /* Undefined. Protocol error already set.*/
+                    break;
+            }
         }
-    }
 
-    *curIdx = idx;
+        *curIdx = idx;
+    }
 
     return status;
 }
@@ -824,25 +912,28 @@ static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams (uint8_t *buffer, uint
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
-    uint8_t idx = *curIdx;
-
-    switch (ntf->RfProt)
+    if ((NULL != buffer) && (0 != bufferLen)&& (0 != curIdx) && (NULL != ntf) )
     {
-        case ptx_NSC_RfProtocol_IsoDep:
-            status = ptx_NSC_RfActivateNtf_ParseProtParams_IsoDep(buffer, bufferLen, &idx, ntf);
-            break;
+        uint8_t idx = *curIdx;
 
-        case ptx_NSC_RfProtocol_NfcDep:
-            status = ptx_NSC_RfActivateNtf_ParseProtParams_NfcDep(buffer, bufferLen, &idx, ntf);
-            break;
+        switch (ntf->RfProt)
+        {
+            case ptx_NSC_RfProtocol_IsoDep:
+                status = ptx_NSC_RfActivateNtf_ParseProtParams_IsoDep(buffer, bufferLen, &idx, ntf);
+                break;
 
-        default:
-            /* Undefined. Propagate further.*/
-            status = PTX_STATUS_SUCCESS;
-            break;
+            case ptx_NSC_RfProtocol_NfcDep:
+                status = ptx_NSC_RfActivateNtf_ParseProtParams_NfcDep(buffer, bufferLen, &idx, ntf);
+                break;
+
+            default:
+                /* Undefined. Propagate further.*/
+                status = PTX_STATUS_SUCCESS;
+                break;
+        }
+
+        *curIdx = idx;
     }
-
-    *curIdx = idx;
 
     return status;
 }
@@ -850,94 +941,97 @@ static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams (uint8_t *buffer, uint
 static ptx_Status_t ptx_NSC_RfActivateNtf_ParseTechParams (uint8_t *buffer, uint8_t *curIdx, ptx_NSC_RfActivate_Ntf_t *ntf)
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
-    uint8_t idx = *curIdx;
 
-    switch (ntf->RfTech)
-    {
-        case ptx_NSC_RfTech_Passive_Poll_A:
+    if ((NULL != buffer) && (0 != curIdx) && (NULL != ntf) )
+    {        
+        uint8_t idx = *curIdx;
+
+        switch (ntf->RfTech)
         {
-            ntf->RfTechParams.PollA.SensRes[0] = buffer[idx];
-            idx++;
-
-            ntf->RfTechParams.PollA.SensRes[1] = buffer[idx];
-            idx++;
-
-            uint8_t nfc_id1_len = buffer[idx];
-            idx++;
-
-            /* Check for NFC-ID length. Must be 4, 7 or 10. */
-            if ( (PTX_NSC_NFCID1_LEN_1 == nfc_id1_len) || (PTX_NSC_NFCID1_LEN_2 == nfc_id1_len) ||
-                 (PTX_NSC_NFCID1_LEN_3 == nfc_id1_len) )
+            case ptx_NSC_RfTech_Passive_Poll_A:
             {
-
-                ntf->RfTechParams.PollA.NfcId1Len = nfc_id1_len;
-                (void) memcpy(ntf->RfTechParams.PollA.NfcId1, &buffer[idx], nfc_id1_len);
-                idx = (uint8_t) (idx + nfc_id1_len);
-
-                ntf->RfTechParams.PollA.SelRes = buffer[idx];
+                ntf->RfTechParams.PollA.SensRes[0] = buffer[idx];
                 idx++;
 
-                status = PTX_STATUS_SUCCESS;
+                ntf->RfTechParams.PollA.SensRes[1] = buffer[idx];
+                idx++;
+
+                uint8_t nfc_id1_len = buffer[idx];
+                idx++;
+
+                /* Check for NFC-ID length. Must be 4, 7 or 10. */
+                if ( (PTX_NSC_NFCID1_LEN_1 == nfc_id1_len) || (PTX_NSC_NFCID1_LEN_2 == nfc_id1_len) ||
+                    (PTX_NSC_NFCID1_LEN_3 == nfc_id1_len) )
+                {
+
+                    ntf->RfTechParams.PollA.NfcId1Len = nfc_id1_len;
+                    (void) memcpy(ntf->RfTechParams.PollA.NfcId1, &buffer[idx], nfc_id1_len);
+                    idx = (uint8_t) (idx + nfc_id1_len);
+
+                    ntf->RfTechParams.PollA.SelRes = buffer[idx];
+                    idx++;
+
+                    status = PTX_STATUS_SUCCESS;
+                }
+                break;
             }
-            break;
-        }
 
-        case ptx_NSC_RfTech_Passive_Poll_B:
-        {
-            uint8_t param_poll_b_size = PTX_NSC_RF_ACTIVATE_SENSBRES_LEN;
-
-            (void) memcpy(ntf->RfTechParams.PollB.SensBRes, &buffer[idx], param_poll_b_size);
-            idx = (uint8_t) (idx + param_poll_b_size);
-
-            status = PTX_STATUS_SUCCESS;
-            break;
-        }
-
-        case ptx_NSC_RfTech_Passive_Poll_F:
-        {
-            uint8_t sensf_len = buffer[idx];
-            if ((PTX_NSC_RF_ACTIVATE_SENSFRES_LEN_1 == sensf_len) || (PTX_NSC_RF_ACTIVATE_SENSFRES_LEN_2 == sensf_len))
+            case ptx_NSC_RfTech_Passive_Poll_B:
             {
-                /* NTF poll F parameters include also the length byte i.e. we get LEN (1By) + SENSF_RES (17 or 19 By). Copy all. */
-                (void) memcpy(ntf->RfTechParams.PollF.SensFRes, &buffer[idx], sensf_len);
-                idx = (uint8_t) (idx + sensf_len);
+                uint8_t param_poll_b_size = PTX_NSC_RF_ACTIVATE_SENSBRES_LEN;
+
+                (void) memcpy(ntf->RfTechParams.PollB.SensBRes, &buffer[idx], param_poll_b_size);
+                idx = (uint8_t) (idx + param_poll_b_size);
 
                 status = PTX_STATUS_SUCCESS;
+                break;
             }
 
-            break;
+            case ptx_NSC_RfTech_Passive_Poll_F:
+            {
+                uint8_t sensf_len = buffer[idx];
+                if ((PTX_NSC_RF_ACTIVATE_SENSFRES_LEN_1 == sensf_len) || (PTX_NSC_RF_ACTIVATE_SENSFRES_LEN_2 == sensf_len))
+                {
+                    /* NTF poll F parameters include also the length byte i.e. we get LEN (1By) + SENSF_RES (17 or 19 By). Copy all. */
+                    (void) memcpy(ntf->RfTechParams.PollF.SensFRes, &buffer[idx], sensf_len);
+                    idx = (uint8_t) (idx + sensf_len);
+
+                    status = PTX_STATUS_SUCCESS;
+                }
+
+                break;
+            }
+
+            case ptx_NSC_RfTech_Passive_Poll_V:
+            {
+                uint8_t param_poll_v_size = PTX_NSC_RF_ACTIVATE_INVENTORY_RES_LEN;
+
+                (void) memcpy(ntf->RfTechParams.PollV.InventoryRes, &buffer[idx], param_poll_v_size);
+                idx = (uint8_t) (idx + param_poll_v_size);
+
+                status = PTX_STATUS_SUCCESS;
+                break;
+            }
+
+            case ptx_NSC_RfTech_Active_Poll:
+            /* FALL THROUGH */
+            case ptx_NSC_RfTech_Active_Listen:
+            /* FALL THROUGH */
+            case ptx_NSC_RfTech_Passive_Listen_A:
+            /* FALL THROUGH */
+            case ptx_NSC_RfTech_Passive_Listen_B:
+            /* FALL THROUGH */
+            case ptx_NSC_RfTech_Passive_Listen_F:
+                /* No Parameters */
+                status = PTX_STATUS_SUCCESS;
+                break;
+
+            default:
+                /* Protocol error. Undefined technology. */
+                break;
         }
 
-        case ptx_NSC_RfTech_Passive_Poll_V:
-        {
-            uint8_t param_poll_v_size = PTX_NSC_RF_ACTIVATE_INVENTORY_RES_LEN;
-
-            (void) memcpy(ntf->RfTechParams.PollV.InventoryRes, &buffer[idx], param_poll_v_size);
-            idx = (uint8_t) (idx + param_poll_v_size);
-
-            status = PTX_STATUS_SUCCESS;
-            break;
-        }
-
-        case ptx_NSC_RfTech_Active_Poll:
-        /* FALL THROUGH */
-        case ptx_NSC_RfTech_Active_Listen:
-        /* FALL THROUGH */
-        case ptx_NSC_RfTech_Passive_Listen_A:
-        /* FALL THROUGH */
-        case ptx_NSC_RfTech_Passive_Listen_B:
-        /* FALL THROUGH */
-        case ptx_NSC_RfTech_Passive_Listen_F:
-            /* No Parameters */
-            status = PTX_STATUS_SUCCESS;
-            break;
-
-        default:
-            /* Protocol error. Undefined technology. */
-            break;
+        *curIdx = idx;
     }
-
-    *curIdx = idx;
-
     return status;
 }

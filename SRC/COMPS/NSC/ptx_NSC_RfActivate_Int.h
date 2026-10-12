@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -57,6 +57,8 @@
  */
 #include "ptx_NSC_RfDiscover_Int.h"
 
+#include "ptx_Log.h"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -86,9 +88,6 @@ extern "C" {
 #define PTX_NSC_RFACTIVATE_ATS_T0_IDX               (1u)        /**< The index of T0 parameter in the ATS (RATS response) */
 #define PTX_NSC_RFACTIVATE_ATS_TB_IDX               (3u)        /**< The index of TB parameter in the ATS (RATS response) */
 #define PTX_NSC_RFACTIVATE_ATS_FSCI_DEFAULT         (0x08u)     /**< Default value for FSCI in ATS */
-#define PTX_NSC_RFACTIVATE_ATS_FWI_DEFAULT          (0x04u)     /**< Default value for FWI in ATS */
-#define PTX_NSC_RFACTIVATE_ATS_FWI_RFU              (0x0Fu)     /**< RFU value for FWI in ATS */
-#define PTX_NSC_RFACTIVATE_ATS_FWI_MASK             (0xF0)      /**< NSC ATS FWI */
 
 #define PTX_NSC_RFACTIVATE_ATRRES_LEN               (65U)       /**< Maximum length of the Response to ATR_REQ command including the length parameter LEN */
 #define PTX_NSC_RFACTIVATE_ATRREQ_LEN               (65U)       /**< Maximum length of the ATR_REQ command including the length parameter LEN */
@@ -316,6 +315,7 @@ typedef struct ptx_NSC_RfActivate_Ntf
     ptx_NSC_RfProtocol_t                    RfProt;          /**< RF Protocol.                                   */
     ptx_NSC_RfAct_ProtParam_t               RfProtParams;    /**< RF Protocol specific parameters.               */
     uint8_t                                 RfRoutingAction; /**< RF Routing Action parameter (Listen-Mode only).*/
+
 } ptx_NSC_RfActivate_Ntf_t;
 
 /*

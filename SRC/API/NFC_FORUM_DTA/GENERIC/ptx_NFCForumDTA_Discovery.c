@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -58,7 +58,7 @@
  * the minimum possible delay of the implementation with the current OS Timer implementation.
  * Still using 2 ms causes erroneous behavior of the OS Timer.
  */
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
     #define PTX_NFCFORUMDTA_DISCOVERY_SLEEP_DELAY (20u)
 #else
     #define PTX_NFCFORUMDTA_DISCOVERY_SLEEP_DELAY (2u)
@@ -455,6 +455,12 @@ static ptx_Status_t ptx_NFCForumDTA_CheckSystemStatus(ptx_NFCForumDTA_t *dta)
             if (ptx_RUL_StatusInfoSystem_ErrorTemperature == statusParams.Info.System)
             {
                 PTX_LOG_I(&(dta->rul->Log), "WARNING - Temperature Limiter activated!\n");
+                dta->State = ptx_NFCForumDTA_State_RESTART_SYSTEM;
+            }
+
+            if (ptx_RUL_StatusInfoSystem_ErrorOutOfMemory == statusParams.Info.System)
+            {
+                PTX_LOG_I(&(dta->rul->Log), "WARNING - Out of Memory!\n");
                 dta->State = ptx_NFCForumDTA_State_RESTART_SYSTEM;
             }
 

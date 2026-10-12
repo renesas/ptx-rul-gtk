@@ -1,7 +1,7 @@
 /*
  * Renesas Open License v 1.0
  * 
- * Copyright (c) 2020 - 2025, Renesas Electronics Corporation and/or its affiliates
+ * Copyright (c) 2020 - 2026, Renesas Electronics Corporation and/or its affiliates
  * 
  * By installing, copying, downloading, accessing, or otherwise using this software or any part thereof and the related documentation from Renesas Electronics Corporation and/or its affiliates ("Renesas"), You, either individually or on behalf of an entity employing or engaging You, agree to be bound by this Software License Agreement. If you do not agree or no longer agree, you are not permitted to use this software or related documentation.
  * 
@@ -42,7 +42,7 @@ extern const size_t ptx_NSC_uCODE_init_adds [NUM_OF_SECTIONS] ;
 #define SIZE_OF_SECTION_0 4
 
 extern const uint16_t  ptx_NSC_uCODE_section_0 [SIZE_OF_SECTION_0];
-#define SIZE_OF_SECTION_1 11745
+#define SIZE_OF_SECTION_1 12476
 
 extern const uint16_t  ptx_NSC_uCODE_section_1 [SIZE_OF_SECTION_1];
 #define SIZE_OF_SECTION_2 1

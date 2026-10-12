@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -93,42 +93,43 @@ typedef uint16_t    ptx_Status_t;
 #define PTX_STATUS_E_GEN_INTERNAL                   ((ptx_Status_t) 0x0002)     /**< Internal error in the processing. */
 #define PTX_STATUS_E_GEN_TIMEOUT                    ((ptx_Status_t) 0x0003)     /**< Action aborted due to timeout. */
 #define PTX_STATUS_E_GEN_INVALID_STATE              ((ptx_Status_t) 0x0004)     /**< Invalid state: the action is not allowed in that state. */
-#define PTX_STATUS_E_GEN_INVALID_BITRATE            ((ptx_Status_t) 0x0005)     /**< Interface invalid bitrate */
-#define PTX_STATUS_E_GEN_INTERFACE_OPEN             ((ptx_Status_t) 0x0006)     /**< Interface could not be opened */
-#define PTX_STATUS_E_GEN_INTERFACE_CLOSE            ((ptx_Status_t) 0x0007)     /**< Interface could not be closed */
-#define PTX_STATUS_E_GEN_INTERFACE_TX               ((ptx_Status_t) 0x0008)     /**< Interface could not tx data */
-#define PTX_STATUS_E_GEN_INTERFACE_RX               ((ptx_Status_t) 0x0009)     /**< Interface could not rx data */
-#define PTX_STATUS_E_GEN_INTERFACE_NSS              ((ptx_Status_t) 0x000A)     /**< Interface could not assert NSS pin */
-#define PTX_STATUS_E_GEN_INTERFACE_RX_IRQ           ((ptx_Status_t) 0x000B)     /**< Interface could not assert external interrupt pin */
-#define PTX_STATUS_E_GEN_INTERFACE_IRQ_READ         ((ptx_Status_t) 0x000C)     /**< Interface could read external interrupt pin */
-#define PTX_STATUS_E_GEN_INTERFACE_TIMEOUT          ((ptx_Status_t) 0x000D)     /**< Interface response took too long */
-#define PTX_STATUS_E_GEN_TRANSFER_ABORTED           ((ptx_Status_t) 0x000E)     /**< Interface aborted transfer */
+#define PTX_STATUS_E_GEN_INVALID_BITRATE            ((ptx_Status_t) 0x0005)     /**< Interface invalid bitrate. */
+#define PTX_STATUS_E_GEN_INTERFACE_OPEN             ((ptx_Status_t) 0x0006)     /**< Interface could not be opened. */
+#define PTX_STATUS_E_GEN_INTERFACE_CLOSE            ((ptx_Status_t) 0x0007)     /**< Interface could not be closed. */
+#define PTX_STATUS_E_GEN_INTERFACE_TX               ((ptx_Status_t) 0x0008)     /**< Interface could not transmit data. */
+#define PTX_STATUS_E_GEN_INTERFACE_RX               ((ptx_Status_t) 0x0009)     /**< Interface could not receive data. */
+#define PTX_STATUS_E_GEN_INTERFACE_NSS              ((ptx_Status_t) 0x000A)     /**< Interface could not assert NSS pin. */
+#define PTX_STATUS_E_GEN_INTERFACE_RX_IRQ           ((ptx_Status_t) 0x000B)     /**< Interface could not assert external interrupt pin. */
+#define PTX_STATUS_E_GEN_INTERFACE_IRQ_READ         ((ptx_Status_t) 0x000C)     /**< Interface could not read external interrupt pin. */
+#define PTX_STATUS_E_GEN_INTERFACE_TIMEOUT          ((ptx_Status_t) 0x000D)     /**< Interface response took too long. */
+#define PTX_STATUS_E_GEN_TRANSFER_ABORTED           ((ptx_Status_t) 0x000E)     /**< Interface aborted transfer. */
 #define PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES     ((ptx_Status_t) 0x000F)     /**< Insufficient Resources to provide for required operation. */
 #define PTX_STATUS_E_GEN_NOT_FOUND                  ((ptx_Status_t) 0x0010)     /**< System resource such as a file, path or method, not found. */
-#define PTX_STATUS_E_GEN_INTERFACE_IRQ_DIRECTION    ((ptx_Status_t) 0x0011)     /**< Interface error, IRQ Pin direction (or other configuration) could not be set */
-#define PTX_STATUS_E_GEN_INTERFACE_IRQ_EDGE         ((ptx_Status_t) 0x0012)     /**< Interface error, IRQ Pin edge could not be set */
-#define PTX_STATUS_E_GEN_INTERFACE_IRQ_VALUE        ((ptx_Status_t) 0x0013)     /**< Interface error, IRQ Pin could not be read or written */
-#define PTX_STATUS_E_GEN_NOT_IMPLEMENTED            ((ptx_Status_t) 0x0014)     /**< Not implemented function */
-#define PTX_STATUS_E_GEN_FEATURE_DISABLED           ((ptx_Status_t) 0x0015)     /**< System Feature is disabled. */
-#define PTX_STATUS_E_GEN_ACCESS_DENIED              ((ptx_Status_t) 0x0016)     /**< Access Denied to system resource or configuration parameter. */
+#define PTX_STATUS_E_GEN_INTERFACE_IRQ_DIRECTION    ((ptx_Status_t) 0x0011)     /**< Interface error, IRQ Pin direction (or other configuration) could not be set. */
+#define PTX_STATUS_E_GEN_INTERFACE_IRQ_EDGE         ((ptx_Status_t) 0x0012)     /**< Interface error, IRQ Pin edge could not be set. */
+#define PTX_STATUS_E_GEN_INTERFACE_IRQ_VALUE        ((ptx_Status_t) 0x0013)     /**< Interface error, IRQ Pin could not be read or written. */
+#define PTX_STATUS_E_GEN_NOT_IMPLEMENTED            ((ptx_Status_t) 0x0014)     /**< Not implemented function. */
+#define PTX_STATUS_E_GEN_FEATURE_DISABLED           ((ptx_Status_t) 0x0015)     /**< System feature is disabled. */
+#define PTX_STATUS_E_GEN_ACCESS_DENIED              ((ptx_Status_t) 0x0016)     /**< Access denied to system resource or configuration parameter. */
 #define PTX_STATUS_E_GEN_NOT_PERMITTED              ((ptx_Status_t) 0x0017)     /**< Operation not permitted. */
 #define PTX_STATUS_E_GEN_ADCCLIPPING                ((ptx_Status_t) 0x0018)     /**< ADC overdriven (value is within clipping region). */
-#define PTX_STATUS_E_GEN_NOT_AVAILABLE              ((ptx_Status_t) 0x0019)     /**< Unavailable functionality */
-#define PTX_STATUS_E_GEN_WRONG_HARDWARE             ((ptx_Status_t) 0x001A)     /**< Silicon version incompatible with SDK */
-#define PTX_STATUS_E_GEN_FW_INVALID                 ((ptx_Status_t) 0x001B)     /**< Invalid Firmware detected */
+#define PTX_STATUS_E_GEN_NOT_AVAILABLE              ((ptx_Status_t) 0x0019)     /**< Unavailable functionality. */
+#define PTX_STATUS_E_GEN_WRONG_HARDWARE             ((ptx_Status_t) 0x001A)     /**< Silicon version incompatible with SDK. */
+#define PTX_STATUS_E_GEN_FW_INVALID                 ((ptx_Status_t) 0x001B)     /**< Invalid firmware detected. */
 #define PTX_STATUS_E_GEN_OUT_OF_RANGE               ((ptx_Status_t) 0x001C)     /**< A value/measurement exceeds the valid range. */
+#define PTX_STATUS_E_GEN_OVERTEMPERATURE            ((ptx_Status_t) 0x001D)     /**< The over-temperature threshold was already reached during system initialization. */
 
 /**
  * \brief ERROR CODES RELATED TO NSC
  */
 #define PTX_STATUS_E_NSC_PROTOCOL                   ((ptx_Status_t) 0x0100)     /**< Error at NSC protocol. */
 #define PTX_STATUS_E_NSC_RFERROR                    ((ptx_Status_t) 0x0101)     /**< Error at NSC. RF ERROR. */
-#define PTX_STATUS_E_NSC_NO_TAG_AVAILABLE           ((ptx_Status_t) 0x0102)     /**< No Rf Config Tag available */
-#define PTX_STATUS_E_NSC_NO_FIT_TAG                 ((ptx_Status_t) 0x0103)     /**< Tag does not fit into the buffer */
-#define PTX_STATUS_E_NSC_TAG_NEVER_FITS             ((ptx_Status_t) 0x0104)     /**< Tag will never fit into our transfer buffer */
-#define PTX_STATUS_E_NSC_RX_ERROR_LENGTH            ((ptx_Status_t) 0x0105)     /**< Received message in buffer is too big */
-#define PTX_STATUS_E_NSC_INVALID_RFCONFIG           ((ptx_Status_t) 0x0106)     /**< RF Configuration file not supported */
-#define PTX_STATUS_E_NSC_FW_DL_DENIED               ((ptx_Status_t) 0x0107)     /**< Firmware download is denied */
+#define PTX_STATUS_E_NSC_NO_TAG_AVAILABLE           ((ptx_Status_t) 0x0102)     /**< No RF Config Tag available. */
+#define PTX_STATUS_E_NSC_NO_FIT_TAG                 ((ptx_Status_t) 0x0103)     /**< Tag does not fit into the buffer. */
+#define PTX_STATUS_E_NSC_TAG_NEVER_FITS             ((ptx_Status_t) 0x0104)     /**< Tag will never fit into our transfer buffer. */
+#define PTX_STATUS_E_NSC_RX_ERROR_LENGTH            ((ptx_Status_t) 0x0105)     /**< Received message in buffer is too big. */
+#define PTX_STATUS_E_NSC_INVALID_RFCONFIG           ((ptx_Status_t) 0x0106)     /**< RF Configuration file not supported. */
+#define PTX_STATUS_E_NSC_FW_DL_DENIED               ((ptx_Status_t) 0x0107)     /**< Firmware download is denied. */
 #define PTX_STATUS_E_NSC_ERR_STANDBY                ((ptx_Status_t) 0x0108)     /**< Exited Standby mode in DISCOVERY state. */
 #define PTX_STATUS_E_NSC_COLLISION                  ((ptx_Status_t) 0x0109)     /**< Error during data exchange due to collision. */
 #define PTX_STATUS_E_NSC_SYSTEM                     ((ptx_Status_t) 0x010A)     /**< Critical system error. */
@@ -145,11 +146,11 @@ typedef uint16_t    ptx_Status_t;
 /**
  * \brief ERROR CODES RELATED TO HAL: TIMERS
  */
-#define PTX_STATUS_E_HALTIMER_FUNCTION_NOT_SET      ((ptx_Status_t) 0x0201)     /**< Timer function not set */
-#define PTX_STATUS_E_HALTIMER_INTERNAL_OPEN         ((ptx_Status_t) 0x0202)     /**< Timer open failed */
-#define PTX_STATUS_E_HALTIMER_INTERNAL_CLOSE        ((ptx_Status_t) 0x0203)     /**< Timer close failed */
-#define PTX_STATUS_E_HALTIMER_INTERNAL_START        ((ptx_Status_t) 0x0204)     /**< Timer start failed */
-#define PTX_STATUS_E_HALTIMER_INTERNAL_STOP         ((ptx_Status_t) 0x0205)     /**< Timer stop failed */
+#define PTX_STATUS_E_HALTIMER_FUNCTION_NOT_SET      ((ptx_Status_t) 0x0201)     /**< Timer function not set. */
+#define PTX_STATUS_E_HALTIMER_INTERNAL_OPEN         ((ptx_Status_t) 0x0202)     /**< Timer open failed. */
+#define PTX_STATUS_E_HALTIMER_INTERNAL_CLOSE        ((ptx_Status_t) 0x0203)     /**< Timer close failed. */
+#define PTX_STATUS_E_HALTIMER_INTERNAL_START        ((ptx_Status_t) 0x0204)     /**< Timer start failed. */
+#define PTX_STATUS_E_HALTIMER_INTERNAL_STOP         ((ptx_Status_t) 0x0205)     /**< Timer stop failed. */
 
 /**
  * \brief ERROR CODES RELATED TO HIP
@@ -177,10 +178,11 @@ typedef uint16_t    ptx_Status_t;
 /**
  * \brief ERROR CODES RELATED TO NCI
  */
-#define PTX_STATUS_E_NCI_IGNORE_MESSAGE             ((ptx_Status_t) 0x0500)     /**< CMD- or DATA-packet from the DH which shall be ignored by the NFCC */
+#define PTX_STATUS_E_NCI_IGNORE_MESSAGE             ((ptx_Status_t) 0x0500)     /**< CMD- or DATA-packet from the DH which shall be ignored by the NFCC. */
 #define PTX_STATUS_E_NCI_INTERFACE_MAPPING          ((ptx_Status_t) 0x0501)     /**< Wrong RF Interface mapping or Invalid Interface. */
 #define PTX_STATUS_E_NCI_INTERFACE_EXT_MAPPING      ((ptx_Status_t) 0x0502)     /**< Wrong RF Interface Extension mapping or Interface Extension is not started. */
 #define PTX_STATUS_E_NCI_PARAM_CORRUPTED            ((ptx_Status_t) 0x0503)     /**< Message contains corrupted data. */
+#define PTX_STATUS_E_NCI_INTERNAL                   ((ptx_Status_t) 0x0504)     /**< Internal NCI Error occurred. */
 
 /**
  * \brief ERROR CODES RELATED TO SWP
@@ -193,22 +195,22 @@ typedef uint16_t    ptx_Status_t;
  * \brief ERROR CODES RELATED TO HCI
  */
 #define PTX_STATUS_E_HCI_PIPE_NOTOPENED             ((ptx_Status_t) 0x0700)     /**< Pipe is not open. */
-#define PTX_STATUS_E_HCI_RFPARAM_NOTWRITTEN         ((ptx_Status_t) 0x0701)     /**< RF parameters are not set.(e.g. MODE is no in enabled state.) */
+#define PTX_STATUS_E_HCI_RFPARAM_NOTWRITTEN         ((ptx_Status_t) 0x0701)     /**< RF parameters are not set.(e.g. MODE is not in enabled state.) */
 
 /**
  * \brief ERROR CODES RELATED TO NDEF OPERATIONS
  */
-#define PTX_STATUS_E_NDEF_UNSUPPORTED               ((ptx_Status_t) 0x0800)     /**< Unsupported Operation. */
+#define PTX_STATUS_E_NDEF_UNSUPPORTED               ((ptx_Status_t) 0x0800)     /**< Unsupported operation. */
 #define PTX_STATUS_E_NDEF_NO_MESSAGES               ((ptx_Status_t) 0x0801)     /**< No NDEF Messages present on Tag. */
-#define PTX_STATUS_E_NDEF_INVALID_TAG_TYPE          ((ptx_Status_t) 0x0802)     /**< Unknown/Wrong Tag TYpe. */
-#define PTX_STATUS_E_NDEF_TAG_ACCESS_DENIED         ((ptx_Status_t) 0x0803)     /**< Tag Operation Access Denied. */
-#define PTX_STATUS_E_NDEF_INVALID_TAG_STATE         ((ptx_Status_t) 0x0804)     /**< Invalid Tag LC State for requested operation. */
+#define PTX_STATUS_E_NDEF_INVALID_TAG_TYPE          ((ptx_Status_t) 0x0802)     /**< Unknown/Wrong Tag type. */
+#define PTX_STATUS_E_NDEF_TAG_ACCESS_DENIED         ((ptx_Status_t) 0x0803)     /**< Tag operation access denied. */
+#define PTX_STATUS_E_NDEF_INVALID_TAG_STATE         ((ptx_Status_t) 0x0804)     /**< Invalid Tag LC state for requested operation. */
 #define PTX_STATUS_E_NDEF_TLV_OVERWRITE_ERROR       ((ptx_Status_t) 0x0805)     /**< Data to be written would overwrite existing TLVs. */
-#define PTX_STATUS_E_NDEF_PROTOCOL_ERROR            ((ptx_Status_t) 0x0806)     /**< Indicate that something is out of order in NDEF Operations. */
+#define PTX_STATUS_E_NDEF_PROTOCOL_ERROR            ((ptx_Status_t) 0x0806)     /**< Indicate that something is out of order in NDEF operations. */
 #define PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES    ((ptx_Status_t) 0x0807)     /**< Not enough memory space. */
 #define PTX_STATUS_E_NDEF_ASSERTION_ERROR           ((ptx_Status_t) 0x0808)     /**< An assertion has failed. */
 #define PTX_STATUS_E_NDEF_NOT_FOUND                 ((ptx_Status_t) 0x0809)     /**< Something was missing on the Tag. */
-#define PTX_STATUS_E_NDEF_T3T_WRITE_IN_PROGRESS     ((ptx_Status_t) 0x080A)     /**< T3T Update Operation has not finished. */
+#define PTX_STATUS_E_NDEF_T3T_WRITE_IN_PROGRESS     ((ptx_Status_t) 0x080A)     /**< T3T update operation has not finished. */
 #define PTX_STATUS_E_NDEF_TAG_NACK                  ((ptx_Status_t) 0x080B)     /**< Tag responded with a NACK of some kind. */
 
 /**
@@ -261,12 +263,12 @@ typedef uint16_t    ptx_Status_t;
  */
 #define PTX_STATUS_WLC_INVALID_STATE                        ((ptx_Status_t) 0xE001)   /**< The WLC state machine is in the wrong state. */
 #define PTX_STATUS_WLC_INCOMPATIBLE_TAG_PROTOCOL            ((ptx_Status_t) 0xE002)   /**< The available protocols of the listener are not compatible with WLC. */
-#define PTX_STATUS_WLC_INVALID_WLC_PROTOCOL_VERSION         ((ptx_Status_t) 0xE003)   /**< Invalid WLC Protocol Version of the WLC-L device. */
+#define PTX_STATUS_WLC_INVALID_WLC_PROTOCOL_VERSION         ((ptx_Status_t) 0xE003)   /**< Invalid WLC protocol version of the WLC-L device. */
 #define PTX_STATUS_WLC_CAP_RECORD_MISSING                   ((ptx_Status_t) 0xE004)   /**< Cannot read the WLC Capability Record. */
-#define PTX_STATUS_WLC_NEGO_WAIT_MAX_NUM_RETRIES            ((ptx_Status_t) 0xE005)   /**< Max number of retires during waiting time for WLC-L in Negotiated mode. */
+#define PTX_STATUS_WLC_NEGO_WAIT_MAX_NUM_RETRIES            ((ptx_Status_t) 0xE005)   /**< Max number of retries during waiting time for WLC-L in negotiated mode. */
 #define PTX_STATUS_WLC_CTL_RECORD_MISSING                   ((ptx_Status_t) 0xE006)   /**< Cannot read the WLC Control Record. */
 #define PTX_STATUS_WLC_CTL_MAX_NUM_RETRIES                  ((ptx_Status_t) 0xE007)   /**< Max Number of retries during wait for valid WLC Control Record. */
-#define PTX_STATUS_WLC_INVALID_MODE                         ((ptx_Status_t) 0xE008)   /**< The listener is in an invalid WLC Mode. */
+#define PTX_STATUS_WLC_INVALID_MODE                         ((ptx_Status_t) 0xE008)   /**< The listener is in an invalid WLC mode. */
 #define PTX_STATUS_WLC_PROTOCOL_ERROR                       ((ptx_Status_t) 0xE009)   /**< The listener reported a protocol error. */
 #define PTX_STATUS_WLC_INVALID_HOLD_OFF_DURATION            ((ptx_Status_t) 0xE00A)   /**< The hold-off duration contains an invalid value (must be <= 25% of WPT duration). */
 #define PTX_STATUS_WLC_WPT_ICD                              ((ptx_Status_t) 0xE00B)   /**< The WPT cycle stopped due to a Impedance Change Detection (ICD). */

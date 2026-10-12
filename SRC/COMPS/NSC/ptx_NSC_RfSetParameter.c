@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -48,6 +48,7 @@
  * ####################################################################################################################
  */
 #include "ptx_NSC_RfSetParameter.h"
+#include "ptx_NSC_RfConfig.h"
 #include "ptx_NSC_StateMachine.h"
 
 
@@ -86,9 +87,11 @@ ptx_Status_t ptx_NSC_RfSetParameter(ptx_NSC_t *nsc, ptx_NSC_RfSetParameter_Param
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != setParams) &&
-         (0 < paramCnt) && (PTX_NSC_RF_SET_PARAM_MAXPARAMCOUNT >= paramCnt))
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != setParams) &&
+        (0 < paramCnt) && (PTX_NSC_RF_SET_PARAM_MAXPARAMCOUNT >= paramCnt))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfSetParameter");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_RfSetParam, NULL);
     }
 
@@ -182,18 +185,27 @@ ptx_Status_t ptx_NSC_RfSetParameter(ptx_NSC_t *nsc, ptx_NSC_RfSetParameter_Param
 
 static ptx_Status_t ptx_NSC_RfSetParameter_Dispatch(ptx_NSC_t *nscCtx, uint8_t *txBuffer, uint32_t txBufferLen)
 {
-    ptx_Status_t status = ptx_NSC_CmdProcessor_DispatchMsg(nscCtx, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, txBuffer, txBufferLen);
-
-    if (PTX_STATUS_SUCCESS == status)
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    
+    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != txBuffer) && (0 != txBuffer))
     {
-        uint8_t nsc_rsp[PTX_NSC_CMD_PROCESSOR_RFSETPARAM_RSPLEN];
-        uint32_t nsc_rsp_len = sizeof(nsc_rsp);
+        PTX_LOG_V(nscCtx->Log, "ptx_NSC_RfSetParameter_Dispatch");
 
-        status = ptx_NSC_CmdProcessor_FetchMsg(nscCtx, nsc_rsp, &nsc_rsp_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFSETPARAM_RSP);
+
+        status = ptx_NSC_CmdProcessor_DispatchMsg(nscCtx, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, txBuffer, txBufferLen);
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            status = ptx_NSC_CmdProcessor_ProcessRsp(nscCtx, ptx_NSC_CmdProcessor_RspId_RfSetParam, nsc_rsp, nsc_rsp_len, NULL);
+
+            uint8_t nsc_rsp[PTX_NSC_CMD_PROCESSOR_RFSETPARAM_RSPLEN];
+            uint32_t nsc_rsp_len = sizeof(nsc_rsp);
+
+            status = ptx_NSC_CmdProcessor_FetchMsg(nscCtx, nsc_rsp, &nsc_rsp_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFSETPARAM_RSP);
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NSC_CmdProcessor_ProcessRsp(nscCtx, ptx_NSC_CmdProcessor_RspId_RfSetParam, nsc_rsp, nsc_rsp_len, NULL);
+            }
         }
     }
 
@@ -267,7 +279,6 @@ static uint8_t ptx_NSC_Param_CheckBitrate(uint8_t bitrate)
         case PTX_NSC_RF_SET_BITRATE_424:    /* FALL THROUGH */
         case PTX_NSC_RF_SET_BITRATE_848:    /* FALL THROUGH */
         case PTX_NSC_RF_SET_BITRATE_26_5:   /* FALL THROUGH */
-        case PTX_NSC_RF_SET_BITRATE_53:
             valid_bitrate = 1;
             break;
         default:

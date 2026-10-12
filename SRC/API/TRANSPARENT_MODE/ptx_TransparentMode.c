@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -368,7 +368,7 @@ ptx_Status_t ptx_TransparentMode_Exchange (ptx_TransparentMode_t *tmComp,
 static ptx_Status_t ptx_TransparentMode_LoadRFParameters (ptx_TransparentMode_t *tmComp, ptx_TransparentMode_RFParams_t *rfParams, uint32_t timeoutMS)
 {
     /*
-     * Internal uses a resolution of 128/fc per tick ~ 9,44us; 1 ms is roughly 106 ticks (~1.00059ms)
+     * Internally uses a resolution of 128/fc per tick ~ 9,44us; 1 ms is roughly 106 ticks (~1.00059ms)
      * Note: The resolution is limited to 24-bits i.e. the max. value is roughly 158 s.
      */
     const uint32_t BASE_TIMEOUT_1_MS = (uint32_t)106;
@@ -532,8 +532,7 @@ static ptx_Status_t ptx_TransparentMode_CheckTechAndBitrateCompatibility(ptx_Tra
             break;
 
         case ptx_TransparentMode_RF_Tech_V:
-            if ((txBitrateType == ptx_TransparentMode_RF_Bitrate_26 || txBitrateType == ptx_TransparentMode_RF_Bitrate_53) &&
-                (rxBitrateType == ptx_TransparentMode_RF_Bitrate_26 || rxBitrateType == ptx_TransparentMode_RF_Bitrate_53))
+            if ((txBitrateType == ptx_TransparentMode_RF_Bitrate_26) && (rxBitrateType == ptx_TransparentMode_RF_Bitrate_26))
             {
                 status = PTX_STATUS_SUCCESS;
             }

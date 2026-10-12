@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -59,6 +59,7 @@
 #include "ptx_Components.h"
 #include "ptx_HAL_DRV_Timer_Int.h"
 #include "hal_data.h"
+#include "ptx_Log.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -121,6 +122,9 @@ typedef struct ptx_HAL_DRV_Tmr
     uint8_t                     Id;         /**< Timer Port Id.*/
 
     ptx_HAL_DRV_Tmr_Port_t      *Port;      /**< Pointer to initialised timer. */
+    
+    ptx_Log_t                   *Log;       /**< Pointer to logger context. */
+
 } ptx_HAL_DRV_Tmr_t;
 
 /**
@@ -128,10 +132,13 @@ typedef struct ptx_HAL_DRV_Tmr
  */
 typedef struct ptx_HAL_DRV_Tmr_InitParams
 {
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
     void        *Osal;      /**< Pointer to OSAL context. */
+
 #endif
+    ptx_Log_t                   *Log;       /**< Pointer to logger context. */
 } ptx_HAL_DRV_Tmr_InitParams_t;
+
 
 /*
  * ####################################################################################################################
@@ -142,7 +149,11 @@ typedef struct ptx_HAL_DRV_Tmr_InitParams
 /**
  * \brief Component Initialization.
  *
- * \param[in]       ctx   Pointer to component.
+ * Initializes the Timer driver component. Validates input parameters and searches for an available
+ * (unassigned) timer port from the pool of configured timer instances. Marks the selected timer port
+ * as assigned to prevent reuse. The Log context must be a valid logger instance. Osal (Windows/Linux/AOSP only) pointer to valid OSAL context.
+ *
+ * \param[out]      ctx             Pointer to component.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
@@ -152,85 +163,131 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Init (ptx_HAL_DRV_Tmr_t *ctx, ptx_HAL_DRV_Tmr_InitP
 /**
  * \brief Component De-Initialization.
  *
- * \param[in]       ctx   Pointer to component.
+ * Clears all component data, releases the assigned timer port, and resets component ID to Comp_None.
+ * Clears any registered callback and callback context. The timer port is marked as unassigned and
+ * becomes available for reuse by other components.
+ *
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_DeInit (ptx_HAL_DRV_Tmr_t *ctx);
 
 /**
- * \brief Timer Open.
+ * \brief Opens the timer hardware interface.
  *
- * \param[in]       ctx   Pointer to function context.
+ * Opens the GPT (General Purpose Timer) hardware block and configures it according to the port configuration.
+ * If the timer is already open (FSP_ERR_ALREADY_OPEN), it will be closed first and then reopened to ensure
+ * a clean state. Registers the timer interrupt service routine (ISR) callback for timer events.
+ *
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Open (void *ctx);
 
 /**
- * \brief Timer Close.
+ * \brief Closes the timer hardware interface.
  *
- * \param[in]       ctx   Pointer to function context.
+ * Closes the GPT hardware block and releases associated resources. Returns success if the timer is
+ * successfully closed or if it was not open (FSP_ERR_NOT_OPEN).
+ *
+ * \param[in,out]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Close (void *ctx);
-
 /**
- * \brief Timer Start.
+ * \brief Starts the timer.
  *
- * \param[in]       ctx   Pointer to function context.
+ * Starts the timer counting. Resets the IsElapsed flag to FALSE before starting. The timer will
+ * count according to its configured period and mode (periodic or single-shot). Timer interrupts
+ * will be generated when the configured period expires.
+ *
+ * \param[in]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Start (void *ctx);
 
 /**
- * \brief Timer Stop.
+ * \brief Stops the timer.
  *
- * \param[in]       ctx   Pointer to function context.
+ * Stops the timer from counting. The timer can be restarted by calling ptx_HAL_DRV_Tmr_Start.
+ * The IsElapsed flag is not modified by this function.
+ *
+ * \param[in]       ctx   Pointer to component.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Stop (void *ctx);
 
 /**
- * \brief Timer IsElapsed request.
+ * \brief Checks if the timer has elapsed.
  *
- * \param[in]       ctx         Pointer to function context.
- * \param[in]       isElapsed   Pointer to variable for storing status information.
+ * Reads the IsElapsed flag which is set by the timer interrupt service routine when the configured
+ * period expires. The flag is set to TRUE when the timer elapses and remains TRUE until the timer
+ * is started again (which resets it to FALSE).
+ *
+ * \param[in]       ctx         Pointer to component.
+ * \param[out]      isElapsed   Pointer to variable for storing elapsed status (0 = not elapsed, 1 = elapsed).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_IsElapsed (void *ctx, uint8_t *isElapsed);
 
 /**
- * \brief Timer Execution callback registration.
+ * \brief Registers a timer execution callback.
  *
- * \param[in]       ctx   Pointer to function context.
- * \param[in]       cb    Callback function to be registered.
- * \param[in]       cbCtx Context for Callback function.
+ * Registers a callback function and its context to be executed when the timer elapses. The callback
+ * is invoked from the timer interrupt service routine. Both the callback function and context must
+ * be non-NULL. The callback behavior depends on the timer mode:
+ * - Periodic mode: Callback is executed each time the timer period expires
+ * - Single-shot mode: Callback is executed only once when the timer period expires
+ *
+ * \param[in]       ctx   Pointer to component.
+ * \param[in]       cb    Callback function to be registered (must not be NULL).
+ * \param[in]       cbCtx Context for callback function (must not be NULL).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_RegExecCb (void *ctx, ptx_HAL_DRV_Tmr_ExecCb_t cb, ptx_HAL_DRV_Tmr_ExecCbCtx_t cbCtx);
 
 /**
- * \brief Timer Configuration.
+ * \brief Configures timer parameters.
  *
- * \param[in]       ctx   Pointer to function context.
- * \param[in]       cfg   Array of configurations to be set.
- * \param[in]       len   Length of configuration array.
+ * Applies one or more configuration parameters to the timer. Supported configuration types include:
+ * - HAL_DRV_Tmr_CfgType_Period: Sets the timer period with time unit (milliseconds or seconds).
+ *   The period is calculated based on the PCLKD clock frequency and the configured clock divider.
+ * - HAL_DRV_Tmr_CfgType_Mode: Sets the timer mode (periodic or single-shot).
+ *
+ * Configuration is applied sequentially; if any configuration fails, the operation aborts and
+ * returns an error status.
+ *
+ * \param[in]       ctx   Pointer to component.
+ * \param[in]       cfg   Array of configurations to be applied.
+ * \param[in]       len   Length of configuration array (must be > 0).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
 ptx_Status_t ptx_HAL_DRV_Tmr_Cfg (void *ctx, ptx_HAL_DRV_Tmr_Cfg_t cfg[], uint32_t len);
 
 /**
- * \brief Sleep/Delay functionality.
+ * \brief Performs a blocking sleep/delay.
  *
- * \param[in]       ctx         Pointer to function context.
- * \param[in]       timeout     Time to sleep, in milliseconds.
+ * Blocks execution for the specified duration in milliseconds. Configures the timer with the requested
+ * timeout period, starts it, and waits in a low-power loop until the timer elapses. Uses interrupt-driven
+ * synchronization with MCU wait-for-interrupt (WFI) to minimize power consumption during the delay.
+ *
+ * The function performs the following steps:
+ * 1. Stops any running timer
+ * 2. Configures the timer period to the requested timeout in milliseconds
+ * 3. Starts the timer
+ * 4. Waits in a loop, disabling/enabling interrupts and using WFI for low-power operation
+ * 5. Stops the timer when elapsed
+ *
+ * \param[in]       ctx         Pointer to component.
+ * \param[in]       timeout     Time to sleep, in milliseconds (must be > 0).
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
@@ -244,4 +301,3 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Sleep (void *ctx, uint32_t timeout);
 #endif /* Guard */
 
 /** @} */
-

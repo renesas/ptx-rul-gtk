@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -79,8 +79,10 @@ ptx_Status_t ptx_NSC_RUL_FetchMsg (ptx_NSC_t *nsc, uint8_t *msg, uint32_t *msgLe
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (0 != *msgLen))
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (NULL != msgLen)  && (0 != *msgLen))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RUL_FetchMsg");
+
         if (PTX_NSC_RUL_NEW_MSG_RECEIVED != ptx_NSC_RUL_NewMsgReceived (nsc, msg, msgLen, &status))
         {
             uint8_t timer_elapsed;
@@ -151,41 +153,46 @@ ptx_Status_t ptx_NSC_RUL_FetchMsg (ptx_NSC_t *nsc, uint8_t *msg, uint32_t *msgLe
 static uint8_t ptx_NSC_RUL_NewMsgReceived (ptx_NSC_t *nsc, uint8_t *msg, uint32_t *msgLen, ptx_Status_t *errStatus)
 {
     /* Parameter checking done within the caller. All must be valid. */
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     uint8_t ret_val = PTX_NSC_RUL_NEW_MSG_NOT_RECEIVED;
 
-    nsc->CmdProcessor.LastMsg.IsNewMsg = 0;
-
-    ptx_Status_t status = ptx_NSC_CmdProcessor_GetPendingMsg(nsc);
-    if (PTX_STATUS_SUCCESS == status)
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (NULL != msgLen) && (NULL != errStatus))
     {
-        /* Check if we have a new message in the internal buffer. */
-        if (1 == nsc->CmdProcessor.LastMsg.IsNewMsg)
+        nsc->CmdProcessor.LastMsg.IsNewMsg = 0;
+
+        status = ptx_NSC_CmdProcessor_GetPendingMsg(nsc);
+        if (PTX_STATUS_SUCCESS == status)
         {
-            uint32_t len = nsc->CmdProcessor.LastMsg.Length;
-
-            /* Is the destination buffer large enough? */
-            if (*msgLen >= len)
+            PTX_LOG_V(nsc->Log, "ptx_NSC_RUL_NewMsgReceived");
+            /* Check if we have a new message in the internal buffer. */
+            if (1 == nsc->CmdProcessor.LastMsg.IsNewMsg)
             {
-                /* Copy the data from source to destination buffer. */
-                memcpy(&msg[0], nsc->CmdProcessor.LastMsg.Payload, len);
-                *msgLen = len;
+                uint32_t len = nsc->CmdProcessor.LastMsg.Length;
 
-                /* Reset "NewMsg"-flag so we can receive the next one. */
-                nsc->CmdProcessor.LastMsg.IsNewMsg = 0;
-            }
-            else
-            {
-                /* The destination buffer is not large enough. */
-                status = PTX_STATUS_E_NSC_RX_ERROR_LENGTH;
-                *msgLen = 0;
-            }
+                /* Is the destination buffer large enough? */
+                if (*msgLen >= len)
+                {
+                    /* Copy the data from source to destination buffer. */
+                    memcpy(&msg[0], nsc->CmdProcessor.LastMsg.Payload, len);
+                    *msgLen = len;
 
-            ret_val = PTX_NSC_RUL_NEW_MSG_RECEIVED;
+                    /* Reset "NewMsg"-flag so we can receive the next one. */
+                    nsc->CmdProcessor.LastMsg.IsNewMsg = 0;
+                }
+                else
+                {
+                    /* The destination buffer is not large enough. */
+                    status = PTX_STATUS_E_NSC_RX_ERROR_LENGTH;
+                    *msgLen = 0;
+                }
+
+                ret_val = PTX_NSC_RUL_NEW_MSG_RECEIVED;
+            }
         }
-    }
 
-    *errStatus = status;
+        *errStatus = status;
+    }
 
     return ret_val;
 }

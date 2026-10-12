@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -70,8 +70,11 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_Init");
+
 #if defined(PTX_ENABLE_SPI)
 
         if (HAL_Interface_Type_SPI == initParams->Type)
@@ -85,7 +88,9 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
             interface_init_params.Speed = initParams->Speed;
             interface_init_params.Log = initParams->Log;
             interface_init_params.Gpio = initParams->Gpio;
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+            ctx->Log = initParams->Log;
+
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
             interface_init_params.OS = initParams->Osal;
 #endif
 
@@ -93,6 +98,7 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
 
             if (PTX_STATUS_SUCCESS == status)
             {
+
                 ctx->Type = HAL_Interface_Type_SPI;
 
                 ctx->Open               = ptx_HAL_Interface_SPI_Open;
@@ -100,14 +106,11 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
                 ctx->TRx                = ptx_HAL_Interface_SPI_TRx;
                 ctx->Tx                 = NULL;
                 ctx->Rx                 = NULL;
-                ctx->EnableAsyncRx      = ptx_HAL_Interface_SPI_EnableAsyncRx;
-                ctx->DisableAsyncRx     = ptx_HAL_Interface_SPI_DisableAsyncRx;
-                ctx->RegAsyncRxCb       = ptx_HAL_Interface_SPI_RegAsyncRxCb;
-                ctx->AsyncRxNoNBlocking = ptx_HAL_Interface_SPI_AsyncRxNoNBlocking;
-                ctx->AsyncRxBlocking    = ptx_HAL_Interface_SPI_AsyncRxBlocking;
                 ctx->RxPending          = ptx_HAL_Interface_SPI_RxPending;
                 ctx->SetParameter       = ptx_HAL_Interface_SPI_SetParameter;
                 ctx->GetParameter       = ptx_HAL_Interface_SPI_GetParameter;
+
+
             }
 
         }
@@ -130,7 +133,7 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
             interface_init_params.Log = initParams->Log;
             interface_init_params.Gpio = initParams->Gpio;
             interface_init_params.Speed = initParams->Speed;
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
             interface_init_params.OS = initParams->Osal;
 #endif
             status = ptx_HAL_Interface_UART_Init(&ctx->UartInterface, &interface_init_params);
@@ -144,11 +147,6 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
                 ctx->TRx                = ptx_HAL_Interface_UART_TRx;
                 ctx->Tx                 = ptx_HAL_Interface_UART_Tx;
                 ctx->Rx                 = ptx_HAL_Interface_UART_Rx;
-                ctx->EnableAsyncRx      = ptx_HAL_Interface_UART_EnableAsyncRx;
-                ctx->DisableAsyncRx     = ptx_HAL_Interface_UART_DisableAsyncRx;
-                ctx->RegAsyncRxCb       = ptx_HAL_Interface_UART_RegAsyncRxCb;
-                ctx->AsyncRxNoNBlocking = ptx_HAL_Interface_UART_AsyncRxNonBlocking;
-                ctx->AsyncRxBlocking    = ptx_HAL_Interface_UART_AsyncRxBlocking;
                 ctx->RxPending          = ptx_HAL_Interface_UART_RxPending;
                 ctx->SetParameter       = ptx_HAL_Interface_UART_SetParameter;
                 ctx->GetParameter       = ptx_HAL_Interface_UART_GetParameter;
@@ -169,7 +167,7 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
             interface_init_params.Log = initParams->Log;
             interface_init_params.Gpio = initParams->Gpio;
             interface_init_params.Speed = initParams->Speed;
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
             interface_init_params.OS = initParams->Osal;
 #endif
 
@@ -184,11 +182,6 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
                 ctx->TRx                = ptx_HAL_Interface_I2C_TRx;
                 ctx->Tx                 = NULL;
                 ctx->Rx                 = NULL;
-                ctx->EnableAsyncRx      = ptx_HAL_Interface_I2C_EnableAsyncRx;
-                ctx->DisableAsyncRx     = ptx_HAL_Interface_I2C_DisableAsyncRx;
-                ctx->RegAsyncRxCb       = ptx_HAL_Interface_I2C_RegAsyncRxCb;
-                ctx->AsyncRxNoNBlocking = ptx_HAL_Interface_I2C_AsyncRxNonBlocking;
-                ctx->AsyncRxBlocking    = ptx_HAL_Interface_I2C_AsyncRxBlocking;
                 ctx->RxPending          = ptx_HAL_Interface_I2C_RxPending;
                 ctx->SetParameter       = ptx_HAL_Interface_I2C_SetParameter;
                 ctx->GetParameter       = ptx_HAL_Interface_I2C_GetParameter;
@@ -207,7 +200,7 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
             interface_init_params.Log = initParams->Log;
             interface_init_params.Gpio = initParams->Gpio;
             interface_init_params.Speed = initParams->Speed;
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
             interface_init_params.OS = initParams->Osal;
 #endif
 
@@ -222,11 +215,6 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
                 ctx->TRx                = ptx_HAL_Interface_I3C_TRx;
                 ctx->Tx                 = NULL;
                 ctx->Rx                 = NULL;
-                ctx->EnableAsyncRx      = ptx_HAL_Interface_I3C_EnableAsyncRx;
-                ctx->DisableAsyncRx     = ptx_HAL_Interface_I3C_DisableAsyncRx;
-                ctx->RegAsyncRxCb       = ptx_HAL_Interface_I3C_RegAsyncRxCb;
-                ctx->AsyncRxNoNBlocking = ptx_HAL_Interface_I3C_AsyncRxNonBlocking;
-                ctx->AsyncRxBlocking    = ptx_HAL_Interface_I3C_AsyncRxBlocking;
                 ctx->RxPending          = ptx_HAL_Interface_I3C_RxPending;
                 ctx->SetParameter       = ptx_HAL_Interface_I3C_SetParameter;
                 ctx->GetParameter       = ptx_HAL_Interface_I3C_GetParameter;
@@ -249,9 +237,12 @@ ptx_Status_t ptx_HAL_Interface_DeInit (ptx_HAL_Interface_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_DeInit");
 #if defined(PTX_ENABLE_SPI)
         if (HAL_Interface_Type_SPI == ctx->Type)
         {
+           
+
             status = ptx_HAL_Interface_SPI_DeInit(&ctx->SpiInterface);
         }
 #endif
@@ -279,6 +270,7 @@ ptx_Status_t ptx_HAL_Interface_DeInit (ptx_HAL_Interface_t *ctx)
 
         if (PTX_STATUS_SUCCESS == status)
         {
+            
             memset(ctx, 0, sizeof(ptx_HAL_Interface_t));
             ctx->CompId = Comp_None;
         }

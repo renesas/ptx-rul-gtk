@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -108,7 +108,7 @@ ptx_Status_t ptx_RfTest_RunTest(ptx_RfTest_t *rfTestComp, ptx_RfTest_InParams_t 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(rfTestComp, Comp_RF_TEST)) && (NULL != testParams))
+    if (PTX_COMP_CHECK(rfTestComp, Comp_RF_TEST) && (NULL != testParams))
     {
 
         status = ptx_RfTest_LogParameters(rfTestComp, testParams);
@@ -174,7 +174,7 @@ static ptx_Status_t ptx_RfTest_LogParameters(ptx_RfTest_t *rfTestComp, ptx_RfTes
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((PTX_COMP_CHECK(rfTestComp, Comp_RF_TEST)) && (NULL != testParams))
+    if (PTX_COMP_CHECK(rfTestComp, Comp_RF_TEST) && (NULL != testParams))
     {
         status = PTX_STATUS_SUCCESS;
 

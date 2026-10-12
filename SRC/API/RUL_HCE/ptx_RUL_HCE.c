@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -128,19 +128,22 @@ ptx_Status_t ptx_RUL_HCE_Init(ptx_RUL_HCE_t *hce, ptx_RUL_HCE_InitParams_t *init
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != hce) && (NULL != initParams))
+    if ((NULL != hce) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_I(initParams->Log, "ptx_RUL_HCE_Init");
+
         hce->Rul                  = initParams->Rul;
 
         hce->AppRxBufferSize      = initParams->AppRxBufferSize;
         hce->AppRxBuffer          = initParams->AppRxBuffer;
 
-        hce->CompId = Comp_HCE;
-
+        hce->CompId               = Comp_HCE;
+        hce->Log                  = initParams->Log;
         status = ptx_RUL_HCE_ResetState(hce);
 
         if (PTX_STATUS_SUCCESS == status)
         {
+
             status = ptx_RUL_HCE_RegisterExtension(hce->Rul, hce);
         }
 
@@ -159,6 +162,7 @@ ptx_Status_t ptx_RUL_HCE_DeInit(ptx_RUL_HCE_t *hce)
 
     if (PTX_COMP_CHECK(hce, Comp_HCE))
     {
+        PTX_LOG_I(hce->Log, "ptx_RUL_HCE_DeInit");
         status = ptx_RUL_HCE_RemoveExtension(hce->Rul);
 
         hce->CompId = Comp_None;
@@ -177,6 +181,8 @@ ptx_Status_t ptx_RUL_HCE_ResetState(ptx_RUL_HCE_t *hce)
 
     if (PTX_COMP_CHECK(hce, Comp_HCE))
     {
+        PTX_LOG_I(hce->Log, "ptx_RUL_HCE_ResetState");
+
         status = ptx_RUL_HCE_InitEventQueue(hce);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -199,6 +205,8 @@ ptx_Status_t ptx_RUL_HCE_GetEvent(ptx_RUL_HCE_t *hce, ptx_RUL_HCE_EventRecord_t 
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != event))
     {
+        PTX_LOG_I(hce->Log, "ptx_RUL_HCE_GetEvent");
+
         ptx_RUL_Status_Params_t status_params;
         memset(&status_params, 0, sizeof(ptx_RUL_Status_Params_t));
         status_params.Type = ptx_RUL_StatusType_System;
@@ -228,8 +236,9 @@ ptx_Status_t ptx_RUL_HCE_SendData(ptx_RUL_HCE_t *hce, uint8_t *tx, uint32_t txLe
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != tx))
     {
+        PTX_LOG_I(hce->Log, "ptx_RUL_HCE_SendData");
         /* Tx Rf Data. */
-        status = ptx_NSC_DataTx(&(hce->Rul->Nsc), tx, txLen, 0U);
+        status = ptx_NSC_DataTx(&(hce->Rul->Nsc), tx, txLen, 0U, PTX_NSC_DATA_TIMEOUT_DEFAULT);
     }
 
     return status;
@@ -243,6 +252,8 @@ ptx_Status_t ptx_RUL_HCE_ReserveEventRecord(ptx_RUL_HCE_t *hce, ptx_RUL_HCE_Even
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != evtRecord) && (NULL != eventRecordIndex))
     {
+        PTX_LOG_I(hce->Log, "ptx_RUL_HCE_ReserveEventRecord");
+
         status = ptx_RUL_HCE_ReadFromTail(hce, &record_index);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -268,6 +279,8 @@ ptx_Status_t ptx_RUL_HCE_AddNewEventPending(ptx_RUL_HCE_t *hce, uint16_t recordI
 
     if (PTX_COMP_CHECK(hce, Comp_HCE))
     {
+        PTX_LOG_I(hce->Log, "ptx_RUL_HCE_AddNewEventPending");
+
         status = ptx_RUL_HCE_AddToTail(hce, recordIndex);
     }
 
@@ -286,6 +299,8 @@ static ptx_Status_t ptx_RUL_HCE_RegisterExtension(ptx_RUL_t *rul, ptx_RUL_HCE_t 
 
     if (PTX_COMP_CHECK(rul, Comp_RUL) && PTX_COMP_CHECK(hce, Comp_HCE))
     {
+        PTX_LOG_V(&(rul->Log), "ptx_RUL_HCE_RegisterExtension");
+
         ptx_RUL_Extension_Endpoints_t ep;
         memset(&ep, 0, sizeof(ptx_RUL_Extension_Endpoints_t));
 
@@ -310,6 +325,8 @@ static ptx_Status_t ptx_RUL_HCE_RemoveExtension(ptx_RUL_t *rul)
 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
+        PTX_LOG_V(&(rul->Log), "ptx_RUL_HCE_RemoveExtension");
+
         status = ptx_RUL_RemoveExtensionEndpoints(rul, Comp_HCE);
     }
 
@@ -323,7 +340,9 @@ static ptx_Status_t ptx_RUL_HCE_ProcessDataMsg(void *ctx, ptx_NSC_RfData_Msg_t *
     ptx_RUL_HCE_t *hce = ctx;
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != msg))
-    {
+    {   
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessDataMsg");
+
         if (RUL_HCE_DiscoverState_Activate == hce->DiscoverState)
         {
             ptx_RUL_HCE_EventRecord_t *record;
@@ -371,6 +390,8 @@ static ptx_Status_t ptx_RUL_HCE_ProcessError(void *ctx, ptx_NSC_Error_Ntf_t *ntf
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != ntf))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessError");
+
         ptx_RUL_HCE_EventRecord_t *record;
         uint16_t idx;
 
@@ -406,6 +427,8 @@ static ptx_Status_t ptx_RUL_HCE_ProcessReset(void *ctx)
 
     if (PTX_COMP_CHECK(hce, Comp_HCE))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessError");
+
         ptx_RUL_HCE_EventRecord_t *record;
         uint16_t idx;
 
@@ -433,6 +456,8 @@ static ptx_Status_t ptx_RUL_HCE_ProcessRfActivate(void *ctx, ptx_NSC_RfActivate_
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != ntf) && (NULL != ntf_used))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessError");
+
         if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) ||
             (ptx_NSC_RfTech_Passive_Listen_B == ntf->RfTech) ||
             (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech) ||
@@ -479,6 +504,8 @@ static ptx_Status_t ptx_RUL_HCE_ProcessRfField(void *ctx, uint8_t field, uint8_t
 
     if (PTX_COMP_CHECK(hce, Comp_HCE))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessRfField");
+
         ptx_RUL_HCE_EventRecord_t *record;
         uint16_t idx;
 
@@ -523,6 +550,8 @@ static ptx_Status_t ptx_RUL_HCE_ProcessRfDeactivate(void *ctx, ptx_NSC_RfDeactiv
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != ntf))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessRfDeactivate");
+
         ptx_RUL_HCE_EventRecord_t *record;
         uint16_t idx;
 
@@ -570,6 +599,8 @@ static ptx_Status_t ptx_RUL_HCE_ReadFromTail(ptx_RUL_HCE_t *hce, uint16_t *recor
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (recordIndex != NULL))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ReadFromTail");
+
         /* Check that the event queue is not empty? */
         if (hce->EventQ.NrOfEntries < hce->EventQ.MaxNrOfEntries)
         {
@@ -592,6 +623,8 @@ static ptx_Status_t ptx_RUL_HCE_ReadFromHead(ptx_RUL_HCE_t *hce, uint16_t *recor
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (recordIndex != NULL))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ReadFromHead");
+
         /* Check that the event queue is not empty? */
         if (0 != hce->EventQ.NrOfEntries)
         {
@@ -614,6 +647,8 @@ static ptx_Status_t ptx_RUL_HCE_AddToTail(ptx_RUL_HCE_t *hce, uint16_t recordInd
 
     if (PTX_COMP_CHECK(hce, Comp_HCE))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_AddToTail");
+
         /* Check that the event queue is not full? */
         if (hce->EventQ.NrOfEntries < hce->EventQ.MaxNrOfEntries)
         {
@@ -657,6 +692,8 @@ static ptx_Status_t ptx_RUL_HCE_RemoveFromHead(ptx_RUL_HCE_t *hce, uint16_t *rec
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (recordIndex != NULL))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_RemoveFromHead");
+
         /* Check that the event queue is not empty? */
         if (0 != hce->EventQ.NrOfEntries)
         {
@@ -688,6 +725,8 @@ static ptx_Status_t ptx_RUL_HCE_ReadNextEvent(ptx_RUL_HCE_t *hce, ptx_RUL_HCE_Ev
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (evtRecord != NULL) && (indexOfRecordRead != NULL))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ReadNextEvent");
+
         status = ptx_RUL_HCE_ReadFromHead(hce, &record_index);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -707,6 +746,8 @@ static ptx_Status_t ptx_RUL_HCE_ReleaseEvent(ptx_RUL_HCE_t *hce, ptx_RUL_HCE_Eve
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (evtRecord != NULL))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ReleaseEvent");
+
         /* Verify that the buffer reference information is valid */
         if (evtRecord == &hce->EventQ.Entries[recordIndex])
         {
@@ -726,8 +767,10 @@ static ptx_Status_t ptx_RUL_HCE_InitEventQueue(ptx_RUL_HCE_t *hce)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (NULL != hce)
+    if ((NULL != hce))
     {
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_InitEventQueue");
+
         hce->EventQ.NrOfEntries = 0;
         hce->EventQ.HeadIndex = e_EvtRecordIndexMin;
         hce->EventQ.TailIndex = e_EvtRecordIndexMin;

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -91,7 +91,7 @@ extern "C" {
 #define CON_SYS_CODE_2                                  (0x8EFC)        /**< Type-F System Code pattern 3. */
 
 #define PTX_NFCFORUMDTA_NDEF_MESSAGE_BUFFER_SIZE        (7000u)         /**< Max. Buffer size for NDEF message buffer. */
-#define PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE   (512u)          /**< Max. single NDEF-transmission buffer size. */
+#define PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE   (2048u)          /**< Max. single NDEF-transmission buffer size. */
 
 #define PTX_NFCFORUMDTA_TYPE_F_BR212                    (212u)          /**< Type-F 212 kBit/s bitrate. */
 #define PTX_NFCFORUMDTA_TYPE_F_BR424                    (424u)          /**< Type-F 424 kBit/s bitrate. */

@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -59,9 +59,9 @@
  */
 
 /* Macro to check CB function pointer */
-#define PTX_DEVUART_FP_CHECK(ptx_devUart_fp)    ((NULL != uartInterface->Drv) && (NULL != uartInterface->Drv->ptx_devUart_fp))
+#define PTX_DEVUART_FP_CHECK(ptx_devUart_fp)   ((NULL != uartInterface->Drv) && (NULL != uartInterface->Drv->ptx_devUart_fp))
 
-#define PTX_HAL_INTERFACE_UART_IRQ_LEVEL_HIGH  (1u)
+#define PTX_HAL_INTERFACE_UART_IRQ_LEVEL_HIGH (1u)
 
 /*
  * ####################################################################################################################
@@ -76,12 +76,14 @@
  * ####################################################################################################################
  */
 
-ptx_Status_t ptx_HAL_Interface_UART_Init (ptx_HAL_Interface_UART_t *ctx, ptx_HAL_Interface_UART_InitParams_t *initParams)
+ptx_Status_t ptx_HAL_Interface_UART_Init(ptx_HAL_Interface_UART_t *ctx, ptx_HAL_Interface_UART_InitParams_t *initParams)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
-    {
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
+    {       
+        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_UART_Init");
+
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Interface_UART_t));
 
         ptx_HAL_DRV_Interface_UART_InitParams_t    drv_init_params;
@@ -93,7 +95,7 @@ ptx_Status_t ptx_HAL_Interface_UART_Init (ptx_HAL_Interface_UART_t *ctx, ptx_HAL
         drv_init_params.Speed = initParams->Speed;
         drv_init_params.Log = initParams->Log;
         drv_init_params.Gpio = initParams->Gpio;
-#if defined(PTX_APP_DIVERSITY_WIN) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
         drv_init_params.OS = initParams->OS;
 #endif
 
@@ -109,19 +111,21 @@ ptx_Status_t ptx_HAL_Interface_UART_Init (ptx_HAL_Interface_UART_t *ctx, ptx_HAL
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_UART_DeInit (ptx_HAL_Interface_UART_t *ctx)
+ptx_Status_t ptx_HAL_Interface_UART_DeInit(ptx_HAL_Interface_UART_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Drv.Log, "ptx_HAL_Interface_UART_DeInit");
+
         status = ptx_HAL_DRV_Interface_UART_DeInit(&ctx->Drv);
     }
 
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_UART_Open (void *ctx)
+ptx_Status_t ptx_HAL_Interface_UART_Open(void *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -129,13 +133,15 @@ ptx_Status_t ptx_HAL_Interface_UART_Open (void *ctx)
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Open");
+
         status = ptx_HAL_DRV_Interface_UART_Open(&uartInterface->Drv);
     }
 
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_UART_Close (void *ctx)
+ptx_Status_t ptx_HAL_Interface_UART_Close(void *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -143,13 +149,15 @@ ptx_Status_t ptx_HAL_Interface_UART_Close (void *ctx)
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Close");
+
         status = ptx_HAL_DRV_Interface_UART_Close(&uartInterface->Drv);
     }
 
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_UART_TRx (void *ctx, uint8_t *txBuf[], uint32_t txLen[], uint32_t txBufferCnt,
+ptx_Status_t ptx_HAL_Interface_UART_TRx(void *ctx, uint8_t *txBuf[], uint32_t txLen[], uint32_t txBufferCnt,
                                          uint8_t *rxBuf[], uint32_t rxLen[], uint32_t rxBufferCnt)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -158,6 +166,8 @@ ptx_Status_t ptx_HAL_Interface_UART_TRx (void *ctx, uint8_t *txBuf[], uint32_t t
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_TRx");
+
         status = PTX_STATUS_SUCCESS;
 
         if ((NULL != txBuf) && (NULL != txLen) && (0 != txBufferCnt))
@@ -165,7 +175,7 @@ ptx_Status_t ptx_HAL_Interface_UART_TRx (void *ctx, uint8_t *txBuf[], uint32_t t
             /* TX operation is required and parameters are valid. */
             uint32_t txIdx = 0;
 
-            while ((PTX_STATUS_SUCCESS == status) && (txIdx < txBufferCnt))
+            while((PTX_STATUS_SUCCESS == status) && (txIdx < txBufferCnt))
             {
                 if (NULL != txBuf[txIdx])
                 {
@@ -189,7 +199,7 @@ ptx_Status_t ptx_HAL_Interface_UART_TRx (void *ctx, uint8_t *txBuf[], uint32_t t
                 /* RX operation is required and parameters are valid. */
                 uint32_t rxIdx = 0;
 
-                while ((PTX_STATUS_SUCCESS == status) && (rxIdx < rxBufferCnt))
+                while((PTX_STATUS_SUCCESS == status) && (rxIdx < rxBufferCnt))
                 {
                     if (NULL != rxBuf[rxIdx])
                     {
@@ -211,7 +221,7 @@ ptx_Status_t ptx_HAL_Interface_UART_TRx (void *ctx, uint8_t *txBuf[], uint32_t t
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_UART_Tx (void *ctx, uint8_t *txBuf, uint32_t txLen)
+ptx_Status_t ptx_HAL_Interface_UART_Tx(void *ctx, uint8_t *txBuf, uint32_t txLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -219,13 +229,15 @@ ptx_Status_t ptx_HAL_Interface_UART_Tx (void *ctx, uint8_t *txBuf, uint32_t txLe
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL) && (NULL != txBuf))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Tx");
+
         status = ptx_HAL_DRV_Interface_UART_Tx(&uartInterface->Drv, txBuf, txLen);
     }
 
     return status;
 }
 
-ptx_Status_t ptx_HAL_Interface_UART_Rx (void *ctx, uint8_t *rxBuf, uint32_t rxLen)
+ptx_Status_t ptx_HAL_Interface_UART_Rx(void *ctx, uint8_t *rxBuf, uint32_t rxLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -233,52 +245,9 @@ ptx_Status_t ptx_HAL_Interface_UART_Rx (void *ctx, uint8_t *rxBuf, uint32_t rxLe
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL) && (NULL != rxBuf))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Rx");
+
         status = ptx_HAL_DRV_Interface_UART_Rx(&uartInterface->Drv, &rxBuf[0], rxLen);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_UART_EnableAsyncRx (void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_UART_t *uartInterface = &((ptx_HAL_Interface_t*)ctx)->UartInterface;
-
-    if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_UART_ActivateRxIrq(&uartInterface->Drv);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_UART_DisableAsyncRx (void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_UART_t *uartInterface = &((ptx_HAL_Interface_t*)ctx)->UartInterface;
-
-    if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_UART_DeactivateRxIrq(&uartInterface->Drv);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_UART_RegAsyncRxCb(void *ctx, ptx_HAL_Interface_UART_AsyncRxCb_t rxCb, ptx_HAL_Interface_UART_AsyncRxCbCtx_t rxCbCtx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_UART_t *uartInterface = &((ptx_HAL_Interface_t*)ctx)->UartInterface;
-
-    if (PTX_COMP_CHECK(uartInterface, Comp_HAL) && (NULL != rxCb) && (NULL != rxCbCtx))
-    {
-        uartInterface->AsyncRxCb       = rxCb;
-        uartInterface->AsyncRxCbCtx    = rxCbCtx;
-
-        status = PTX_STATUS_SUCCESS;
     }
 
     return status;
@@ -292,63 +261,9 @@ ptx_Status_t ptx_HAL_Interface_UART_RxPending(void* ctx, uint8_t *rxPending)
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL) && (NULL != rxPending))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_RxPending");
+
         status = ptx_HAL_DRV_Interface_UART_RxIrqLevel(&uartInterface->Drv, rxPending);
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_UART_AsyncRxNonBlocking(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_UART_t *uartInterface = &((ptx_HAL_Interface_t*)ctx)->UartInterface;
-
-    if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
-    {
-        uint8_t level = 0;
-
-        status = ptx_HAL_DRV_Interface_UART_RxIrqLevel(&uartInterface->Drv, &level);
-
-        if ((PTX_STATUS_SUCCESS == status) && (PTX_HAL_INTERFACE_UART_IRQ_LEVEL_HIGH == level))
-        {
-            if ((NULL != uartInterface->AsyncRxCb) && (NULL != uartInterface->AsyncRxCbCtx))
-            {
-                uartInterface->AsyncRxCb(uartInterface->AsyncRxCbCtx);
-            }
-            else
-            {
-                /* No AsyncRx callback registered */
-                status = PTX_STATUS_E_GEN_INTERNAL;
-            }
-        }
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_Interface_UART_AsyncRxBlocking(void *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    ptx_HAL_Interface_UART_t *uartInterface = &((ptx_HAL_Interface_t*)ctx)->UartInterface;
-
-    if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
-    {
-        status = ptx_HAL_DRV_Interface_UART_WaitForIRQ(&uartInterface->Drv);
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            if ((NULL != uartInterface->AsyncRxCb) && (NULL != uartInterface->AsyncRxCbCtx))
-            {
-                uartInterface->AsyncRxCb(uartInterface->AsyncRxCbCtx);
-            }
-            else
-            {
-                /* No AsyncRx callback registered */
-                status = PTX_STATUS_E_GEN_INTERNAL;
-            }
-        }
     }
 
     return status;
@@ -362,6 +277,8 @@ ptx_Status_t ptx_HAL_Interface_UART_SetParameter(void *ctx, ptx_HAL_DRV_Interfac
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_SetParameter");
+
         status = ptx_HAL_DRV_Interface_UART_SetParameter(&uartInterface->Drv, parameter);
     }
 
@@ -376,6 +293,8 @@ ptx_Status_t ptx_HAL_Interface_UART_GetParameter(void *ctx, ptx_HAL_DRV_Interfac
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
+        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_GetParameter");
+
         status = ptx_HAL_DRV_Interface_UART_GetParameter(&uartInterface->Drv, parameter);
     }
 

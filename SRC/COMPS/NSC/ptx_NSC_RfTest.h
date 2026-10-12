@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -128,8 +128,7 @@ typedef enum ptx_RfTest_BitRate
     RF_TEST_BITRATE_212     = 0x01,      /**< RF Bit-rate 212 kBit/s */
     RF_TEST_BITRATE_424     = 0x02,      /**< RF Bit-rate 424 kBit/s */
     RF_TEST_BITRATE_848     = 0x03,      /**< RF Bit-rate 848 kBit/s */
-    RF_TEST_BITRATE_26_5    = 0x06,      /**< RF Bit-rate 26.6 kBit/s */
-    RF_TEST_BITRATE_53      = 0x07       /**< RF Bit-rate 53 kBit/s */
+    RF_TEST_BITRATE_26_5    = 0x06       /**< RF Bit-rate 26.6 kBit/s */
 } ptx_RfTest_BitRate_t;
 
 /**

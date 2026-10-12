@@ -99,8 +99,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Init(ptx_HAL_DRV_Interface_I3C_t *ctx, pt
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_I3C_Init");
+
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I3C_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_I3C_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
@@ -110,7 +112,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Init(ptx_HAL_DRV_Interface_I3C_t *ctx, pt
                 ctx->Port = &gDrvI3CPortConfigs[config];
                 ctx->Speed = initParams->Speed;
                 ctx->Address = initParams->Address;
-                ctx->Logger = initParams->Log;
+                ctx->Log = initParams->Log;
                 ctx->Gpio = initParams->Gpio;
                 ctx->CompId = Comp_HAL;
                 status = PTX_STATUS_SUCCESS;
@@ -127,6 +129,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_DeInit(ptx_HAL_DRV_Interface_I3C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_DeInit");
+
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I3C_t));
         status = PTX_STATUS_SUCCESS;
     }
@@ -141,6 +145,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Open(ptx_HAL_DRV_Interface_I3C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_Open");
+
         const i3c_instance_t *i3c = ctx->Port->Instance;
 
         /* Initializes the I3C module. */
@@ -240,6 +246,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Close(ptx_HAL_DRV_Interface_I3C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_Close");
+
         const i3c_instance_t *i3c = ctx->Port->Instance;
 
         fsp_err_t r_status = R_I3C_Close(i3c->p_ctrl);
@@ -273,6 +281,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Tx(ptx_HAL_DRV_Interface_I3C_t *ctx, uint
     
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != txBuf))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_Tx");
+
         const i3c_instance_t *i3c = ctx->Port->Instance;
         /* update buffer */
         for (uint32_t cnt = PTX_HAL_DRV_I3C_RESET_VALUE; cnt < txLen; cnt++)
@@ -291,6 +301,12 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Tx(ptx_HAL_DRV_Interface_I3C_t *ctx, uint
             /* wait for write complete event.*/
             status = ptx_HAL_DRV_Interface_I3C_Wait4TransferDone(ctx, I3C_EVENT_WRITE_COMPLETE, PTX_HAL_DRV_INTERFACE_I3C_WAIT_TIME);
         }
+#if !defined(PTX_ENABLE_TFCI)
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            PTX_LOG_I_MEM(ctx->Log, &txBuf[0], txLen, "TX: ");
+        }
+#endif
     }
 
     return status;
@@ -303,6 +319,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Rx(ptx_HAL_DRV_Interface_I3C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != rxBuf))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_Rx");
+
         const i3c_instance_t *i3c = ctx->Port->Instance;
         /* Start a read operation. */
         err = R_I3C_Read(i3c->p_ctrl, rxBuf, rxLen, restart);
@@ -316,58 +334,13 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_Rx(ptx_HAL_DRV_Interface_I3C_t *ctx, uint
             /* wait for read complete event.*/
             status = ptx_HAL_DRV_Interface_I3C_Wait4TransferDone(ctx, I3C_EVENT_READ_COMPLETE, PTX_HAL_DRV_INTERFACE_I3C_WAIT_TIME);
         }
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_I3C_ActivateRxIrq(ptx_HAL_DRV_Interface_I3C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        if (NULL != ctx->Port->ExternalIrqInstance)
+#if !defined(PTX_ENABLE_TFCI)
+        if (PTX_STATUS_SUCCESS == status)
         {
-            const external_irq_instance_t *irq = ctx->Port->ExternalIrqInstance;
-            fsp_err_t r_status = R_ICU_ExternalIrqEnable(irq->p_ctrl);
-
-            if (FSP_SUCCESS == r_status)
-            {
-                status = PTX_STATUS_SUCCESS;
-            }
-            else
-            {
-                status = PTX_STATUS_E_GEN_INTERFACE_RX_IRQ;
-            }
+            PTX_LOG_I_MEM(ctx->Log, &rxBuf[0], rxLen, "RX: ");
         }
+#endif
     }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_I3C_DeactivateRxIrq(ptx_HAL_DRV_Interface_I3C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        if (NULL != ctx->Port->ExternalIrqInstance)
-        {
-            const external_irq_instance_t *irq = ctx->Port->ExternalIrqInstance;
-            fsp_err_t r_status = R_ICU_ExternalIrqDisable(irq->p_ctrl);
-
-            if (FSP_SUCCESS == r_status)
-            {
-                status = PTX_STATUS_SUCCESS;
-            }
-            else
-            {
-                status = PTX_STATUS_E_GEN_INTERFACE_RX_IRQ;
-            }
-        }
-    }
-
     return status;
 }
 
@@ -377,6 +350,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_RxIrqLevel(ptx_HAL_DRV_Interface_I3C_t *c
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_RxIrqLevel");
+
         bsp_io_level_t value;
         memset(&value, 0, sizeof(value));
         
@@ -396,24 +371,14 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_RxIrqLevel(ptx_HAL_DRV_Interface_I3C_t *c
     return status;
 }
 
-ptx_Status_t ptx_HAL_DRV_Interface_I3C_WaitForIRQ(ptx_HAL_DRV_Interface_I3C_t *ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
-    }
-
-    return status;
-}
-
 ptx_Status_t ptx_HAL_DRV_Interface_I3C_SetParameter(ptx_HAL_DRV_Interface_I3C_t *ctx, ptx_HAL_DRV_Interface_Parameter_t *parameter)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_SetParameter");
+        
         if ((HAL_DRV_Interface_Parameter_Type_I3C_DynamicAddressAssignment == parameter->type) &&
             (PTX_HAL_DRV_INTERFACE_I3C_DAA == parameter->value.I3C_DynamicAddressAssignment)
         )
@@ -432,8 +397,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I3C_GetParameter(ptx_HAL_DRV_Interface_I3C_t 
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_GetParameter");
+        
         status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
     }
 
@@ -452,6 +419,8 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I3C_Wait4TransferDone(ptx_HAL_DRV_Inte
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (PTX_HAL_DRV_I3C_EVENT_SIZE > eventId))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I3C_Wait4TransferDone");
+        
         ctx->Port->TransferState = TRX_TX_INPROGRESS;
         ctx->Port->TransferWaitCnt = timeout;
 

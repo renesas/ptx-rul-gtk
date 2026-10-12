@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -77,8 +77,10 @@ ptx_Status_t ptx_NSC_RfDiscover(ptx_NSC_t *nsc, ptx_NSC_RfDiscover_Param_t *disc
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) )
+    if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfDiscover");
+
         status = ptx_NSC_CheckRfStateCmdExecution(nsc, ptx_NSC_SM_CmdId_RfDiscover, NULL);
     }
 
@@ -407,6 +409,8 @@ ptx_Status_t ptx_NSC_GetRfDiscoveryParam(ptx_NSC_t *nsc, ptx_NSC_RfDiscover_Para
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != cfg) && (NULL != params))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_GetRfDiscoveryParam");
+
         if (NSC_RfDiscover_Param_Type_Listen > type)
         {
             status = ptx_NSC_GetRfDiscoveryParam_Poll(nsc, type, cfg, params);
@@ -431,24 +435,32 @@ ptx_Status_t ptx_NSC_GetRfDiscoveryParam(ptx_NSC_t *nsc, ptx_NSC_RfDiscover_Para
 
 static ptx_Status_t ptx_NSC_RfDiscover_Dispatch(ptx_NSC_t *nsc, uint8_t *txBuffer, uint32_t txBufferLen)
 {
-    ptx_Status_t status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, txBuffer, txBufferLen);
-
-    if (PTX_STATUS_SUCCESS == status)
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != txBuffer) && (0 != txBufferLen))
     {
-        uint8_t nsc_rsp[PTX_NSC_CMD_PROCESSOR_RFDISCOVER_RSPLEN];
-        uint32_t nsc_rsp_len = PTX_NSC_CMD_PROCESSOR_RFDISCOVER_RSPLEN;
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfDiscover_Dispatch");
 
-        status = ptx_NSC_CmdProcessor_FetchMsg(nsc, nsc_rsp, &nsc_rsp_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFDISCOVER_RSP);
+        status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, txBuffer, txBufferLen);
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            if (0 != nsc_rsp_len)
+
+            uint8_t nsc_rsp[PTX_NSC_CMD_PROCESSOR_RFDISCOVER_RSPLEN];
+            uint32_t nsc_rsp_len = PTX_NSC_CMD_PROCESSOR_RFDISCOVER_RSPLEN;
+
+            status = ptx_NSC_CmdProcessor_FetchMsg(nsc, nsc_rsp, &nsc_rsp_len, PTX_NSC_TIMEOUT_DEFAULT, PTX_NSC_CMD_PROCESSOR_RFDISCOVER_RSP);
+
+            if (PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_NSC_CmdProcessor_ProcessRsp(nsc, ptx_NSC_CmdProcessor_RspId_RfDiscover, nsc_rsp, nsc_rsp_len, NULL);
-            }
-            else
-            {
-                status = PTX_STATUS_E_NSC_PROTOCOL;
+                if (0 != nsc_rsp_len)
+                {
+                    status = ptx_NSC_CmdProcessor_ProcessRsp(nsc, ptx_NSC_CmdProcessor_RspId_RfDiscover, nsc_rsp, nsc_rsp_len, NULL);
+                }
+                else
+                {
+                    status = PTX_STATUS_E_NSC_PROTOCOL;
+                }
             }
         }
     }

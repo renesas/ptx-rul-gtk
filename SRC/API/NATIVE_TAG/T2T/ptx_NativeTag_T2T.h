@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -82,7 +82,7 @@ extern "C" {
  */
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_NativeTag_T2T
 {
@@ -135,11 +135,11 @@ ptx_Status_t ptx_NativeTag_T2T_Close (ptx_NativeTag_T2T_t *t2t);
 /**
  * \brief Read the T2T blocks.
  *
- * \param[in]       t2t             Pointer to an existing instance of the T2T component.
+ * \param[in]       t2t                 Pointer to an existing instance of the T2T component.
  * \param[in]       blockNr             Block number to be read (within sector).
  * \param[out]      rx                  Pointer to Rx-buffer where the received data from the card shall be stored.
  * \param[in,out]   rxLen               Size of Rx-buffer (in), Length of the received data (out).
- * \param[in]       msTimeout           Timeout in ms that the function is going to wait for receiving data from the card.
+ * \param[in]       msTimeout           Timeout in ms for receiving data from the card.
  *
  * \return Status, indicating whether the operation was successful.
  */
@@ -152,13 +152,13 @@ ptx_Status_t ptx_NativeTag_T2T_Read (ptx_NativeTag_T2T_t *t2t,
 /**
  * \brief Write to the T2T blocks.
  *
- * \param[in]       t2t             Pointer to an existing instance of the T2T component.
+ * \param[in]       t2t                 Pointer to an existing instance of the T2T component.
  * \param[in]       blockNr             Block number to be written (within sector).
  * \param[in]       blockData           Data to write.
  * \param[in]       blockDataLen        Length of data to write.
  * \param[out]      rx                  Pointer to Rx-buffer where the received data from the card shall be stored.
  * \param[in,out]   rxLen               Size of Rx-buffer (in), Length of the received data (out).
- * \param[in]       msTimeout           Timeout in ms that the function is going to wait for receiving data from the card.
+ * \param[in]       msTimeout           Timeout in ms for receiving data from the card.
  *
  * \return Status, indicating whether the operation was successful.
  */
@@ -173,11 +173,11 @@ ptx_Status_t ptx_NativeTag_T2T_Write (ptx_NativeTag_T2T_t *t2t,
 /**
  * \brief Select the T2T sector.
  *
- * \param[in]       t2t             Pointer to an existing instance of the T2T component.
+ * \param[in]       t2t                 Pointer to an existing instance of the T2T component.
  * \param[in]       secNr               Sector number to be used (default sector is 0).
  * \param[out]      rx                  Pointer to Rx-buffer where the received data from the card shall be stored.
  * \param[in,out]   rxLen               Size of Rx-buffer (in), Length of the received data (out).
- * \param[in]       msTimeout           Timeout in ms that the function is going to wait for receiving data from the card.
+ * \param[in]       msTimeout           Timeout in ms for receiving data from the card.
  *
  * \return Status, indicating whether the operation was successful.
  */

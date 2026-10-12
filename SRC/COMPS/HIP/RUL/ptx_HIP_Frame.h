@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -61,7 +61,7 @@
 #include "ptx_Status.h"
 #include "ptx_Components.h"
 #include "ptx_HIP_Int.h"
-
+#include "ptx_Log.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -152,7 +152,7 @@ typedef struct ptx_HIP_FrameData
 } ptx_HIP_FrameData_t;
 
 /**
- * \brief Main Component Struture
+ * \brief Main Component Structure
  */
 typedef struct ptx_HIP_Frame
 {
@@ -167,6 +167,8 @@ typedef struct ptx_HIP_Frame
 
     uint8_t                     ScratchPad[PTX_HIP_MAX_FRAME_LENGTH];       /**< Scratchpad, to form the frame, or receive a frame */
     uint32_t                    ScratchPadSize;                             /**< Scratchpad size */
+    ptx_Log_t                   *Log;                                       /**< Initialised Log Context */
+
 } ptx_HIP_Frame_t;
 
 /**
@@ -177,6 +179,8 @@ typedef struct ptx_HIP_Frame_InitParams
     ptx_HAL_t                   *Hal;             /**< Pointer to an initialised HAL instance */
 
     ptx_HIP_Frame_EncodeCb_t    EncodeCb;         /**< Pointer to Encode function */
+    ptx_Log_t                  *Log;              /**< Pointer to logger context. */
+
 
 } ptx_HIP_Frame_InitParams_t;
 
@@ -210,7 +214,7 @@ ptx_Status_t ptx_HIP_Frame_Close (ptx_HIP_Frame_t *frame);
  * \brief Transmit and Receive data
  *
  * \param[in]       frame        Pointer to component.
- * \param[inout]    data         Pointer to the frame data.
+ * \param[in,out]   data         Pointer to the frame data.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */

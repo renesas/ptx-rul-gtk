@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -89,15 +89,17 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Init (ptx_HAL_DRV_Interface_SPI_t *ctx, p
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ctx) && (NULL != initParams))
+    if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
+        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_SPI_Init");
+
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_SPI_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_SPI_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
         {
             if ((gDrvSPIPortConfigs[config].Type == initParams->PortType) && (gDrvSPIPortConfigs[config].ID == initParams->PortID))
             {
-                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvSPIPortConfigs[config].ModuleDescriptor, NULL);
+                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvSPIPortConfigs[config].ModuleDescriptor, NULL, initParams->Log);
                 if (PTX_STATUS_SUCCESS == status)
                 {
                     ctx->Port = &gDrvSPIPortConfigs[config];
@@ -123,6 +125,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeInit (ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_DeInit");
+
         status = ptx_HAL_FTD2XX_LibClose(ctx->Ftd2xx_ctx);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -141,16 +145,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Open(ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Open");
+
         status = ptx_HAL_FTD2XX_SPI_Open(ctx->Ftd2xx_ctx, ctx->Speed);
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "SPI Open OK on FTDI: %s", ctx->Port->ModuleDescriptor);
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "SPI Open FAILED");
-        }
     }
 
     return status;
@@ -162,16 +160,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Close(ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Close");
+
         status = ptx_HAL_FTD2XX_SPI_Close(ctx->Ftd2xx_ctx);
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            PTX_LOG_I (ctx->Log, "SPI Close OK on FTDI: %s", ctx->Port->ModuleDescriptor);
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "SPI Close FAILED");
-        }
     }
 
     return status;
@@ -183,16 +175,14 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Tx(ptx_HAL_DRV_Interface_SPI_t* ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Tx");
+
         status = ptx_HAL_FTD2XX_SPI_TRx(ctx->Ftd2xx_ctx, txBuf, &txLen, NULL, 0);
 
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
         {
-            PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "SPI Write: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "SPI Write ERROR Status: %u", status);
+            PTX_LOG_I_MEM (ctx->Log, txBuf, txLen, "TX: ");
         }
 #endif
     }
@@ -206,18 +196,17 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Rx(ptx_HAL_DRV_Interface_SPI_t* ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        status = ptx_HAL_FTD2XX_SPI_TRx(ctx->Ftd2xx_ctx, 0, NULL, rxBuf, &rxLen);
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Rx");
 
+        status = ptx_HAL_FTD2XX_SPI_TRx(ctx->Ftd2xx_ctx, 0, NULL, rxBuf, &rxLen);
+        
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
         {
-            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "SPI Read: ");
-        }
-        else
-        {
-            PTX_LOG_I (ctx->Log, "SPI Read ERROR Status: %u", status);
+            PTX_LOG_I_MEM (ctx->Log, rxBuf, rxLen, "RX: ");
         }
 #endif
+
     }
 
     return status;
@@ -229,6 +218,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetNss(ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetNss");
+
         status = ptx_HAL_FTD2XX_SPICSEnable(ctx->Ftd2xx_ctx);
     }
 
@@ -241,29 +232,9 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_ResetNss(ptx_HAL_DRV_Interface_SPI_t* ctx
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_ResetNss");
+
         status = ptx_HAL_FTD2XX_SPICSDisable(ctx->Ftd2xx_ctx);
-    }
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_SPI_ActivateRxIrq(ptx_HAL_DRV_Interface_SPI_t* ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
-    }
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeactivateRxIrq(ptx_HAL_DRV_Interface_SPI_t* ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_SUCCESS;
     }
     return status;
 }
@@ -272,22 +243,13 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_RxIrqLevel(ptx_HAL_DRV_Interface_SPI_t* c
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint16_t level_16 = 0;
+
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_RxIrqLevel");
+
         status = ptx_HAL_FTD2XX_GetIRQLine(ctx->Ftd2xx_ctx, &level_16);
         *level = (0 == level_16) ? 0 : 1;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_HAL_DRV_Interface_SPI_WaitForIRQ(ptx_HAL_DRV_Interface_SPI_t* ctx)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ctx, Comp_HAL))
-    {
-        status = PTX_STATUS_E_GEN_NOT_IMPLEMENTED;
     }
 
     return status;
@@ -297,8 +259,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetParameter(ptx_HAL_DRV_Interface_SPI_t*
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -322,8 +286,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_GetParameter(ptx_HAL_DRV_Interface_SPI_t*
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && NULL != parameter)
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_GetParameter");
+
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -353,6 +319,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetTransmissionSpeed(ptx_HAL_DRV_Interfac
 
     if ((NULL != ctx) && (0 != speed))
     {
+        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetTransmissionSpeed");
+
         uint32_t oldSpeed = ctx->Speed;
         ctx->Speed = speed;
 

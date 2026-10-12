@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -177,7 +177,10 @@ ptx_Status_t ptx_NSC_CmdProcessor_Config (ptx_NSC_t *nsc, ptx_NSC_CmdProcessor_C
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != cfgParams))
-    {
+    {       
+        PTX_LOG_I(nsc->Log, "ptx_NSC_CmdProcessor_Config");
+
+
         /* All callback functions have to be registered, so all the input parameters must be valid.
          * Note: FetchMsg CB is used and set by NSC, and so it is not configured within this API.
          */
@@ -261,6 +264,8 @@ ptx_Status_t ptx_NSC_CmdProcessor_DispatchMsg(ptx_NSC_t *nsc, uint16_t writeBuff
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_CmdProcessor_DispatchMsg");
+
         status = ptx_NSC_CmdProcessor_GetPendingMsg(nsc);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -285,6 +290,8 @@ ptx_Status_t ptx_NSC_CmdProcessor_FetchMsg(ptx_NSC_t *nsc, uint8_t *msg, uint32_
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != nsc->CmdProcessor.FetchMsg) && (NULL != msg))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CmdProcessor_FetchMsg");
+
         uint8_t msg_type_received;
         uint8_t num_retries = 0;
 
@@ -352,6 +359,8 @@ ptx_Status_t ptx_NSC_CmdProcessor_ProcessRsp(ptx_NSC_t *nsc, ptx_NSC_CmdProcesso
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (PTX_NSC_CMD_PROCESSOR_MIN_RSP_LEN <= msgLen))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CmdProcessor_ProcessRsp");
+
         if (PTX_NSC_CMD_PROCESSOR_LOOPBACK_RSP == msg[PTX_NSC_CMD_PROCESSOR_RSP_ID_OFFSET])
         {
             /* Special handling required for LOOPBACK_RSP message. ErrorCode is not the first byte.
@@ -557,6 +566,8 @@ ptx_Status_t ptx_NSC_CmdProcessor_GetPendingMsg(ptx_NSC_t *nsc)
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CmdProcessor_GetPendingMsg");
+
         uint8_t isRxPending = 0;
         status = ptx_HAL_Interface_RxPending(nsc->HAL, &isRxPending);
 
@@ -598,6 +609,8 @@ ptx_Status_t ptx_NSC_CmdProcessor_ProcessMsg(ptx_NSC_t *nsc, uint8_t *msg, uint3
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (0 != msgLen))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CmdProcessor_ProcessMsg");
+
         uint8_t msg_type = (msg[PTX_NSC_CMD_PROCESSOR_FRAMETYPE_OFFSET] & PTX_NSC_CMD_PROCESSOR_FRAMETYPE_MASK);
 
         nsc->CmdProcessor.LastMsg.IsNewMsg = 1;
@@ -642,11 +655,13 @@ static ptx_Status_t ptx_NSC_CmdProcessor_ProcessNtfMsg(ptx_NSC_t *nsc, uint8_t *
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (0 != msgLen))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CmdProcessor_ProcessNtfMsg");
+
         switch (msg[0])
         {
             case PTX_NSC_CMD_PROCESSOR_RESET_NTF:
             {
-                if (PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN == msgLen)
+                if (PTX_NSC_CMD_PROCESSOR_RESET_NTFLEN_MIN <= msgLen)
                 {
                     nsc->State = ptx_NSC_State_Init;
                     status = PTX_STATUS_SUCCESS;
@@ -890,7 +905,6 @@ static ptx_Status_t ptx_NSC_CmdProcessor_ProcessNtfMsg(ptx_NSC_t *nsc, uint8_t *
             {
                 if ((PTX_NSC_LENGTH_MAX >= msgLen) && (PTX_NSC_CMD_OPCODE_LEN <= msgLen))
                 {
-                    PTX_LOG_I_MEM(nsc->HAL->Log, &msg[PTX_NSC_CMD_OPCODE_LEN], msgLen - PTX_NSC_CMD_OPCODE_LEN, "Received DBG_NTF: ");
                     status = PTX_STATUS_SUCCESS;
                 }
                 else
@@ -916,6 +930,8 @@ static ptx_Status_t ptx_NSC_CmdProcessor_ProcessDataMsg(ptx_NSC_t *nsc, uint8_t 
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (PTX_NSC_LENGTH_DATAMSG_MIN <= msgLen))
     {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_CmdProcessor_ProcessDataMsg");
+
         status = PTX_STATUS_SUCCESS;
 
         /* Basic pre-processing of Data message */
@@ -992,11 +1008,14 @@ static ptx_Status_t ptx_NSC_CmdProcessor_ProcessDataMsg(ptx_NSC_t *nsc, uint8_t 
 
 static void ptx_NSC_ParseRfActivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfActivate_Ntf_t *ntf)
 {
+    PTX_LOG_V(nsc->Log, "ptx_NSC_ParseRfActivateNtf");
+
     /* No additional parameter checking here. The function is called only within NTF message handler,
      * after all the parameter checking has already been done.
      */
 
     /* Check state transitions for Listen mode. */
+    
     if ((ptx_NSC_RfTech_Passive_Listen_A <= ntf->RfTech) && (ptx_NSC_RfTech_Passive_Listen_F >= ntf->RfTech))
     {
         if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) || (ptx_NSC_RfProtocol_NfcDep == ntf->RfProt))
@@ -1057,18 +1076,6 @@ static void ptx_NSC_ParseRfActivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfActivate_Ntf_t 
                 nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX;
                 break;
         }
-
-        /*
-         * RFU
-         */
-        #if 0
-        nsc->FWI = (ntf->RfProtParams.IsoDep.PollA.ATS[PTX_NSC_RFACTIVATE_ATS_TB_IDX] & PTX_NSC_RFACTIVATE_ATS_FWI_MASK) >> 4;
-        
-        if (PTX_NSC_RFACTIVATE_ATS_FWI_RFU == nsc->FWI)
-        {
-            nsc->FWI = PTX_NSC_RFACTIVATE_ATS_FWI_DEFAULT;
-        }
-        #endif
     }
     else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Poll_B == ntf->RfTech))
     {
@@ -1104,18 +1111,6 @@ static void ptx_NSC_ParseRfActivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfActivate_Ntf_t 
                 nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX;
                 break;
         }
-
-        /*
-         * RFU
-         */
-        #if 0
-        nsc->FWI = (ntf->RfTechParams.PollB.SensBRes[PTX_NSC_RF_DISCOVER_PROTINFO2_OFFSET] & PTX_NSC_RF_DISCOVER_PINFO2_FWI_MASK) >> 4;
-        
-        if (PTX_NSC_RFACTIVATE_ATS_FWI_RFU == nsc->FWI)
-        {
-            nsc->FWI = PTX_NSC_RFACTIVATE_ATS_FWI_DEFAULT;
-        }
-        #endif
     }
     else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech))
     {
@@ -1197,7 +1192,7 @@ static void ptx_NSC_ParseRfActivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfActivate_Ntf_t 
         {
             mtu_size = ntf->RfProtParams.NfcDep.PollAF.AtrRes[16];
         }
-        else if (ptx_NSC_RfTech_Active_Poll == ntf->RfTech)
+        else if (ptx_NSC_RfTech_Active_Poll == ntf->RfTech || ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech || ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech)
         {
             mtu_size = ntf->RfProtParams.NfcDep.ListenAF.Lr;
         }
@@ -1229,70 +1224,70 @@ static void ptx_NSC_ParseRfActivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfActivate_Ntf_t 
     else
     {
         nsc->MtU = PTX_NSC_MAX_TRANSFER_UNIT_SIZE;
-
-        /*
-         * RFU
-         */
-        #if 0
-        nsc->FWI = PTX_NSC_FWI_UNSET;
-        #endif
     }
 }
 
 static void ptx_NSC_ParseRfDeactivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfDeactivate_Ntf_t *ntf, ptx_Status_t *st)
 {
-    ptx_Status_t status = *st;
-
-    if (PTX_STATUS_SUCCESS == status)
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != ntf) && (NULL !=  st))
     {
-        if ((ptx_NSC_State_Listen == nsc->State) || (ptx_NSC_State_Listen_Dep == nsc->State))
+        PTX_LOG_V(nsc->Log, "ptx_NSC_ParseRfDeactivateNtf");
+
+        status = *st;
+
+        if (PTX_STATUS_SUCCESS == status)
         {
-            if (ptx_NSC_RfDeactivate_Reason_RF_Field == ntf->Reason)
+
+            if ((ptx_NSC_State_Listen == nsc->State) || (ptx_NSC_State_Listen_Dep == nsc->State))
             {
-                nsc->State = ptx_NSC_State_Discovery;
-            }
-            else if (ptx_NSC_RfDeactivate_Reason_Release == ntf->Reason)
-            {
-                nsc->State = ptx_NSC_State_Listen_Idle;
-            }
-            else if (ptx_NSC_RfDeactivate_Reason_Deselect == ntf->Reason)
-            {
-                nsc->State = ptx_NSC_State_Listen_Sleep;
+                if (ptx_NSC_RfDeactivate_Reason_RF_Field == ntf->Reason)
+                {
+                    nsc->State = ptx_NSC_State_Discovery;
+                }
+                else if (ptx_NSC_RfDeactivate_Reason_Release == ntf->Reason)
+                {
+                    nsc->State = ptx_NSC_State_Listen_Idle;
+                }
+                else if (ptx_NSC_RfDeactivate_Reason_Deselect == ntf->Reason)
+                {
+                    nsc->State = ptx_NSC_State_Listen_Sleep;
+                }
+                else
+                {
+                    nsc->State = nsc->PendingState;
+                }
             }
             else
             {
                 nsc->State = nsc->PendingState;
             }
+
+            nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX;
+
+            if (NULL != nsc->CmdProcessor.ProcessRfDeactivateNtf)
+            {
+                status = nsc->CmdProcessor.ProcessRfDeactivateNtf(nsc->CmdProcessor.Ctx, ntf);
+            }
+        }
+        else if (PTX_STATUS_E_NSC_RFERROR == status)
+        {
+            /* NTF ErrorCode is an error value, but NTF message is a proper one.
+            *  Notify upper layer about it.
+            */
+
+            /* We SHALL not overwrite the previously set error status. Just make a call to CB handler */
+            if (NULL != nsc->CmdProcessor.ProcessRfDeactivateNtf)
+            {
+                (void)nsc->CmdProcessor.ProcessRfDeactivateNtf(nsc->CmdProcessor.Ctx, ntf);
+            }
         }
         else
         {
-            nsc->State = nsc->PendingState;
+            /* Nothing to do. Error is propagated up. */
         }
 
-        nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX;
-
-        if (NULL != nsc->CmdProcessor.ProcessRfDeactivateNtf)
-        {
-            status = nsc->CmdProcessor.ProcessRfDeactivateNtf(nsc->CmdProcessor.Ctx, ntf);
-        }
+        *st = status;
     }
-    else if (PTX_STATUS_E_NSC_RFERROR == status)
-    {
-        /* NTF ErrorCode is an error value, but NTF message is a proper one.
-         *  Notify upper layer about it.
-         */
-
-        /* We SHALL not overwrite the previously set error status. Just make a call to CB handler */
-        if (NULL != nsc->CmdProcessor.ProcessRfDeactivateNtf)
-        {
-            (void)nsc->CmdProcessor.ProcessRfDeactivateNtf(nsc->CmdProcessor.Ctx, ntf);
-        }
-    }
-    else
-    {
-        /* Nothing to do. Error is propagated up. */
-    }
-
-    *st = status;
 }
-

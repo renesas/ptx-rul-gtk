@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -94,8 +94,10 @@ ptx_Status_t ptx_NSC_RfDeactivate(ptx_NSC_t *nsc, ptx_NSC_RfDeact_Param_t *param
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != param) && (NULL != ntfToFollow) )
+    if ( PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != param) && (NULL != ntfToFollow))
     {
+        PTX_LOG_I(nsc->Log, "ptx_NSC_RfDeactivate");
+
         uint32_t cmd_params[PTX_NSC_SM_DEACT_PARAMLEN];
         cmd_params[PTX_NSC_SM_DEACT_LEN_IDX]    = PTX_NSC_SM_DEACT_PARAMLEN;
         cmd_params[PTX_NSC_SM_DEACT_TYPE_IDX]   = param->Type;
@@ -229,7 +231,13 @@ ptx_Status_t ptx_NSC_ProcessRfDeactivateNtf (uint8_t *buffer, uint32_t bufferLen
 
 static ptx_Status_t ptx_NSC_RfDeactivate_CheckErr(ptx_NSC_t *nsc, uint8_t *msg, ptx_Status_t inStatus, ptx_NSC_RfDeact_Param_t *param, uint8_t *ntfToFollow)
 {
-    ptx_Status_t status = inStatus;
+
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != msg) && (NULL != param) && (NULL != ntfToFollow))
+    {
+        PTX_LOG_V(nsc->Log, "ptx_NSC_RfDeactivate_CheckErr");
+        status = inStatus;
 
     /**
      * NOTE: special cases handling is required only for the RfDeactivate API. It is due to the fact that NSC
@@ -266,70 +274,72 @@ static ptx_Status_t ptx_NSC_RfDeactivate_CheckErr(ptx_NSC_t *nsc, uint8_t *msg, 
      * to the requested state in order to change the internal state according to the requested state
      */
 
-    if (PTX_STATUS_E_NSC_PROTOCOL == status)
-    {
-        if ( (PTX_NSC_CMD_PROCESSOR_ERROR_NTF == msg[PTX_NSC_RFERR_NTF_IDX_OPCODE]) &&
-             (NSC_ErrorCode_StandbyMode == (ptx_NSC_ErrorCodes_t)msg[PTX_NSC_RFERR_NTF_IDX_ERRCODE]) )
+        if (PTX_STATUS_E_NSC_PROTOCOL == status)
         {
-            /* Scenario 1 */
 
-            /* Standby error received. NSC turned to IDLE. */
-            status = PTX_STATUS_E_NSC_ERR_STANDBY;
-
-            if ( (ptx_NSC_State_Idle == nsc->State) && (ptx_NSC_State_Idle == nsc->PendingState) )
+            if ( (PTX_NSC_CMD_PROCESSOR_ERROR_NTF == msg[PTX_NSC_RFERR_NTF_IDX_OPCODE]) &&
+                (NSC_ErrorCode_StandbyMode == (ptx_NSC_ErrorCodes_t)msg[PTX_NSC_RFERR_NTF_IDX_ERRCODE]) )
             {
-                /* The caller requested to deactivate to IDLE and the state eventually turned to IDLE after
-                 * NSC_ERROR_NTF. This is a valid transition.
-                 */
-                status = PTX_STATUS_SUCCESS;
-            }
-        }
-        else if ( (PTX_NSC_CMD_PROCESSOR_RFDEACTIVATE_RSP == msg[PTX_NSC_RF_DEACTIVATE_RSP_OPCODE_IDX]) &&
-                  ((uint8_t)NSC_ErrorCode_InvalidCommand == msg[PTX_NSC_RF_DEACTIVATE_RSP_STATUS_IDX]) )
-        {
-            /* Scenario 2 */
+                /* Scenario 1 */
 
-            if ( (ptx_NSC_State_Idle == nsc->State) && (ptx_NSC_State_Idle == nsc->PendingState) )
+                /* Standby error received. NSC turned to IDLE. */
+                status = PTX_STATUS_E_NSC_ERR_STANDBY;
+
+                if ( (ptx_NSC_State_Idle == nsc->State) && (ptx_NSC_State_Idle == nsc->PendingState) )
+                {
+                    /* The caller requested to deactivate to IDLE and the state eventually turned to IDLE after
+                    * NSC_ERROR_NTF. This is a valid transition.
+                    */
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+            else if ( (PTX_NSC_CMD_PROCESSOR_RFDEACTIVATE_RSP == msg[PTX_NSC_RF_DEACTIVATE_RSP_OPCODE_IDX]) &&
+                    ((uint8_t)NSC_ErrorCode_InvalidCommand == msg[PTX_NSC_RF_DEACTIVATE_RSP_STATUS_IDX]) )
             {
-                /* The caller requested to deactivate to IDLE and the state eventually turned to IDLE after
-                 * NSC_RF_LPCD_NTF. This is a valid transition.
-                 */
-                status = PTX_STATUS_SUCCESS;
-            }
-        }
-        else if ( PTX_NSC_CMD_PROCESSOR_RFLPCD_NTF == msg[PTX_NSC_RFLPCD_NTF_IDX_OPCODE] )
-        {
-            /* Scenario 3 */
+                /* Scenario 2 */
 
-            if ( (ptx_NSC_State_Idle == nsc->State) && (ptx_NSC_State_Idle == nsc->PendingState) )
+                if ( (ptx_NSC_State_Idle == nsc->State) && (ptx_NSC_State_Idle == nsc->PendingState) )
+                {
+                    /* The caller requested to deactivate to IDLE and the state eventually turned to IDLE after
+                    * NSC_RF_LPCD_NTF. This is a valid transition.
+                    */
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+            else if ( PTX_NSC_CMD_PROCESSOR_RFLPCD_NTF == msg[PTX_NSC_RFLPCD_NTF_IDX_OPCODE] )
             {
-                /* The caller requested to deactivate to IDLE and the state eventually turned to IDLE after
-                 * NSC_RF_LPCD_NTF. This is a valid transition.
-                 */
-                status = PTX_STATUS_SUCCESS;
-            }
-        }
-        else if ( (PTX_NSC_CMD_PROCESSOR_RFDEACTIVATE_RSP == msg[PTX_NSC_RF_DEACTIVATE_RSP_OPCODE_IDX]) &&
-                  ((uint8_t)NSC_ErrorCode_RfTimeoutError == msg[PTX_NSC_RF_DEACTIVATE_RSP_STATUS_IDX]) &&
-                  (NSC_RfDeact_Type_ProtSpecific == param->Type))
-        {
-            /* Scenario 4 */
+                /* Scenario 3 */
 
-            if (ptx_NSC_State_Poll_Dep == nsc->State)
+                if ( (ptx_NSC_State_Idle == nsc->State) && (ptx_NSC_State_Idle == nsc->PendingState) )
+                {
+                    /* The caller requested to deactivate to IDLE and the state eventually turned to IDLE after
+                    * NSC_RF_LPCD_NTF. This is a valid transition.
+                    */
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+            else if ( (PTX_NSC_CMD_PROCESSOR_RFDEACTIVATE_RSP == msg[PTX_NSC_RF_DEACTIVATE_RSP_OPCODE_IDX]) &&
+                    ((uint8_t)NSC_ErrorCode_RfTimeoutError == msg[PTX_NSC_RF_DEACTIVATE_RSP_STATUS_IDX]) &&
+                    (NSC_RfDeact_Type_ProtSpecific == param->Type))
             {
-                /* The caller sent an S(DESELECT) command, but the Tag did not respond with an S(DESLECT) response
-                 * According to the specification we may ignore the PICC.
-                 * However, as the deactivate command was answered as a failure, the internal NSC state was not trasitioned
-                 * This generic Deactivation with the same State shall assure that we complete the deactivation in the state the user requested*/
+                /* Scenario 4 */
 
-                param->Type = NSC_RfDeact_Type_Generic;
-                status = ptx_NSC_RfDeactivate(nsc, param, ntfToFollow);
+                if (ptx_NSC_State_Poll_Dep == nsc->State)
+                {
+                    /* The caller sent an S(DESELECT) command, but the Tag did not respond with an S(DESLECT) response
+                    * According to the specification we may ignore the PICC.
+                    * However, as the deactivate command was answered as a failure, the internal NSC state was not trasitioned
+                    * This generic Deactivation with the same State shall assure that we complete the deactivation in the state the user requested*/
+
+                    param->Type = NSC_RfDeact_Type_Generic;
+                    status = ptx_NSC_RfDeactivate(nsc, param, ntfToFollow);
+                }
+
             }
-
-        }
-        else
-        {
-            /* Keep the error */
+            else
+            {
+                /* Keep the error */
+            }
         }
     }
 
