@@ -40,6 +40,12 @@ project("NFC_FORUM_BASIC_DISCOVERY")
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4)
 
+# NOTE: GTK4 is LGPL v2.1 or later
+# This dynamically-linked dependency requires LGPL compliance:
+# - COPYING and COPYING.LESSER must be included in distributions
+# - Source code availability must be provided or documented
+# - See DEPENDENCIES.md and LGPL_COMPLIANCE.md for complete information
+
 # General Configuration
 # ---------------------
 
@@ -410,6 +416,23 @@ if (PTX_BUILD_MCU)
 else()
 	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL)
 endif()
+
+# LGPL Compliance: Copy license files to build directory
+configure_file(
+	"${CMAKE_SOURCE_DIR}/../../../COPYING"
+	"${CMAKE_BINARY_DIR}/COPYING"
+	COPYONLY
+)
+configure_file(
+	"${CMAKE_SOURCE_DIR}/../../../COPYING.LESSER"
+	"${CMAKE_BINARY_DIR}/COPYING.LESSER"
+	COPYONLY
+)
+configure_file(
+	"${CMAKE_SOURCE_DIR}/../../../DEPENDENCIES.md"
+	"${CMAKE_BINARY_DIR}/DEPENDENCIES.md"
+	COPYONLY
+)
 
 target_include_directories(${TARGET_EXE_NAME} PUBLIC 
 	../../../SRC/EXAMPLES

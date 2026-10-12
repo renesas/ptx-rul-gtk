@@ -31,6 +31,7 @@ Connect the PTX board via USB-C for power.
 
 ## Software requirements
 
+- RUL SDK 1.2.0
 - GTK4 - install the `libgtk-4-dev` package
 - cmake
 
@@ -86,6 +87,11 @@ For running the executable outside the `BUILD` directory, the following files mu
 - `about.ui` - about window file
 - `gschemas.compiled` - the compiled settings file, where the actual settings are stored
 
+When distributing the application, the following license files must also be included alongside the executable (they are copied to the `BUILD` directory by cmake):
+- `COPYING` - LGPL v2.1 full text
+- `COPYING.LESSER` - LGPL v2.1 clarification
+- `DEPENDENCIES.md` - list of dependencies and their licenses
+
 The settings schema file `app.gschemas.xml` is only reqired for compiling the settings file once, not for running the application.
 
 ## Under the hood
@@ -114,3 +120,31 @@ Menu items:
 - About - show information about the application.
 - Quit (Ctrl+Q) - close the applicatoin.
 
+## Licensing and Compliance
+
+### Application License
+The PTX GTK4 Discovery Application is licensed under the **BSD-3-Clause License**.
+
+### Third-Party Dependencies
+This application links against **GTK4** and related libraries (**GLib**, **Gio**), which are licensed under the **LGPL v2.1 or later**.
+
+### License Files
+- **`COPYING`**: Contains the full LGPL v2.1 license text
+- **`COPYING.LESSER`**: Clarifies the use of the LESSER GPL variant
+- **`DEPENDENCIES.md`**: Complete list of all dependencies and their licenses
+- **`LGPL_COMPLIANCE.md`**: Detailed compliance statement
+
+### Source Code Availability
+The source code for this application is available at:
+https://github.com/renesas/ptx-rul-gtk
+
+For source code of LGPL dependencies:
+- **GTK4**: https://gitlab.gnome.org/GNOME/gtk
+- **GLib/Gio**: https://gitlab.gnome.org/GNOME/glib
+
+### Licensing Questions
+For licensing inquiries or questions about proprietary components:
+- **Renesas NFC Components**: marketing_nfc_reader@lm.renesas.com
+- **LGPL Compliance**: See `LGPL_COMPLIANCE.md` for detailed information
+
+See `license.txt` for a complete summary of all licenses.

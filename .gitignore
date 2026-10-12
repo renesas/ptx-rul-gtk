@@ -71,3 +71,11 @@ CMakeUserPresets.json
 # sdk
 **/BUILD/LogOutput.txt
 **/BUILD/NFC_FORUM_BASIC_DISCOVERY
+
+# license
+**/BUILD/COPYING
+**/BUILD/COPYING.LESSER
+**/BUILD/DEPENDENCIES.md
+
+# vscode
+.vscode/

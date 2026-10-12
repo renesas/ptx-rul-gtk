@@ -54,6 +54,11 @@
 
                   Settings are permanently stored in the gschemas file.
                   If run from the command line, messages will be printed there.
+
+    Licensing   : This program is linked against GTK4 (LGPL v2.1+) and related libraries.
+                  See COPYING or COPYING.LESSER for details on LGPL requirements and
+                  source availability. See DEPENDENCIES.md and LGPL_COMPLIANCE.md for
+                  complete licensing information.
 */
 
 #include "ptx_ExampleApplication.h"

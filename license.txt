@@ -2,11 +2,20 @@ LICENSES
 
 NAME                    LICENSE FILE PATH                                            LICENSE TYPE                   COPYRIGHT                            COMMENTS
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-PTX2xxR/W RUL SDK       https://opensource.org/licenses/BSD-3-Clause                 The BSD 3-Clause License       Renesas Electronics               contained in source code headers
-1.2.0       
+GTK4                    ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       Dynamically linked GUI toolkit
+                        https://gitlab.gnome.org/GNOME/gtk
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-PTX2xxR/W               .\Renesas_Open_License_v1.txt                                Renesas Open License v 1.0     Renesas Electronics               
-Firmware/uCode                                                                                                                              
+GLib                    ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       Core utilities (transitive via GTK4)
+                        https://gitlab.gnome.org/GNOME/glib
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Gio                     ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       I/O and settings (transitive via GTK4)
+                        https://gitlab.gnome.org/GNOME/glib
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PTX2xxR/W RUL SDK       https://opensource.org/licenses/BSD-3-Clause                 The BSD 3-Clause License       Renesas Electronics               contained in source code headers
+1.2.0
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+PTX2xxR/W               .\Renesas_Open_License_v1.txt                                Renesas Open License v 1.0     Renesas Electronics
+Firmware/uCode
 Image RUL SDK
 1.2.0
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
