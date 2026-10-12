@@ -80,7 +80,7 @@ If the appliactoin is run from the command line, information will be printed the
 All necessary files for running the application are inside the `BUILD` directory, from where the it must be launched.
 
 For running the executable outside the `BUILD` directory, the following files must be copied and they must be inside the same directory as the executable:
-- `libRUL.so` - RUL SDK shared object file
+- `libRUL.so` - RUL shared library - need to run `export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH` from `BUILD` once in order to add the path
 - `window.ui` - main window file
 - `prefs.ui` - preferences window file
 - `menu.ui` - menu file
