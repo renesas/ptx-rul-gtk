@@ -52,10 +52,10 @@ This document provides a comprehensive list of all dependencies used by the PTX 
 
 ## Proprietary/Renesas Components
 
-### PTX2xxR/W RUL SDK 1.2.0
+### PTX2xxR/W RUL SDK 1.2.1
 - **Source**: Renesas Electronics
 - **License**: BSD-3-Clause
-- **Copyright**: Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+- **Copyright**: Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 - **Purpose**: NFC reader hardware interface and protocol implementation
 - **License File**: Embedded in source code headers
 - **Usage**: Core SDK components, not modified
@@ -75,7 +75,7 @@ This document provides a comprehensive list of all dependencies used by the PTX 
 
 ### ptx-rul-gtk
 - **License**: BSD-3-Clause
-- **Copyright**: Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+- **Copyright**: Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 - **Source**: https://github.com/renesas/ptx-rul-gtk
 - **Purpose**: GTK4 NFC Forum basic discovery demo application
 - **License Text**: Embedded in all source file headers via SPDX-License-Identifier

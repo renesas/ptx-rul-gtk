@@ -69,7 +69,7 @@ The application:
 The application code itself is licensed under BSD-3-Clause:
 
 - All source files include SPDX-License-Identifier: BSD-3-Clause
-- Copyright: Copyright (c) 2025, Renesas Electronics Corporation
+- Copyright: Copyright (c) 2026, Renesas Electronics Corporation
 - Full license text included in source file headers
 - Users can use, modify, and distribute under BSD-3-Clause terms
 

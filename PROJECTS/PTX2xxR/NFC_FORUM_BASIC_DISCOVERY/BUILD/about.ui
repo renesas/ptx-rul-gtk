@@ -6,14 +6,14 @@
   
 <!-- Text buffer that contains hard-coded text -->
   <object class="GtkTextBuffer" id="buffer">
-    <property name="text">GTK4 application using the PTX205R and the RUL SDK's reference implementation for the Raspberry Pi and SPI.
+    <property name="text">GTK4 application using the PTX205R and the RUL SDK v1.2.1 reference implementation for the Raspberry Pi and SPI.
 
 Polls for RF-technologies A, B, F, V. If a card is activated, card inforamtion is displayed. If the card contains an NDEF message, it's displayed as UTF-8 encoded text, without any parsing. Only one single card in the field is supported.
 
 LICENSE INFORMATION
 
 SPDX-License-Identifier: BSD-3-Clause
-Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
