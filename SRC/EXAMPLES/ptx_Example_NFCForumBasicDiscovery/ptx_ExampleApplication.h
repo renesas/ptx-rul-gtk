@@ -2,7 +2,7 @@
     ---------------------------------------------------------------
     SPDX-License-Identifier: BSD-3-Clause
 
-    Copyright (c) 2025, Renesas Electronics Corporation and/or its affiliates
+    Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 
 
     Redistribution and use in source and binary forms, with or without modification,
@@ -39,9 +39,10 @@
     File        : EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.h
 
     Description : This application example demonstrates how to
+                  - integrate the RUL SDK into a GTK4 application,
                   - setup and start the basic NFC Forum RF-Discovery loop,
                   - retrieve Card/Tag parameters from the Card-registry,
-                  - perform simple NFC data exchanges with various Cards/Tags,
+                  - read NDEF messages,
                   using the RUL-API. Typical use cases for the NFC Forum RF-Discovery
                   and data exchanges are IoT applications.
 */
