@@ -1755,11 +1755,25 @@ static void setupPrefsWindow(GtkBuilder *builder, AppState *state)
     g_signal_connect(state->darkModeSwitch, "state-set", G_CALLBACK(onDarkModeSwitchSet), NULL);
 }
 
-/* Setup function for about window (empty, no special setup needed) */
+/* Setup function for about window: show the application version in the window and header bar title */
 static void setupAboutWindow(GtkBuilder *builder, AppState *state)
 {
-    (void)builder;
     (void)state;
+
+    const char *titleWithVersion = "PTX205R Discovery (" PTX_VERSION_STRING ")";
+
+    GObject *window = gtk_builder_get_object(builder, "aboutWindow");
+    if (GTK_IS_WINDOW(window)) {
+        gtk_window_set_title(GTK_WINDOW(window), titleWithVersion);
+    }
+
+    GObject *headerbar = gtk_builder_get_object(builder, "headerbar");
+    if (GTK_IS_HEADER_BAR(headerbar)) {
+        GtkWidget *titleWidget = gtk_header_bar_get_title_widget(GTK_HEADER_BAR(headerbar));
+        if (GTK_IS_LABEL(titleWidget)) {
+            gtk_label_set_text(GTK_LABEL(titleWidget), titleWithVersion);
+        }
+    }
 }
 
 /* Generic window loader that handles common setup */

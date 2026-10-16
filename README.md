@@ -244,6 +244,13 @@ Menu items:
 - About - show information about the application.
 - Quit (Ctrl+Q) - close the application.
 
+## Versioning
+
+The application uses semantic versioning (MAJOR.MINOR.PATCH): MAJOR for incompatible changes, MINOR for new features, PATCH for fixes.
+The version is defined in `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_Version.h` by `PTX_VERSION_MAJOR`, `PTX_VERSION_MINOR` and `PTX_VERSION_PATCH`, `PTX_VERSION_STRING` holds the full version string (e.g. `0.0.0`).
+To change the version, update these three values and rebuild the application.
+The version is displayed in the title of the *About* window, e.g. "PTX205R Discovery (0.0.0)".
+
 ## Licensing and Compliance
 
 ### Application License

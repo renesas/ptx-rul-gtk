@@ -2,8 +2,8 @@
 <interface>
   <object id="window" class="GtkWindow">
     <property name="title">PTX205R</property>
-    <property name="default-width">600</property>
-    <property name="default-height">640</property>
+    <property name="default-width">700</property>
+    <property name="default-height">600</property>
     <child type="titlebar">
       <object class="GtkHeaderBar" id="header">
         <child type="title">
