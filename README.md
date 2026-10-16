@@ -101,7 +101,7 @@ The settings schema file `app.gschema.xml` is only required for compiling the se
 When the application is launched, UI files and settings are loaded, and the PTX is initialized in a separate thread.
 If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab.
 Discovery and the NDEF operations share one discovery loop, which runs in a separate thread and polls for RF-technologies A, B, F, V.
-Only one single card in the field is supported.
+The *Discovery* tab supports multiple cards in the field, the *NDEF* tab supports only one single card.
 While discovery is running, the tabs cannot be switched.
 
 If the initialization fails, an error message will be displayed and the application must be closed.
@@ -113,7 +113,27 @@ If the application is closed, the PTX is de-initialized - if discovery was runni
 
 Discovery is started by clicking the START button on the *Discovery* tab.
 When discovery is started, the START button becomes the STOP button, and vice versa.
-If a card is activated, the UI thread is updated and card information is displayed.
+Multiple cards in the field are supported: up to 5 cards per RF-technology (A, B, F, V), 20 cards in total, as in the SDK's example application.
+The SDK's card registry holds up to 32 cards (`PTX_RUL_MAX_SUPPORTED_DEVICES`), the per-technology limit is set by `PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH`.
+
+When cards are found, the UI thread is updated and the cards are displayed in a table, one row per card:
+
+| Column   | Content |
+| -------- | ------- |
+| #        | Number of the card |
+| RF-Tech  | Type-A, Type-B, Type-F or Type-V |
+| Protocol | The protocol the card was activated with (a card is only activated when it is alone in the field), otherwise the protocols supported by the card |
+| Bit rate | Nominal RF bit rate (TX / RX if they differ). Discovered cards report the default of their RF-technology (Type-A/B 106, Type-F 212 or 424, Type-V 26 kbit/s), higher bit rates are only reported after an activation negotiating them, which this application does not enable |
+| ID       | NFCID1 (Type-A), NFCID0 (Type-B), NFCID2 (Type-F) or UID (Type-V, most significant byte first) |
+| Detections | Number of discovery cycles in which the card was found |
+| Details  | Technology-specific data that is not part of the ID: ATQA and SAK (Type-A), application data and protocol info of SENSB_RES (Type-B), PMm and - if present - system code of SENSF_RES (Type-F), DSFID (Type-V). The complete SENS_RES/SEL_RES, SENSB_RES, SENSF_RES or INVENTORY_RES is shown as tooltip |
+
+Above the table, the number of cards detected since discovery was started is displayed.
+Not every card is resolved in every discovery cycle when multiple cards are in the field, so the cards are collected: once a card has been detected, it stays in the list - also after it was removed from the field - until discovery is restarted (STOP and START, or RESET).
+Cards are identified by their RF-technology and ID, and keep their position in the list in the order of their first detection.
+The Detections column shows how often each card was found, it stops increasing when a card is removed.
+The list holds up to 50 cards (`PTX_DEMO_APP_MAX_LISTED_CARDS`), further cards are not listed and the status line reports that the list is full.
+Cards using a random ID (e.g. some mobile phones) get a new entry for every new ID.
 The RESET button clears the displayed card information and restarts discovery.
 
 ### NDEF read
@@ -191,7 +211,7 @@ The record type picker and the input form of the *NDEF* tab are generated from t
 ## The UI
 
 The main window has two tabs, *Discovery* and *NDEF*, and a menu button.
-The *Discovery* tab has the START/STOP and RESET buttons and a text box for the card information.
+The *Discovery* tab has the START/STOP and RESET buttons, the number of detected cards and a table with the information of all detected cards.
 The *NDEF* tab has a read section with the READ and STOP buttons on top and a text box for the NDEF message, and a write section with the WRITE button, the record type picker and the ADD, REMOVE and CLEAR buttons on top.
 The write section also has the input fields of the selected record type, the list of records, the raw bytes of the message and a status label.
 There's also a window for the preferences and the about information, which can be opened from the menu.

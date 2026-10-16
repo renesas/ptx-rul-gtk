@@ -40,11 +40,11 @@
 
     Description : GTK4 application using the PTX205R and the RUL SDK's reference implementation
                   for the Raspberry Pi and SPI.
-                  Polls for RF-technologies A, B, F, V. If a card is activated, card
-                  information is displayed. If the card contains an NDEF message, it's
-                  parsed into its records, which are displayed decoded (URI, Text, Smart Poster,
-                  MIME, absolute URI, external types) together with the raw message bytes.
-                  Only one single card in the field is supported.
+                  Polls for RF-technologies A, B, F, V. On the Discovery tab, all cards in the
+                  field (up to 5 per RF-technology) are displayed in a table. On the NDEF tab
+                  (single card only), the NDEF message of an activated card is parsed into its
+                  records, which are displayed decoded (URI, Text, Smart Poster, MIME, absolute
+                  URI, external types) together with the raw message bytes.
                   On the NDEF tab, an NDEF message can be composed of standard record types (URI, Text,
                   Smart Poster, Phone, Email, SMS, Geo location, vCard, MIME, Wi-Fi, Android app) - see
                   ptx_ExampleNdefRecords.c. The WRITE button starts discovery for max. 10 polling cycles,
@@ -94,6 +94,23 @@
 
 /* Delay/Sleep between checking RF-Discovery state and no device was found. */
 static const uint32_t PTX_DEMO_APP_NO_CARD_SLEEP_MS = 10u;
+
+/* Delay/Sleep between checking RF-Discovery state and Discovery-procedure is ongoing (resolving multiple cards). */
+static const uint32_t PTX_DEMO_APP_CARD_RESOLVE_SLEEP_MS = 5u;
+
+/* Max. number of cards resolved per RF-technology (A, B, F, V), as in the SDK's example. */
+#define PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH  5u
+
+/* Max. number of cards resolved per discovery cycle. The SDK's card registry holds up to PTX_RUL_MAX_SUPPORTED_DEVICES cards. */
+#define PTX_DEMO_APP_MAX_CARDS              (4u * PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH)
+G_STATIC_ASSERT(PTX_DEMO_APP_MAX_CARDS <= PTX_RUL_MAX_SUPPORTED_DEVICES);
+
+/* Max. number of cards listed on the Discovery tab - cards are collected until discovery is restarted. */
+#define PTX_DEMO_APP_MAX_LISTED_CARDS       50u
+
+/* Max. length of a card ID (NFCID1, NFCID0, NFCID2, UID). */
+#define CARD_ID_MAX_LEN                     PTX_RUL_NFCID1_MAX_LEN
+G_STATIC_ASSERT((CARD_ID_MAX_LEN >= PTX_RUL_NFCID0_LEN) && (CARD_ID_MAX_LEN >= PTX_RUL_NFCID2_LEN) && (CARD_ID_MAX_LEN >= PTX_RUL_UID_LEN));
 
 /* Idle time between two consecutive polling-loop cycles. */
 static const uint32_t PTX_DEMO_APP_DISCOVERY_IDLE_TIME_MS = 100u;
@@ -155,6 +172,13 @@ typedef enum {
     NdefWriteResult_Failed                     /* Creating or writing the NDEF message failed */
 } NdefWriteResult;
 
+/* Card listed on the Discovery tab */
+typedef struct {
+    ptx_RUL_CardParams_t card;                 /* Latest card parameters */
+    ptx_RUL_CardProtocolType_t activeProtocol; /* Protocol of the last activation, Undefined if never activated */
+    uint32_t detections;                       /* Number of discovery cycles the card was found in */
+} ListedCard;
+
 /* Consolidated shared state with single mutex protecting all shared data */
 typedef struct {
     GMutex mutex;                              /* Single mutex protecting all shared state */
@@ -178,6 +202,12 @@ typedef struct {
     /* Card state */
     ptx_RUL_CardParams_t activeCard;           /* Was sActiveCard (volatile) */
     ptx_RUL_CardProtocolType_t activeProtocol; /* Was sActiveProtocol (volatile) */
+
+    /* Cards detected since discovery was started (Discovery tab) */
+    ListedCard listedCards[PTX_DEMO_APP_MAX_LISTED_CARDS]; /* In order of first detection */
+    uint32_t listedCardsCnt;                   /* Number of listed cards */
+    gboolean listFull;                         /* A card was not listed because the list is full */
+    gboolean cardUpdatePending;                /* UI update of the card table is queued */
     gboolean isNdefMessage;                    /* Was sIsNdefMessage (volatile bool) */
     gboolean isNdefMessageRead;                /* Was sIsNdefMessageRead (volatile bool) */
 
@@ -208,7 +238,9 @@ typedef struct {
 
 typedef struct {
     gboolean darkMode;
-    GtkTextView *contentTextView;
+    GtkLabel *cardStatusLabel;                 /* Discovery tab: status and number of cards */
+    GtkGrid *cardTable;                        /* Discovery tab: one row per card */
+    guint cardRowsShown;                       /* Number of card rows in the table */
     GtkButton *startStopButton;
     GtkWidget *stackSwitcher;
     GtkButton *ndefReadButton;
@@ -243,14 +275,13 @@ typedef struct {
  * ####################################################################################################################
  */
 static void appendToTextBuffer(GtkTextBuffer *buffer, const char *fmt, ...);
-static void formatHexBytes(char *buffer, size_t maxLen, const volatile uint8_t *data, size_t len);
-static void displayCardTechInfo(GtkTextBuffer *buffer, const volatile ptx_RUL_CardParams_t *card);
 static void updateNdefButtons(AppState *state);
 typedef GtkWindow* (*LoadWindowFunc)(GtkApplication *app, AppState *state, GtkWindow *parent);
 static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplication *app, AppState *state);
 static ptx_Status_t runDemo();
 static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry);
+static void publishCardList(const ptx_RUL_CardRegistry_t *cardRegistry, gboolean activated);
 static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry);
 static ptx_Status_t processStateRestartDiscovery(ptx_RUL_t *rul, demoState_t *demoState);
 static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *demoState);
@@ -310,17 +341,6 @@ static void appendToTextBuffer(GtkTextBuffer *buffer, const char *fmt, ...)
     gtk_text_buffer_insert(buffer, &iter, content, (int)strlen(content));
 }
 
-static void formatHexBytes(char *buffer, size_t maxLen, const volatile uint8_t *data, size_t len)
-{
-    size_t n = 0;
-    for (size_t i = 0; i < len && n + 2 < maxLen; ++i) {
-        int written = snprintf(&buffer[n], maxLen - n, "%02X", data[i]);
-        if (written > 0) {
-            n += (size_t)written;
-        }
-    }
-}
-
 static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplication *app, AppState *state)
 {
     GtkWindow *parent = gtk_application_get_active_window(app);
@@ -330,50 +350,6 @@ static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplicat
         gtk_window_set_transient_for(*window, parent);
     }
     gtk_window_present(*window);
-}
-
-static void displayCardTechInfo(GtkTextBuffer *buffer, const volatile ptx_RUL_CardParams_t *card)
-{
-    char hexBuf[HEX_BUFFER_SIZE];
-
-    switch(card->TechType)
-    {
-        case ptx_RUL_CardRfTechType_A:
-            appendToTextBuffer(buffer, "RF-technology: Type-A\n");
-            appendToTextBuffer(buffer, "SENS_RES: ");
-            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeA.SensRes, sizeof(card->TechParam.TypeA.SensRes));
-            appendToTextBuffer(buffer, "%s\n", hexBuf);
-            appendToTextBuffer(buffer, "ID length: %02X\n", card->TechParam.TypeA.NfcId1Len);
-            appendToTextBuffer(buffer, "ID: ");
-            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeA.NfcId1, card->TechParam.TypeA.NfcId1Len);
-            appendToTextBuffer(buffer, "%s\n", hexBuf);
-            break;
-
-        case ptx_RUL_CardRfTechType_B:
-            appendToTextBuffer(buffer, "RF-technology: Type-B\n");
-            appendToTextBuffer(buffer, "SENSB_RES: ");
-            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeB.SensBRes, sizeof(card->TechParam.TypeB.SensBRes));
-            appendToTextBuffer(buffer, "%s\n", hexBuf);
-            break;
-
-        case ptx_RUL_CardRfTechType_F:
-            appendToTextBuffer(buffer, "RF-technology: Type-F\n");
-            appendToTextBuffer(buffer, "SENSF_RES: ");
-            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeF.SensFRes, sizeof(card->TechParam.TypeF.SensFRes));
-            appendToTextBuffer(buffer, "%s\n", hexBuf);
-            break;
-
-        case ptx_RUL_CardRfTechType_V:
-            appendToTextBuffer(buffer, "RF-technology: Type-V\n");
-            appendToTextBuffer(buffer, "INVENTORY_RES: ");
-            formatHexBytes(hexBuf, sizeof(hexBuf), card->TechParam.TypeV.InventoryRes, sizeof(card->TechParam.TypeV.InventoryRes));
-            appendToTextBuffer(buffer, "%s\n", hexBuf);
-            break;
-
-        default:
-            appendToTextBuffer(buffer, "RF-technology: Unsupported\n");
-            break;
-    }
 }
 
 static gboolean displayDiscoveryLoopError(gpointer data)
@@ -388,10 +364,10 @@ static gboolean displayDiscoveryLoopError(gpointer data)
     }
 
     const char *description = getErrorDescription(errorData->errorCode);
-    GtkTextBuffer *const buffer = gtk_text_view_get_buffer(state->contentTextView);
+    char content[128];
+    snprintf(content, sizeof(content), "ERROR 0x%04X - %s\nPlease restart the application.", errorData->errorCode, description);
 
-    appendToTextBuffer(buffer, "\nERROR 0x%04X - %s\nPlease restart the application.\n",
-                       errorData->errorCode, description);
+    gtk_label_set_text(state->cardStatusLabel, content);
     appendToTextBuffer(gtk_text_view_get_buffer(state->ndefTextView),
                        "\nERROR 0x%04X - %s\nPlease restart the application.\n",
                        errorData->errorCode, description);
@@ -401,37 +377,9 @@ static gboolean displayDiscoveryLoopError(gpointer data)
     updateNdefButtons(state);
     gtk_widget_set_sensitive(state->stackSwitcher, TRUE);
 
-    char content[128];
-    snprintf(content, sizeof(content), "ERROR 0x%04X - %s\nPlease restart the application.", errorData->errorCode, description);
     gtk_label_set_text(state->ndefWriteStatusLabel, content);
 
     g_free(errorData);
-    return FALSE;
-}
-
-static gboolean updateCardInfo()
-{
-    lockSharedState();
-    gboolean isRunning = sSharedState.doRunDiscovery;
-    unlockSharedState();
-
-    if(!isRunning)
-        return FALSE;
-
-    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
-    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
-    GtkTextBuffer * const buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(state->contentTextView));
-
-    gtk_text_buffer_set_text(buffer, "Card activated\n", -1);
-
-    lockSharedState();
-    ptx_RUL_CardParams_t localCard = sSharedState.activeCard;
-    ptx_RUL_CardProtocolType_t localProtocol = sSharedState.activeProtocol;
-    unlockSharedState();
-
-    displayCardTechInfo(buffer, &localCard);
-    appendToTextBuffer(buffer, "%s\n", getProtocolTypeString(localProtocol));
-
     return FALSE;
 }
 
@@ -758,55 +706,393 @@ static const char* getProtocolShortString(ptx_RUL_CardProtocolType_t protocol)
     }
 }
 
-/* Appends a one-line card summary: RF technology, protocol and card ID. */
-static void appendCardSummary(GString *out, const ptx_RUL_CardParams_t *card, ptx_RUL_CardProtocolType_t protocol)
+static const char* getTechString(ptx_RUL_CardRfTechType_t tech)
 {
-    const char *tech = "Unsupported";
-    const uint8_t *id = NULL;
-    uint32_t idLen = 0;
-    uint8_t uid[PTX_RUL_UID_LEN];
+    switch(tech) {
+        case ptx_RUL_CardRfTechType_A: return "Type-A";
+        case ptx_RUL_CardRfTechType_B: return "Type-B";
+        case ptx_RUL_CardRfTechType_F: return "Type-F";
+        case ptx_RUL_CardRfTechType_V: return "Type-V";
+        default: return "Unsupported";
+    }
+}
+
+/* Gets the card ID (CARD_ID_MAX_LEN bytes buffer), returns FALSE for unsupported RF technologies. */
+static gboolean getCardId(const ptx_RUL_CardParams_t *card, uint8_t *id, uint32_t *len)
+{
+    switch(card->TechType)
+    {
+        case ptx_RUL_CardRfTechType_A:
+            *len = MIN(card->TechParam.TypeA.NfcId1Len, PTX_RUL_NFCID1_MAX_LEN);
+            memcpy(id, card->TechParam.TypeA.NfcId1, *len);
+            return TRUE;
+
+        case ptx_RUL_CardRfTechType_B:
+            *len = PTX_RUL_NFCID0_LEN;
+            memcpy(id, &card->TechParam.TypeB.SensBRes[PTX_RUL_SENSB_RES_NFCID0_OFFSET], *len);
+            return TRUE;
+
+        case ptx_RUL_CardRfTechType_F:
+            *len = PTX_RUL_NFCID2_LEN;
+            memcpy(id, &card->TechParam.TypeF.SensFRes[PTX_RUL_SENSF_RES_NFCID2_OFFSET], *len);
+            return TRUE;
+
+        case ptx_RUL_CardRfTechType_V:
+            /* UID in INVENTORY_RES (after flags and DSFID) is transmitted LSB first - store it MSB first */
+            *len = PTX_RUL_UID_LEN;
+            for (uint32_t i = 0; i < PTX_RUL_UID_LEN; ++i) {
+                id[i] = card->TechParam.TypeV.InventoryRes[2u + PTX_RUL_UID_LEN - 1u - i];
+            }
+            return TRUE;
+
+        default:
+            *len = 0;
+            return FALSE;
+    }
+}
+
+/* Appends the card ID as hex digits, returns FALSE (nothing appended) for unsupported RF technologies. */
+static gboolean appendCardId(GString *out, const ptx_RUL_CardParams_t *card)
+{
+    uint8_t id[CARD_ID_MAX_LEN];
+    uint32_t len = 0;
+
+    if (!getCardId(card, id, &len))
+        return FALSE;
+
+    appendHexString(out, id, len);
+    return TRUE;
+}
+
+/* TRUE if both card parameters belong to the same card (same RF technology and ID). */
+static gboolean isSameCard(const ptx_RUL_CardParams_t *a, const ptx_RUL_CardParams_t *b)
+{
+    uint8_t idA[CARD_ID_MAX_LEN];
+    uint8_t idB[CARD_ID_MAX_LEN];
+    uint32_t lenA = 0;
+    uint32_t lenB = 0;
+
+    return (a->TechType == b->TechType) &&
+           getCardId(a, idA, &lenA) && getCardId(b, idB, &lenB) &&
+           (lenA == lenB) && (0 == memcmp(idA, idB, lenA));
+}
+
+/*
+ * Appends the RF-technology specific data of a card that isn't part of the card ID:
+ * - Type-A: ATQA (SENS_RES) and SAK (SEL_RES)
+ * - Type-B: Application data and Protocol info of SENSB_RES
+ * - Type-F: PMm (PAD) and, if present, System code (RD) of SENSF_RES
+ * - Type-V: DSFID of INVENTORY_RES
+ */
+static void appendCardDetails(GString *out, const ptx_RUL_CardParams_t *card)
+{
+    switch(card->TechType)
+    {
+        case ptx_RUL_CardRfTechType_A:
+            g_string_append(out, "ATQA ");
+            appendHexString(out, card->TechParam.TypeA.SensRes, sizeof(card->TechParam.TypeA.SensRes));
+            g_string_append_printf(out, ", SAK %02X", card->TechParam.TypeA.SelRes);
+            break;
+
+        case ptx_RUL_CardRfTechType_B:
+            g_string_append(out, "App data ");
+            appendHexString(out, &card->TechParam.TypeB.SensBRes[PTX_RUL_SENSB_RES_AFI_OFFSET], PTX_RUL_APPDATA_LEN);
+            g_string_append(out, ", Protocol info ");
+            appendHexString(out, &card->TechParam.TypeB.SensBRes[PTX_RUL_SENSB_BIT_RATE_CAPABILITY_OFFSET], PTX_RUL_PROTINFO_LEN);
+            break;
+
+        case ptx_RUL_CardRfTechType_F:
+        {
+            /* SENSF_RES: length, response code, NFCID2, PAD (PMm, 8 bytes), optional RD (System code) */
+            const uint8_t *sensFRes = card->TechParam.TypeF.SensFRes;
+            g_string_append(out, "PMm ");
+            appendHexString(out, &sensFRes[PTX_RUL_SENSF_RES_PAD0_OFFSET], PTX_RUL_SENSF_RES_RD_OFFSET - PTX_RUL_SENSF_RES_PAD0_OFFSET);
+            if (sensFRes[0] >= (PTX_RUL_SENSF_RES_RD_OFFSET + PTX_RUL_RD_LEN))
+            {
+                g_string_append(out, ", System code ");
+                appendHexString(out, &sensFRes[PTX_RUL_SENSF_RES_RD_OFFSET], PTX_RUL_RD_LEN);
+            }
+            break;
+        }
+
+        case ptx_RUL_CardRfTechType_V:
+            g_string_append_printf(out, "DSFID %02X", card->TechParam.TypeV.InventoryRes[PTX_RUL_INVENTORYRES_DSFID_OFFSET]);
+            break;
+
+        default:
+            break;
+    }
+}
+
+/* Appends the complete RF-technology specific response of a card (shown as tooltip of the details). */
+static void appendCardRawResponse(GString *out, const ptx_RUL_CardParams_t *card)
+{
+    switch(card->TechType)
+    {
+        case ptx_RUL_CardRfTechType_A:
+            g_string_append(out, "SENS_RES ");
+            appendHexString(out, card->TechParam.TypeA.SensRes, sizeof(card->TechParam.TypeA.SensRes));
+            g_string_append_printf(out, ", SEL_RES %02X", card->TechParam.TypeA.SelRes);
+            break;
+
+        case ptx_RUL_CardRfTechType_B:
+            g_string_append(out, "SENSB_RES ");
+            appendHexString(out, card->TechParam.TypeB.SensBRes, sizeof(card->TechParam.TypeB.SensBRes));
+            break;
+
+        case ptx_RUL_CardRfTechType_F:
+            g_string_append(out, "SENSF_RES ");
+            appendHexString(out, card->TechParam.TypeF.SensFRes, sizeof(card->TechParam.TypeF.SensFRes));
+            break;
+
+        case ptx_RUL_CardRfTechType_V:
+            g_string_append(out, "INVENTORY_RES ");
+            appendHexString(out, card->TechParam.TypeV.InventoryRes, sizeof(card->TechParam.TypeV.InventoryRes));
+            break;
+
+        default:
+            break;
+    }
+}
+
+/* Returns the bit rate in kbit/s, 0 for unknown values. */
+static uint32_t getBitRateKbps(ptx_RUL_RfBitRate_t bitRate)
+{
+    switch(bitRate) {
+        case ptx_RUL_RfBitRate_106: return 106u;
+        case ptx_RUL_RfBitRate_212: return 212u;
+        case ptx_RUL_RfBitRate_424: return 424u;
+        case ptx_RUL_RfBitRate_848: return 848u;
+        case ptx_RUL_RfBitRate_26:  return 26u;
+        default: return 0u;
+    }
+}
+
+/*
+ * Appends the nominal RF bit rate of a card, e.g. "106 kbit/s" or "TX 212 / RX 106 kbit/s" if the directions differ.
+ * Discovered cards report the default bit rate of their RF technology, higher bit rates are only reported after an
+ * activation negotiating them.
+ */
+static void appendCardBitRate(GString *out, const ptx_RUL_CardParams_t *card)
+{
+    uint32_t tx = 0;
+    uint32_t rx = 0;
 
     switch(card->TechType)
     {
         case ptx_RUL_CardRfTechType_A:
-            tech = "Type-A";
-            id = card->TechParam.TypeA.NfcId1;
-            idLen = MIN(card->TechParam.TypeA.NfcId1Len, PTX_RUL_NFCID1_MAX_LEN);
+            tx = getBitRateKbps(card->TechParam.TypeA.TxBitRate);
+            rx = getBitRateKbps(card->TechParam.TypeA.RxBitRate);
             break;
 
         case ptx_RUL_CardRfTechType_B:
-            tech = "Type-B";
-            id = &card->TechParam.TypeB.SensBRes[PTX_RUL_SENSB_RES_NFCID0_OFFSET];
-            idLen = PTX_RUL_NFCID0_LEN;
+            tx = getBitRateKbps(card->TechParam.TypeB.TxBitRate);
+            rx = getBitRateKbps(card->TechParam.TypeB.RxBitRate);
             break;
 
         case ptx_RUL_CardRfTechType_F:
-            tech = "Type-F";
-            id = &card->TechParam.TypeF.SensFRes[PTX_RUL_SENSF_RES_NFCID2_OFFSET];
-            idLen = PTX_RUL_NFCID2_LEN;
+            tx = rx = getBitRateKbps(card->TechParam.TypeF.BitRate);
             break;
 
         case ptx_RUL_CardRfTechType_V:
-            /* UID in INVENTORY_RES (after flags and DSFID) is transmitted LSB first - display it MSB first */
-            tech = "Type-V";
-            for (uint32_t i = 0; i < PTX_RUL_UID_LEN; ++i) {
-                uid[i] = card->TechParam.TypeV.InventoryRes[2u + PTX_RUL_UID_LEN - 1u - i];
-            }
-            id = uid;
-            idLen = PTX_RUL_UID_LEN;
+            tx = rx = getBitRateKbps(card->TechParam.TypeV.BitRate);
             break;
 
         default:
             break;
     }
 
-    g_string_append_printf(out, "Card: RF-Tech %s, Protocol %s", tech, getProtocolShortString(protocol));
-    if (NULL != id)
-    {
-        g_string_append(out, ", ID ");
-        appendHexString(out, id, idLen);
+    if ((0u == tx) || (0u == rx))
+        g_string_append(out, "-");
+    else if (tx == rx)
+        g_string_append_printf(out, "%u kbit/s", tx);
+    else
+        g_string_append_printf(out, "TX %u / RX %u kbit/s", tx, rx);
+}
+
+/* Appends the protocols supported by a (not activated) card, e.g. "T4T (ISO-DEP), P2P (NFC-DEP)". */
+static void appendSupportedProtocols(GString *out, uint8_t protocols)
+{
+    static const struct { uint8_t mask; ptx_RUL_CardProtocolType_t type; } PROTOCOLS[] = {
+        { ptx_RUL_SupportedProtocols_T2T,    ptx_RUL_CardProtocolType_T2T },
+        { ptx_RUL_SupportedProtocols_T3T,    ptx_RUL_CardProtocolType_T3T },
+        { ptx_RUL_SupportedProtocols_T4T,    ptx_RUL_CardProtocolType_T4T },
+        { ptx_RUL_SupportedProtocols_NfcDep, ptx_RUL_CardProtocolType_NfcDep },
+        { ptx_RUL_SupportedProtocols_T5T,    ptx_RUL_CardProtocolType_T5T },
+    };
+    gsize start = out->len;
+
+    for (guint i = 0; i < G_N_ELEMENTS(PROTOCOLS); ++i) {
+        if (0u != (protocols & PROTOCOLS[i].mask)) {
+            g_string_append_printf(out, "%s%s", (out->len > start) ? ", " : "", getProtocolShortString(PROTOCOLS[i].type));
+        }
     }
+
+    if (out->len == start) {
+        g_string_append(out, "Unknown");
+    }
+}
+
+/* Appends a one-line card summary: RF technology, protocol and card ID. */
+static void appendCardSummary(GString *out, const ptx_RUL_CardParams_t *card, ptx_RUL_CardProtocolType_t protocol)
+{
+    g_string_append_printf(out, "Card: RF-Tech %s, Protocol %s", getTechString(card->TechType), getProtocolShortString(protocol));
+
+    GString *id = g_string_new(NULL);
+    if (appendCardId(id, card))
+    {
+        g_string_append_printf(out, ", ID %s", id->str);
+    }
+    g_string_free(id, TRUE);
     g_string_append_c(out, '\n');
+}
+
+static void clearCardTable(AppState *state)
+{
+    GtkWidget *child;
+    while (NULL != (child = gtk_widget_get_first_child(GTK_WIDGET(state->cardTable))))
+    {
+        gtk_grid_remove(state->cardTable, child);
+    }
+    state->cardRowsShown = 0;
+}
+
+/* Sets the tooltip of a table cell, only if it changed. */
+static void setCardTableCellTooltip(GtkGrid *table, int column, int row, const char *text)
+{
+    GtkWidget *cell = gtk_grid_get_child_at(table, column, row);
+    if ((NULL != cell) && (0 != g_strcmp0(gtk_widget_get_tooltip_text(cell), text)))
+    {
+        gtk_widget_set_tooltip_text(cell, text);
+    }
+}
+
+/* Sets the text of a table cell, only if it changed (keeps a text selection in unchanged cells). */
+static void setCardTableCellText(GtkGrid *table, int column, int row, const char *text)
+{
+    GtkWidget *cell = gtk_grid_get_child_at(table, column, row);
+    if (GTK_IS_LABEL(cell) && (0 != g_strcmp0(gtk_label_get_text(GTK_LABEL(cell)), text)))
+    {
+        gtk_label_set_text(GTK_LABEL(cell), text);
+    }
+}
+
+static void attachCardTableCell(GtkGrid *table, int column, int row, const char *text, gboolean header, gboolean monospace)
+{
+    GtkWidget *label = gtk_label_new(NULL);
+
+    if (header)
+    {
+        gchar *markup = g_markup_printf_escaped("<b>%s</b>", text);
+        gtk_label_set_markup(GTK_LABEL(label), markup);
+        g_free(markup);
+    }
+    else
+    {
+        gtk_label_set_text(GTK_LABEL(label), text);
+    }
+
+    gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
+    if (monospace)
+    {
+        gtk_widget_add_css_class(label, "monospace");
+        gtk_label_set_selectable(GTK_LABEL(label), TRUE);
+    }
+    gtk_grid_attach(table, label, column, row, 1, 1);
+}
+
+/*
+ * Shows all cards detected since discovery was started as a table: number, RF technology, protocol, nominal bit rate,
+ * ID, number of detections and RF-technology specific details. Rows are only appended, existing rows are updated in place.
+ */
+static gboolean updateCardInfo()
+{
+    enum { COL_NUMBER, COL_TECH, COL_PROTOCOL, COL_BITRATE, COL_ID, COL_DETECTIONS, COL_DETAILS, COL_COUNT };
+    static const char * const HEADERS[COL_COUNT] = { "#", "RF-Tech", "Protocol", "Bit rate", "ID", "Detections", "Details" };
+    static ListedCard cards[PTX_DEMO_APP_MAX_LISTED_CARDS];
+
+    lockSharedState();
+    gboolean isRunning = sSharedState.doRunDiscovery;
+    uint32_t cardsCnt = MIN(sSharedState.listedCardsCnt, PTX_DEMO_APP_MAX_LISTED_CARDS);
+    gboolean listFull = sSharedState.listFull;
+    memcpy(cards, sSharedState.listedCards, cardsCnt * sizeof(cards[0]));
+    sSharedState.cardUpdatePending = FALSE;
+    unlockSharedState();
+
+    if(!isRunning)
+        return FALSE;
+
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+
+    if (0u == cardsCnt)
+    {
+        gtk_label_set_text(state->cardStatusLabel, "Waiting for cards ...");
+        return FALSE;
+    }
+
+    if (NULL == gtk_grid_get_child_at(state->cardTable, COL_NUMBER, 0))
+    {
+        for (guint c = 0; c < COL_COUNT; ++c)
+        {
+            attachCardTableCell(state->cardTable, (int)c, 0, HEADERS[c], TRUE, FALSE);
+        }
+    }
+
+    GString *text = g_string_new(NULL);
+    for (uint32_t i = 0; i < cardsCnt; ++i)
+    {
+        int row = (int)i + 1;
+        const ListedCard *entry = &cards[i];
+
+        /* New card: append a row, the static cells (number, RF technology, ID) never change */
+        if (i >= state->cardRowsShown)
+        {
+            g_string_printf(text, "%u", i + 1u);
+            attachCardTableCell(state->cardTable, COL_NUMBER, row, text->str, FALSE, FALSE);
+            attachCardTableCell(state->cardTable, COL_TECH, row, getTechString(entry->card.TechType), FALSE, FALSE);
+            attachCardTableCell(state->cardTable, COL_PROTOCOL, row, "", FALSE, FALSE);
+            attachCardTableCell(state->cardTable, COL_BITRATE, row, "", FALSE, FALSE);
+
+            g_string_truncate(text, 0);
+            if (!appendCardId(text, &entry->card))
+                g_string_append(text, "-");
+            attachCardTableCell(state->cardTable, COL_ID, row, text->str, FALSE, TRUE);
+            attachCardTableCell(state->cardTable, COL_DETECTIONS, row, "", FALSE, FALSE);
+            attachCardTableCell(state->cardTable, COL_DETAILS, row, "", FALSE, TRUE);
+        }
+
+        g_string_truncate(text, 0);
+        if (ptx_RUL_CardProtocolType_Undefined != entry->activeProtocol)
+            g_string_append(text, getProtocolShortString(entry->activeProtocol));
+        else
+            appendSupportedProtocols(text, entry->card.Protocols);
+        setCardTableCellText(state->cardTable, COL_PROTOCOL, row, text->str);
+
+        g_string_truncate(text, 0);
+        appendCardBitRate(text, &entry->card);
+        setCardTableCellText(state->cardTable, COL_BITRATE, row, text->str);
+
+        g_string_printf(text, "%u", entry->detections);
+        setCardTableCellText(state->cardTable, COL_DETECTIONS, row, text->str);
+
+        g_string_truncate(text, 0);
+        appendCardDetails(text, &entry->card);
+        setCardTableCellText(state->cardTable, COL_DETAILS, row, text->str);
+
+        g_string_truncate(text, 0);
+        appendCardRawResponse(text, &entry->card);
+        setCardTableCellTooltip(state->cardTable, COL_DETAILS, row, text->str);
+    }
+    state->cardRowsShown = MAX(state->cardRowsShown, cardsCnt);
+
+    g_string_printf(text, "%u card%s detected since start", cardsCnt, (1u == cardsCnt) ? "" : "s");
+    if (listFull)
+        g_string_append_printf(text, " - list full (max. %u cards)", PTX_DEMO_APP_MAX_LISTED_CARDS);
+    gtk_label_set_text(state->cardStatusLabel, text->str);
+    g_string_free(text, TRUE);
+
+    return FALSE;
 }
 
 static gboolean updateNdefInfo()
@@ -870,7 +1156,6 @@ static gint onInitDone(gpointer userData)
 {
     GtkApplication *app = GTK_APPLICATION(userData);
     AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
-    GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
 
     lockSharedState();
     ptx_Status_t status = sSharedState.ptxStatus;
@@ -878,7 +1163,7 @@ static gint onInitDone(gpointer userData)
 
     if(status == PTX_STATUS_SUCCESS)
     {
-        gtk_text_buffer_set_text(buffer, "System initialized. Press START to begin discovery!", -1);
+        gtk_label_set_text(state->cardStatusLabel, "System initialized. Press START to begin discovery!");
         gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), TRUE);
         state->ptxReady = TRUE;
         updateNdefButtons(state);
@@ -891,7 +1176,7 @@ static gint onInitDone(gpointer userData)
     {
         char content[128];
         snprintf(content, sizeof(content), "System initialization ERROR: 0x%04X\nPlease check the system and restart the application!", status);
-        gtk_text_buffer_set_text(buffer, content, (int)strlen(content));
+        gtk_label_set_text(state->cardStatusLabel, content);
     }
 
     return 0;
@@ -977,6 +1262,8 @@ static void stopDiscovery(AppState *state)
     lockSharedState();
     sSharedState.doStopDiscovery = true;
     sSharedState.activeCard = (ptx_RUL_CardParams_t){0};
+    sSharedState.listedCardsCnt = 0;
+    sSharedState.listFull = FALSE;
     unlockSharedState();
 }
 
@@ -991,8 +1278,8 @@ static void onStartStop(GtkWidget *widget, gpointer userData)
 
     if(!isRunning)
     {
-        GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-        gtk_text_buffer_set_text(buffer, "", -1);
+        clearCardTable(state);
+        gtk_label_set_text(state->cardStatusLabel, "Waiting for cards ...");
         gtk_button_set_label(state->startStopButton, "STOP");
         startDiscovery(state, DiscoveryMode_CardInfo);
     }
@@ -1470,15 +1757,18 @@ static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userDat
     (void)parameter;
 
     AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
-    GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-    gtk_text_buffer_set_text(buffer, "", -1);
+    clearCardTable(state);
 
     lockSharedState();
     gboolean isRunning = sSharedState.doRunDiscovery;
     if(isRunning)
         sSharedState.doReset = true;
     sSharedState.activeCard = (ptx_RUL_CardParams_t){0};
+    sSharedState.listedCardsCnt = 0;
+    sSharedState.listFull = FALSE;
     unlockSharedState();
+
+    gtk_label_set_text(state->cardStatusLabel, isRunning ? "Waiting for cards ..." : "");
 }
 
 static void onPreferences(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -1564,13 +1854,21 @@ static void onActivate(GtkApplication *app, gpointer userData)
     gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), FALSE);
     g_signal_connect(state->startStopButton, "clicked", G_CALLBACK(onStartStop), app);
 
-    obj = gtk_builder_get_object(windowBuilder, "cardInfoText");
+    obj = gtk_builder_get_object(windowBuilder, "cardStatus");
     if(obj == NULL) {
-        g_warning("Failed to load 'cardInfoText' from window.ui - cannot display card information");
+        g_warning("Failed to load 'cardStatus' from window.ui - cannot display card information");
         g_object_unref(windowBuilder);
         return;
     }
-    state->contentTextView = GTK_TEXT_VIEW(obj);
+    state->cardStatusLabel = GTK_LABEL(obj);
+
+    obj = gtk_builder_get_object(windowBuilder, "cardTable");
+    if(obj == NULL) {
+        g_warning("Failed to load 'cardTable' from window.ui - cannot display card information");
+        g_object_unref(windowBuilder);
+        return;
+    }
+    state->cardTable = GTK_GRID(obj);
 
     obj = gtk_builder_get_object(windowBuilder, "stackSwitcher");
     if(obj == NULL) {
@@ -1666,8 +1964,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     refreshWriteRecordList(state);
     updateWriteSummary(state);
 
-    GtkTextBuffer * buffer = gtk_text_view_get_buffer(state->contentTextView);
-    gtk_text_buffer_set_text(buffer, "Initializing ...", -1);
+    gtk_label_set_text(state->cardStatusLabel, "Initializing ...");
 
     // set up menu
     GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
@@ -1903,16 +2200,16 @@ static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demo
         discParams.IdleTime = PTX_DEMO_APP_DISCOVERY_IDLE_TIME_MS; /* System pauses / idles for 100ms after every full polling loop-cycle. */
         discParams.PollTypeA = 1u;                         /* Poll for NFC-A Technology. */
         discParams.PollTypeAPollFrequency = 1u;            /* Poll for NFC-A Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeADeviceLimit = 5u;              /* Limit the number of NFC-A devices / cards to max. 5 devices (application can define max. value). */
+        discParams.PollTypeADeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-A devices / cards to max. 5 devices (application can define max. value). */
         discParams.PollTypeB = 1u;                         /* Poll for NFC-B Technology. */
         discParams.PollTypeBPollFrequency = 1u;            /* Poll for NFC-B Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeBDeviceLimit = 5u;              /* Limit the number of NFC-B devices / cards to max. 5 devices (application can define max. value). */
+        discParams.PollTypeBDeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-B devices / cards to max. 5 devices (application can define max. value). */
         discParams.PollTypeF212 = 1u;                      /* Poll for NFC-F 212 kBit/s Technology. */
         discParams.PollTypeFPollFrequency = 1u;            /* Poll for NFC-F Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeFDeviceLimit = 5u;              /* Limit the number of NFC-F devices / cards to max. 5 devices (application can define max. value). */
+        discParams.PollTypeFDeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-F devices / cards to max. 5 devices (application can define max. value). */
         discParams.PollTypeV = 1u;                         /* Poll for NFC-V Technology. */
         discParams.PollTypeVPollFrequency = 1u;            /* Poll for NFC-V Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeVDeviceLimit = 5u;              /* Limit the number of NFC-V devices / cards to max. 5 devices (application can define max. value). */
+        discParams.PollTypeVDeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-V devices / cards to max. 5 devices (application can define max. value). */
         discParams.EnableLPCD = 0;                         /* Don't use low-power-card-detection (LPCD) in this demo. */
 #if !defined(PTX_DISABLE_LISTEN_MODE)
         discParams.ListenMode = 0;                         /* Don't use Listen-mode (Card Emulation) in this demo. */
@@ -1949,6 +2246,60 @@ static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demo
     return status;
 }
 
+/*
+ * Merges the cards of the card registry (found in this discovery cycle) into the list of the Discovery tab:
+ * known cards get their detection counter incremented, new cards are appended. Cards are never removed here,
+ * the list is cleared when discovery is restarted.
+ */
+static void publishCardList(const ptx_RUL_CardRegistry_t *cardRegistry, gboolean activated)
+{
+    uint32_t cardsCnt = MIN(cardRegistry->CardsCnt, PTX_RUL_MAX_SUPPORTED_DEVICES);
+    gboolean postUpdate = FALSE;
+
+    lockSharedState();
+    for (uint32_t i = 0; i < cardsCnt; ++i)
+    {
+        const ptx_RUL_CardParams_t *card = &cardRegistry->Cards[i];
+        ListedCard *entry = NULL;
+
+        for (uint32_t j = 0; (j < sSharedState.listedCardsCnt) && (NULL == entry); ++j)
+        {
+            if (isSameCard(&sSharedState.listedCards[j].card, card))
+                entry = &sSharedState.listedCards[j];
+        }
+
+        if (NULL == entry)
+        {
+            if (sSharedState.listedCardsCnt >= PTX_DEMO_APP_MAX_LISTED_CARDS)
+            {
+                sSharedState.listFull = TRUE;
+                continue;
+            }
+            entry = &sSharedState.listedCards[sSharedState.listedCardsCnt++];
+            entry->activeProtocol = ptx_RUL_CardProtocolType_Undefined;
+            entry->detections = 0;
+        }
+
+        entry->card = *card;
+        entry->detections++;
+        if (activated && (i == cardRegistry->ActiveCardId))
+            entry->activeProtocol = cardRegistry->ActiveProtocol;
+    }
+
+    /* Counters change in every cycle - queue at most one UI update at a time */
+    if ((cardsCnt > 0u) && !sSharedState.cardUpdatePending)
+    {
+        sSharedState.cardUpdatePending = TRUE;
+        postUpdate = TRUE;
+    }
+    unlockSharedState();
+
+    if (postUpdate)
+    {
+        g_idle_add(updateCardInfo, NULL);
+    }
+}
+
 static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *demoState, ptx_RUL_CardRegistry_t *cardRegistry)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -1982,11 +2333,31 @@ static ptx_Status_t processStateWaitForDiscovery(ptx_RUL_t *rul, demoState_t *de
                 }
 
                 case ptx_RUL_StatusInfoDiscover_CardDetectionOngoing:
+                {
+                    /* Multiple cards present, the internal Discovery-procedure is still busy resolving all cards. */
+                    (void)ptx_RUL_Sleep(rul, PTX_DEMO_APP_CARD_RESOLVE_SLEEP_MS);
+                    break;
+                }
+
                 case ptx_RUL_StatusInfoDiscover_CardsAvailable:
                 case ptx_RUL_StatusInfoDiscover_MultiProtocol:
-                    // not dealing with multiple cards, multiprotocol or card selection
+                {
+                    /*
+                     * Multiple cards (or a single card supporting multiple protocols) present, all cards are resolved
+                     * and stored in the card registry. The Discovery tab displays all of them, the NDEF tab only
+                     * supports a single card.
+                     */
+                    lockSharedState();
+                    DiscoveryMode mode = sSharedState.mode;
+                    unlockSharedState();
+
+                    if (DiscoveryMode_CardInfo == mode)
+                    {
+                        publishCardList(cardRegistry, FALSE);
+                    }
                     *demoState = demoStateRestartDiscovery;
                     break;
+                }
 
                 default:
                 {
@@ -2174,18 +2545,25 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
 
     if ((NULL != rul) && (NULL != demoState) && (NULL != cardRegistry) && (DiscoveryMode_NdefWrite != mode))
     {
-        /* Check if card changed and update if needed */
-        lockSharedState();
-        ptx_RUL_CardParams_t activeCard = sSharedState.activeCard;
-        unlockSharedState();
-
-        if(0 != memcmp(&activeCard, cardRegistry->ActiveCard, sizeof(activeCard)))
+        if (DiscoveryMode_CardInfo == mode)
         {
+            publishCardList(cardRegistry, TRUE);
+        }
+        else
+        {
+            /* Check if card changed and update if needed */
             lockSharedState();
-            sSharedState.activeCard = *cardRegistry->ActiveCard;
-            sSharedState.activeProtocol = cardRegistry->ActiveProtocol;
+            ptx_RUL_CardParams_t activeCard = sSharedState.activeCard;
             unlockSharedState();
-            g_idle_add((DiscoveryMode_NdefRead == mode) ? updateNdefInfo : updateCardInfo, NULL);
+
+            if(0 != memcmp(&activeCard, cardRegistry->ActiveCard, sizeof(activeCard)))
+            {
+                lockSharedState();
+                sSharedState.activeCard = *cardRegistry->ActiveCard;
+                sSharedState.activeProtocol = cardRegistry->ActiveProtocol;
+                unlockSharedState();
+                g_idle_add(updateNdefInfo, NULL);
+            }
         }
 
         *demoState = demoStateRestartDiscovery;

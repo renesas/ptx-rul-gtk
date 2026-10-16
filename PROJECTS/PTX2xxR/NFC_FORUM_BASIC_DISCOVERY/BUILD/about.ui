@@ -8,11 +8,11 @@
   <object class="GtkTextBuffer" id="buffer">
     <property name="text">GTK4 application using the PTX205R and the RUL SDK v1.2.1 reference implementation for the Raspberry Pi and SPI.
 
-Polls for RF-technologies A, B, F, V. Only one single card in the field is supported.
+Polls for RF-technologies A, B, F, V.
 
-Discovery tab: if a card is activated, card information is displayed.
+Discovery tab: all cards in the field (up to 5 per RF-technology, 20 in total per discovery cycle) are displayed in a table, with RF-technology, protocol, nominal bit rate, ID, the number of detections and technology-specific details. Detected cards stay in the list until discovery is restarted.
 
-NDEF tab: if a card is activated, a one-line card summary (RF-technology, protocol, ID) is displayed, followed by the NDEF records of the card in decoded form (URI, Text, Smart Poster, MIME, absolute URI, external types) and the raw bytes of the NDEF message. NDEF messages can also be composed from standard record types (URI, Text, Smart Poster, Phone, Email, SMS, Geo location, vCard, MIME, Wi-Fi, Android app) and written to a card. Writing waits for a card for max. 10 polling cycles, then stops discovery.
+NDEF tab: only one single card in the field is supported. If a card is activated, a one-line card summary (RF-technology, protocol, ID) is displayed, followed by the NDEF records of the card in decoded form (URI, Text, Smart Poster, MIME, absolute URI, external types) and the raw bytes of the NDEF message. NDEF messages can also be composed from standard record types (URI, Text, Smart Poster, Phone, Email, SMS, Geo location, vCard, MIME, Wi-Fi, Android app) and written to a card. Writing waits for a card for max. 10 polling cycles, then stops discovery.
 
 LICENSE INFORMATION
 
