@@ -15,14 +15,14 @@ This document provides a comprehensive list of all dependencies used by the PTX 
 ### GLib
 - **Source**: https://gitlab.gnome.org/GNOME/glib
 - **License**: LGPL v2.1 or later
-- **Purpose**: Core data structures and utilities (transitive dependency via GTK4)
+- **Purpose**: Core data structures and utilities (used directly by the application, e.g. threads, strings, NDEF message handling, and by GTK4)
 - **Modifications**: None (unmodified dependency)
 - **Link Type**: Dynamic linking (libglib-2.0.so)
 
 ### Gio
 - **Source**: https://gitlab.gnome.org/GNOME/glib (part of GLib)
 - **License**: LGPL v2.1 or later
-- **Purpose**: I/O and settings management via GSettings (transitive dependency via GTK4)
+- **Purpose**: I/O and settings management via GSettings (used directly by the application and by GTK4)
 - **Modifications**: None (unmodified dependency)
 - **Link Type**: Dynamic linking (libgio-2.0.so)
 
@@ -77,7 +77,7 @@ This document provides a comprehensive list of all dependencies used by the PTX 
 - **License**: BSD-3-Clause
 - **Copyright**: Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates
 - **Source**: https://github.com/renesas/ptx-rul-gtk
-- **Purpose**: GTK4 NFC Forum basic discovery demo application
+- **Purpose**: GTK4 NFC Forum basic discovery demo application with NDEF read and write
 - **License Text**: Embedded in all source file headers via SPDX-License-Identifier
 
 ## License Compliance Notes

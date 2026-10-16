@@ -348,6 +348,9 @@ ${SOURCES}
 	../../../SRC/API/NATIVE_TAG/T5T/ptx_NativeTag_T5T.c
 	../../../SRC/API/NDEF/TAG_TYPES/NDEF_T5T/ptx_NDEF_T5T.c
 	../../../SRC/API/NDEF/GENERIC/ptx_NDEF.c
+	../../../SRC/API/NDEF/RECORDS/ptx_NDEFRecord.c
+	../../../SRC/API/NDEF/RECORDS/ptx_NDEFRecord_URI.c
+	../../../SRC/API/NDEF/RECORDS/ptx_NDEFMessage.c
 )
 
 set(HEADER_DIRS
@@ -383,6 +386,7 @@ ${HEADER_DIRS}
 	../../../SRC/API/NDEF/DEFINES
 	../../../SRC/API/NATIVE_TAG/T2T
 	../../../SRC/API/NDEF/GENERIC
+	../../../SRC/API/NDEF/RECORDS
 )
 
 # Build Target Configuration
@@ -406,6 +410,7 @@ set(TARGET_EXE_NAME "NFC_FORUM_BASIC_DISCOVERY")
 add_executable(${TARGET_EXE_NAME})
 target_sources(${TARGET_EXE_NAME} PRIVATE
 	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.c
+	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleNdefRecords.c
 )
 
 # link GTK

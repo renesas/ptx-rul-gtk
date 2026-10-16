@@ -5,10 +5,10 @@ NAME                    LICENSE FILE PATH                                       
 GTK4                    ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       Dynamically linked GUI toolkit
                         https://gitlab.gnome.org/GNOME/gtk
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-GLib                    ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       Core utilities (transitive via GTK4)
+GLib                    ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       Core utilities (direct and via GTK4)
                         https://gitlab.gnome.org/GNOME/glib
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Gio                     ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       I/O and settings (transitive via GTK4)
+Gio                     ./COPYING or ./COPYING.LESSER                                LGPL v2.1 or later             GNOME Project                       I/O and settings (direct and via GTK4)
                         https://gitlab.gnome.org/GNOME/glib
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 PTX2xxR/W RUL SDK       https://opensource.org/licenses/BSD-3-Clause                 The BSD 3-Clause License       Renesas Electronics               contained in source code headers

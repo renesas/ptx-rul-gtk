@@ -42,7 +42,7 @@
                   - integrate the RUL SDK into a GTK4 application,
                   - setup and start the basic NFC Forum RF-Discovery loop,
                   - retrieve Card/Tag parameters from the Card-registry,
-                  - read NDEF messages,
+                  - read (parse) and write NDEF messages,
                   using the RUL-API. Typical use cases for the NFC Forum RF-Discovery
                   and data exchanges are IoT applications.
 */
