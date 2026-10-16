@@ -49,10 +49,12 @@
                   Smart Poster, Phone, Email, SMS, Geo location, vCard, MIME, Wi-Fi, Android app) - see
                   ptx_ExampleNdefRecords.c. The WRITE button starts discovery for max. 10 polling cycles,
                   writes the message to the first activated card, then stops discovery.
+                  On the Polling tab, the discovery settings (idle time, LPCD, per-technology
+                  enable / poll frequency / device limit, Type-F bit rate) can be changed.
                   When the app is launched, the PTX is initialized and discovery can be
                   started/stopped by clicking the START/STOP button on the Discovery tab
                   (RESET clears the displayed card information and restarts discovery), or
-                  the READ/STOP buttons on the NDEF tab (NDEF read). There's a menu offering
+                  the READ/STOP buttons on the NDEF tab (NDEF read, CLEAR clears the output). There's a menu offering
                   the following options:
                   - Preferences - enable/disable dark mode.
                   - About - display about information.
@@ -98,7 +100,8 @@ static const uint32_t PTX_DEMO_APP_NO_CARD_SLEEP_MS = 10u;
 /* Delay/Sleep between checking RF-Discovery state and Discovery-procedure is ongoing (resolving multiple cards). */
 static const uint32_t PTX_DEMO_APP_CARD_RESOLVE_SLEEP_MS = 5u;
 
-/* Max. number of cards resolved per RF-technology (A, B, F, V), as in the SDK's example. */
+/* Default and max. number of cards resolved per RF-technology (A, B, F, V) and discovery cycle (5 as in the SDK's example),
+ * the limit can be lowered on the Polling tab. */
 #define PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH  5u
 
 /* Max. number of cards resolved per discovery cycle. The SDK's card registry holds up to PTX_RUL_MAX_SUPPORTED_DEVICES cards. */
@@ -112,7 +115,7 @@ G_STATIC_ASSERT(PTX_DEMO_APP_MAX_CARDS <= PTX_RUL_MAX_SUPPORTED_DEVICES);
 #define CARD_ID_MAX_LEN                     PTX_RUL_NFCID1_MAX_LEN
 G_STATIC_ASSERT((CARD_ID_MAX_LEN >= PTX_RUL_NFCID0_LEN) && (CARD_ID_MAX_LEN >= PTX_RUL_NFCID2_LEN) && (CARD_ID_MAX_LEN >= PTX_RUL_UID_LEN));
 
-/* Idle time between two consecutive polling-loop cycles. */
+/* Default idle time between two consecutive polling-loop cycles, changeable on the Polling tab. */
 static const uint32_t PTX_DEMO_APP_DISCOVERY_IDLE_TIME_MS = 100u;
 
 /* Estimated RF-polling time per polling-loop cycle (NFC-A, -B, -F, -V). The RUL doesn't report polling cycles,
@@ -172,6 +175,25 @@ typedef enum {
     NdefWriteResult_Failed                     /* Creating or writing the NDEF message failed */
 } NdefWriteResult;
 
+/* RF technologies configurable on the Polling tab */
+enum { POLL_TECH_A, POLL_TECH_B, POLL_TECH_F, POLL_TECH_V, POLL_TECH_COUNT };
+
+/* LPCD modes of the Polling tab (index of the drop-down) */
+enum { POLL_LPCD_DISABLED, POLL_LPCD_EVERY_CYCLE, POLL_LPCD_EVERY_NTH_CYCLE };
+
+/* Discovery settings of the Polling tab */
+typedef struct {
+    uint32_t idleTime;                         /* Idle time between polling cycles (ms) */
+    uint8_t lpcdMode;                          /* POLL_LPCD_* */
+    uint8_t lpcdCycles;                        /* Regular polling every n-th cycle (2-255), POLL_LPCD_EVERY_NTH_CYCLE only */
+    struct {
+        gboolean enabled;                      /* Poll for this technology */
+        uint8_t frequency;                     /* Poll every n-th cycle (1-10) */
+        uint8_t devices;                       /* Max. devices resolved per cycle (1-PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH) */
+    } tech[POLL_TECH_COUNT];
+    gboolean f424;                             /* Type-F at 424 kbit/s instead of 212 kbit/s */
+} PollingValues;
+
 /* Card listed on the Discovery tab */
 typedef struct {
     ptx_RUL_CardParams_t card;                 /* Latest card parameters */
@@ -199,7 +221,7 @@ typedef struct {
     uint32_t writeMsgLen;                      /* Length of the NDEF message to write */
     guint writeRecordCount;                    /* Number of records in the NDEF message to write */
 
-    /* Card state */
+    /* Card state of the NDEF tab (single card) - the Discovery tab uses listedCards */
     ptx_RUL_CardParams_t activeCard;           /* Was sActiveCard (volatile) */
     ptx_RUL_CardProtocolType_t activeProtocol; /* Was sActiveProtocol (volatile) */
 
@@ -208,6 +230,9 @@ typedef struct {
     uint32_t listedCardsCnt;                   /* Number of listed cards */
     gboolean listFull;                         /* A card was not listed because the list is full */
     gboolean cardUpdatePending;                /* UI update of the card table is queued */
+
+    /* Discovery settings (Polling tab), used when discovery is started */
+    ptx_RUL_DiscoverConfig_t pollConfig;
     gboolean isNdefMessage;                    /* Was sIsNdefMessage (volatile bool) */
     gboolean isNdefMessageRead;                /* Was sIsNdefMessageRead (volatile bool) */
 
@@ -245,6 +270,7 @@ typedef struct {
     GtkWidget *stackSwitcher;
     GtkButton *ndefReadButton;
     GtkButton *ndefStopButton;
+    GtkButton *ndefReadClearButton;
     GtkTextView *ndefTextView;
     GtkButton *ndefWriteButton;
     GtkLabel *ndefWriteStatusLabel;
@@ -260,6 +286,16 @@ typedef struct {
     gboolean ndefReadRunning;                  /* NDEF read discovery running (until the reader is idle again) */
     gboolean ndefReadStopping;                 /* STOP clicked, waiting for the reader to become idle */
     gboolean ndefWriteRunning;                 /* NDEF write in progress */
+    GtkSpinButton *pollIdleTime;               /* Polling tab widgets */
+    GtkDropDown *pollLpcdMode;
+    GtkSpinButton *pollLpcdCycles;
+    GtkCheckButton *pollEnabled[POLL_TECH_COUNT];
+    GtkSpinButton *pollFrequency[POLL_TECH_COUNT];
+    GtkSpinButton *pollDevices[POLL_TECH_COUNT];
+    GtkCheckButton *pollF212;
+    GtkCheckButton *pollF424;
+    GtkLabel *pollingNote;
+    gboolean pollingUiLoading;                 /* Widgets are being set, ignore their change signals */
     GtkWindow *prefsWindow;
     GtkSwitch *darkModeSwitch;
     GSettings *settings;
@@ -1293,6 +1329,7 @@ static void onStartStop(GtkWidget *widget, gpointer userData)
 /*
  * Sets the sensitivity of the NDEF tab buttons, all of them require an initialized PTX:
  * - READ:  no NDEF read or write running.
+ * - CLEAR: no NDEF read or write running.
  * - STOP:  NDEF read running and not being stopped already.
  * - WRITE: no NDEF read or write running and the message isn't empty.
  */
@@ -1301,6 +1338,7 @@ static void updateNdefButtons(AppState *state)
     gboolean idle = state->ptxReady && !state->ndefReadRunning && !state->ndefWriteRunning;
 
     gtk_widget_set_sensitive(GTK_WIDGET(state->ndefReadButton), idle);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->ndefReadClearButton), idle);
     gtk_widget_set_sensitive(GTK_WIDGET(state->ndefStopButton),
                              state->ptxReady && state->ndefReadRunning && !state->ndefReadStopping);
     gtk_widget_set_sensitive(GTK_WIDGET(state->ndefWriteButton), idle && (state->writeRecords->len > 0u));
@@ -1571,6 +1609,13 @@ static void onNdefStop(GtkWidget *widget, gpointer userData)
     updateNdefButtons(state);
 }
 
+static void onNdefReadClear(GtkWidget *widget, gpointer userData)
+{
+    (void)widget;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+    gtk_text_buffer_set_text(gtk_text_view_get_buffer(state->ndefTextView), "", -1);
+}
+
 /* Called once discovery has been stopped after an NDEF read. */
 static gboolean onNdefReadStopped(gpointer data)
 {
@@ -1803,6 +1848,192 @@ static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData
     g_application_quit(G_APPLICATION(userData));
 }
 
+/* Default discovery settings: all technologies polled in every cycle, LPCD disabled. */
+static void getDefaultPollingValues(PollingValues *values)
+{
+    memset(values, 0, sizeof(*values));
+    values->idleTime = PTX_DEMO_APP_DISCOVERY_IDLE_TIME_MS;
+    values->lpcdMode = POLL_LPCD_DISABLED;
+    values->lpcdCycles = ptx_RUL_PollLPCD_HybridMin;
+    for (guint i = 0; i < POLL_TECH_COUNT; ++i)
+    {
+        values->tech[i].enabled = TRUE;
+        values->tech[i].frequency = ptx_RUL_PollFreq_EveryCycle;
+        values->tech[i].devices = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH;
+    }
+    values->f424 = FALSE;
+}
+
+/* Builds the RUL discovery configuration from the Polling tab settings. */
+static void buildPollConfig(const PollingValues *values, ptx_RUL_DiscoverConfig_t *cfg)
+{
+    memset(cfg, 0, sizeof(*cfg));
+
+    /* Fixed settings: RF-Discovery / Polling Loop in NFC Forum Poll-Mode, Listen-mode (Card Emulation) not used. */
+    cfg->PollMode = ptx_RUL_PollMode_NfcForum;
+    cfg->EnablePolling = 1u;
+#if !defined(PTX_DISABLE_LISTEN_MODE)
+    cfg->ListenMode = 0;
+#endif /* PTX_DISABLE_LISTEN_MODE */
+
+    /* System pauses / idles after every full polling loop-cycle. */
+    cfg->IdleTime = values->idleTime;
+
+    /* Low-power-card-detection: 0 = disabled, 1 = every cycle, 2-255 = regular polling in every n-th cycle only. */
+    switch (values->lpcdMode)
+    {
+        case POLL_LPCD_EVERY_CYCLE:     cfg->EnableLPCD = ptx_RUL_PollLPCD_Enabled; break;
+        case POLL_LPCD_EVERY_NTH_CYCLE: cfg->EnableLPCD = CLAMP(values->lpcdCycles, ptx_RUL_PollLPCD_HybridMin, ptx_RUL_PollLPCD_HybridMax); break;
+        default:                        cfg->EnableLPCD = ptx_RUL_PollLPCD_Disabled; break;
+    }
+
+    /*
+     * Per technology: poll frequency 1 = every cycle, 2-10 = every n-th cycle (0 = don't poll), and the max. number
+     * of devices / cards resolved per cycle (application can define max. value).
+     */
+    #define POLL_FREQUENCY(i) ((values->tech[i].enabled) ? (uint8_t)CLAMP(values->tech[i].frequency, ptx_RUL_PollFreq_EveryCycle, ptx_RUL_PollFreq_CycleMax) : (uint8_t)ptx_RUL_PollFreq_Disabled)
+    #define POLL_DEVICES(i)   ((uint8_t)CLAMP(values->tech[i].devices, 1u, PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH))
+
+    cfg->PollTypeA = values->tech[POLL_TECH_A].enabled ? 1u : 0u;
+    cfg->PollTypeAPollFrequency = POLL_FREQUENCY(POLL_TECH_A);
+    cfg->PollTypeADeviceLimit = POLL_DEVICES(POLL_TECH_A);
+
+    cfg->PollTypeB = values->tech[POLL_TECH_B].enabled ? 1u : 0u;
+    cfg->PollTypeBPollFrequency = POLL_FREQUENCY(POLL_TECH_B);
+    cfg->PollTypeBDeviceLimit = POLL_DEVICES(POLL_TECH_B);
+
+    /* Type-F is polled either at 212 or at 424 kbit/s */
+    cfg->PollTypeF212 = (values->tech[POLL_TECH_F].enabled && !values->f424) ? 1u : 0u;
+    cfg->PollTypeF424 = (values->tech[POLL_TECH_F].enabled && values->f424) ? 1u : 0u;
+    cfg->PollTypeFPollFrequency = POLL_FREQUENCY(POLL_TECH_F);
+    cfg->PollTypeFDeviceLimit = POLL_DEVICES(POLL_TECH_F);
+
+    cfg->PollTypeV = values->tech[POLL_TECH_V].enabled ? 1u : 0u;
+    cfg->PollTypeVPollFrequency = POLL_FREQUENCY(POLL_TECH_V);
+    cfg->PollTypeVDeviceLimit = POLL_DEVICES(POLL_TECH_V);
+
+    #undef POLL_FREQUENCY
+    #undef POLL_DEVICES
+}
+
+static void readPollingUi(AppState *state, PollingValues *values)
+{
+    values->idleTime = (uint32_t)gtk_spin_button_get_value_as_int(state->pollIdleTime);
+    values->lpcdMode = (uint8_t)MIN(gtk_drop_down_get_selected(state->pollLpcdMode), (guint)POLL_LPCD_EVERY_NTH_CYCLE);
+    values->lpcdCycles = (uint8_t)gtk_spin_button_get_value_as_int(state->pollLpcdCycles);
+    for (guint i = 0; i < POLL_TECH_COUNT; ++i)
+    {
+        values->tech[i].enabled = gtk_check_button_get_active(state->pollEnabled[i]);
+        values->tech[i].frequency = (uint8_t)gtk_spin_button_get_value_as_int(state->pollFrequency[i]);
+        values->tech[i].devices = (uint8_t)gtk_spin_button_get_value_as_int(state->pollDevices[i]);
+    }
+    values->f424 = gtk_check_button_get_active(state->pollF424);
+}
+
+/*
+ * Applies the Polling tab to the discovery configuration and updates the widgets:
+ * - frequency, devices and bit rate of a disabled technology are greyed out,
+ * - at least one technology stays enabled,
+ * - the LPCD cycles are only shown for "Use in every n-th cycle",
+ * - LPCD requires an idle time of at least 1 ms.
+ */
+static void applyPollingUi(AppState *state, GtkWidget *changed)
+{
+    if (state->pollingUiLoading)
+        return;
+
+    PollingValues values;
+    const char *note = "Changes apply when discovery is started next time.";
+
+    state->pollingUiLoading = TRUE;
+    readPollingUi(state, &values);
+
+    guint enabledCount = 0;
+    for (guint i = 0; i < POLL_TECH_COUNT; ++i)
+    {
+        if (values.tech[i].enabled)
+            enabledCount++;
+    }
+    if ((0u == enabledCount) && GTK_IS_CHECK_BUTTON(changed))
+    {
+        gtk_check_button_set_active(GTK_CHECK_BUTTON(changed), TRUE);
+        readPollingUi(state, &values);
+        note = "At least one technology must be enabled.";
+    }
+
+    if (POLL_LPCD_DISABLED != values.lpcdMode)
+    {
+        gtk_spin_button_set_range(state->pollIdleTime, 1, 10000);
+        readPollingUi(state, &values);
+        if (0 == g_strcmp0(note, "Changes apply when discovery is started next time."))
+            note = "LPCD requires an idle time of at least 1 ms. Changes apply when discovery is started next time.";
+    }
+    else
+    {
+        gtk_spin_button_set_range(state->pollIdleTime, 0, 10000);
+    }
+    gtk_widget_set_visible(GTK_WIDGET(state->pollLpcdCycles), POLL_LPCD_EVERY_NTH_CYCLE == values.lpcdMode);
+
+    for (guint i = 0; i < POLL_TECH_COUNT; ++i)
+    {
+        gtk_widget_set_sensitive(GTK_WIDGET(state->pollFrequency[i]), values.tech[i].enabled);
+        gtk_widget_set_sensitive(GTK_WIDGET(state->pollDevices[i]), values.tech[i].enabled);
+    }
+    gtk_widget_set_sensitive(GTK_WIDGET(state->pollF212), values.tech[POLL_TECH_F].enabled);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->pollF424), values.tech[POLL_TECH_F].enabled);
+    gtk_label_set_text(state->pollingNote, note);
+    state->pollingUiLoading = FALSE;
+
+    ptx_RUL_DiscoverConfig_t cfg;
+    buildPollConfig(&values, &cfg);
+    lockSharedState();
+    sSharedState.pollConfig = cfg;
+    unlockSharedState();
+}
+
+static void loadPollingUi(AppState *state, const PollingValues *values)
+{
+    state->pollingUiLoading = TRUE;
+    gtk_spin_button_set_range(state->pollIdleTime, 0, 10000);
+    gtk_spin_button_set_value(state->pollIdleTime, values->idleTime);
+    gtk_drop_down_set_selected(state->pollLpcdMode, values->lpcdMode);
+    gtk_spin_button_set_value(state->pollLpcdCycles, values->lpcdCycles);
+    for (guint i = 0; i < POLL_TECH_COUNT; ++i)
+    {
+        gtk_check_button_set_active(state->pollEnabled[i], values->tech[i].enabled);
+        gtk_spin_button_set_value(state->pollFrequency[i], values->tech[i].frequency);
+        gtk_spin_button_set_value(state->pollDevices[i], values->tech[i].devices);
+    }
+    gtk_check_button_set_active(values->f424 ? state->pollF424 : state->pollF212, TRUE);
+    state->pollingUiLoading = FALSE;
+
+    applyPollingUi(state, NULL);
+}
+
+/* "toggled" of check buttons and "value-changed" of spin buttons */
+static void onPollingChanged(GtkWidget *widget, gpointer userData)
+{
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+    applyPollingUi(state, widget);
+}
+
+/* "notify::selected" of the LPCD drop-down */
+static void onPollingLpcdChanged(GObject *object, GParamSpec *pspec, gpointer userData)
+{
+    (void)pspec;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+    applyPollingUi(state, GTK_WIDGET(object));
+}
+
+static void onPollingRestoreDefaults(GtkWidget *widget, gpointer userData)
+{
+    (void)widget;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+    PollingValues values;
+    getDefaultPollingValues(&values);
+    loadPollingUi(state, &values);
+}
+
 static void freeAppState(AppState *state)
 {
     g_ptr_array_unref(state->writeFieldWidgets);
@@ -1898,6 +2129,16 @@ static void onActivate(GtkApplication *app, gpointer userData)
     gtk_widget_set_sensitive(GTK_WIDGET(state->ndefStopButton), FALSE);
     g_signal_connect(state->ndefStopButton, "clicked", G_CALLBACK(onNdefStop), app);
 
+    obj = gtk_builder_get_object(windowBuilder, "ndefReadClear");
+    if(obj == NULL) {
+        g_warning("Failed to load 'ndefReadClear' button from window.ui - application may not function correctly");
+        g_object_unref(windowBuilder);
+        return;
+    }
+    state->ndefReadClearButton = GTK_BUTTON(obj);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->ndefReadClearButton), FALSE);
+    g_signal_connect(state->ndefReadClearButton, "clicked", G_CALLBACK(onNdefReadClear), app);
+
     obj = gtk_builder_get_object(windowBuilder, "ndefText");
     if(obj == NULL) {
         g_warning("Failed to load 'ndefText' from window.ui - cannot display NDEF message");
@@ -1961,6 +2202,61 @@ static void onActivate(GtkApplication *app, gpointer userData)
     rebuildWriteFields(state, app);
 
     addDefaultWriteRecord(state);
+
+    /* Polling tab: discovery settings */
+    static const char TECH_LETTERS[POLL_TECH_COUNT] = { 'A', 'B', 'F', 'V' };
+    const char * const pollingIds[] = { "pollIdleTime", "pollLpcdMode", "pollLpcdCycles", "pollF212", "pollF424",
+                                        "pollingNote", "pollingRestoreDefaults" };
+    GObject *pollingObjects[G_N_ELEMENTS(pollingIds)];
+    for (guint i = 0; i < G_N_ELEMENTS(pollingIds); ++i)
+    {
+        pollingObjects[i] = gtk_builder_get_object(windowBuilder, pollingIds[i]);
+        if(pollingObjects[i] == NULL) {
+            g_warning("Failed to load '%s' from window.ui - cannot configure polling", pollingIds[i]);
+            g_object_unref(windowBuilder);
+            return;
+        }
+    }
+    state->pollIdleTime = GTK_SPIN_BUTTON(pollingObjects[0]);
+    state->pollLpcdMode = GTK_DROP_DOWN(pollingObjects[1]);
+    state->pollLpcdCycles = GTK_SPIN_BUTTON(pollingObjects[2]);
+    state->pollF212 = GTK_CHECK_BUTTON(pollingObjects[3]);
+    state->pollF424 = GTK_CHECK_BUTTON(pollingObjects[4]);
+    state->pollingNote = GTK_LABEL(pollingObjects[5]);
+    g_signal_connect(pollingObjects[6], "clicked", G_CALLBACK(onPollingRestoreDefaults), app);
+
+    for (guint i = 0; i < POLL_TECH_COUNT; ++i)
+    {
+        char id[32];
+        snprintf(id, sizeof(id), "poll%cEnabled", TECH_LETTERS[i]);
+        GObject *enabled = gtk_builder_get_object(windowBuilder, id);
+        snprintf(id, sizeof(id), "poll%cFrequency", TECH_LETTERS[i]);
+        GObject *frequency = gtk_builder_get_object(windowBuilder, id);
+        snprintf(id, sizeof(id), "poll%cDevices", TECH_LETTERS[i]);
+        GObject *devices = gtk_builder_get_object(windowBuilder, id);
+        if((enabled == NULL) || (frequency == NULL) || (devices == NULL)) {
+            g_warning("Failed to load the Type-%c polling settings from window.ui - cannot configure polling", TECH_LETTERS[i]);
+            g_object_unref(windowBuilder);
+            return;
+        }
+        state->pollEnabled[i] = GTK_CHECK_BUTTON(enabled);
+        state->pollFrequency[i] = GTK_SPIN_BUTTON(frequency);
+        state->pollDevices[i] = GTK_SPIN_BUTTON(devices);
+        gtk_spin_button_set_range(state->pollFrequency[i], ptx_RUL_PollFreq_EveryCycle, ptx_RUL_PollFreq_CycleMax);
+        gtk_spin_button_set_range(state->pollDevices[i], 1, PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH);
+        g_signal_connect(enabled, "toggled", G_CALLBACK(onPollingChanged), app);
+        g_signal_connect(frequency, "value-changed", G_CALLBACK(onPollingChanged), app);
+        g_signal_connect(devices, "value-changed", G_CALLBACK(onPollingChanged), app);
+    }
+    gtk_spin_button_set_range(state->pollLpcdCycles, ptx_RUL_PollLPCD_HybridMin, ptx_RUL_PollLPCD_HybridMax);
+    g_signal_connect(state->pollIdleTime, "value-changed", G_CALLBACK(onPollingChanged), app);
+    g_signal_connect(state->pollLpcdCycles, "value-changed", G_CALLBACK(onPollingChanged), app);
+    g_signal_connect(state->pollF424, "toggled", G_CALLBACK(onPollingChanged), app);
+    g_signal_connect(state->pollLpcdMode, "notify::selected", G_CALLBACK(onPollingLpcdChanged), app);
+
+    PollingValues pollingDefaults;
+    getDefaultPollingValues(&pollingDefaults);
+    loadPollingUi(state, &pollingDefaults);
     refreshWriteRecordList(state);
     updateWriteSummary(state);
 
@@ -2194,25 +2490,16 @@ static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demo
 
     if ((NULL != rul) && (NULL != demoState))
     {
-        /* Initialize RF-Discovery / Polling Loop in NFC Forum Poll-Mode with standard parameters.*/
-        discParams.PollMode = ptx_RUL_PollMode_NfcForum;   /* Enable PolL-Mode only in this example (Listen-mode can be optionally enabled). */
-        discParams.EnablePolling = 1u;                     /* Enable Polling only (Listen-mode can be optionally enabled). */
-        discParams.IdleTime = PTX_DEMO_APP_DISCOVERY_IDLE_TIME_MS; /* System pauses / idles for 100ms after every full polling loop-cycle. */
-        discParams.PollTypeA = 1u;                         /* Poll for NFC-A Technology. */
-        discParams.PollTypeAPollFrequency = 1u;            /* Poll for NFC-A Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeADeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-A devices / cards to max. 5 devices (application can define max. value). */
-        discParams.PollTypeB = 1u;                         /* Poll for NFC-B Technology. */
-        discParams.PollTypeBPollFrequency = 1u;            /* Poll for NFC-B Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeBDeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-B devices / cards to max. 5 devices (application can define max. value). */
-        discParams.PollTypeF212 = 1u;                      /* Poll for NFC-F 212 kBit/s Technology. */
-        discParams.PollTypeFPollFrequency = 1u;            /* Poll for NFC-F Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeFDeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-F devices / cards to max. 5 devices (application can define max. value). */
-        discParams.PollTypeV = 1u;                         /* Poll for NFC-V Technology. */
-        discParams.PollTypeVPollFrequency = 1u;            /* Poll for NFC-V Technology during every Polling-Loop cycle (otherwise every n-th cycle). */
-        discParams.PollTypeVDeviceLimit = PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH; /* Limit the number of NFC-V devices / cards to max. 5 devices (application can define max. value). */
-        discParams.EnableLPCD = 0;                         /* Don't use low-power-card-detection (LPCD) in this demo. */
+        /* RF-Discovery / Polling Loop settings of the Polling tab (see buildPollConfig) */
+        lockSharedState();
+        discParams = sSharedState.pollConfig;
+        unlockSharedState();
+
+        /* Fixed settings: NFC Forum Poll-Mode only, Listen-mode (Card Emulation) not used in this demo. */
+        discParams.PollMode = ptx_RUL_PollMode_NfcForum;
+        discParams.EnablePolling = 1u;
 #if !defined(PTX_DISABLE_LISTEN_MODE)
-        discParams.ListenMode = 0;                         /* Don't use Listen-mode (Card Emulation) in this demo. */
+        discParams.ListenMode = 0;
 #endif /* PTX_DISABLE_LISTEN_MODE */
 
         status = ptx_RUL_InitiateDiscovery(rul, &discParams);
@@ -2227,7 +2514,7 @@ static ptx_Status_t processStateStartDiscovery(ptx_RUL_t *rul, demoState_t *demo
             {
                 sSharedState.writeResult = NdefWriteResult_NoCard;
                 sSharedState.writeDeadline = g_get_monotonic_time() +
-                    (gint64)NDEF_WRITE_MAX_POLLING_CYCLES * (PTX_DEMO_APP_DISCOVERY_IDLE_TIME_MS + PTX_DEMO_APP_POLLING_TIME_MS) * 1000;
+                    (gint64)NDEF_WRITE_MAX_POLLING_CYCLES * ((gint64)discParams.IdleTime + PTX_DEMO_APP_POLLING_TIME_MS) * 1000;
             }
             unlockSharedState();
 

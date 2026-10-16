@@ -99,7 +99,7 @@ The settings schema file `app.gschema.xml` is only required for compiling the se
 ## Under the hood
 
 When the application is launched, UI files and settings are loaded, and the PTX is initialized in a separate thread.
-If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab.
+If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab. The discovery settings are configured on the *Polling* tab.
 Discovery and the NDEF operations share one discovery loop, which runs in a separate thread and polls for RF-technologies A, B, F, V.
 The *Discovery* tab supports multiple cards in the field, the *NDEF* tab supports only one single card.
 While discovery is running, the tabs cannot be switched.
@@ -113,7 +113,7 @@ If the application is closed, the PTX is de-initialized - if discovery was runni
 
 Discovery is started by clicking the START button on the *Discovery* tab.
 When discovery is started, the START button becomes the STOP button, and vice versa.
-Multiple cards in the field are supported: up to 5 cards per RF-technology (A, B, F, V), 20 cards in total, as in the SDK's example application.
+Multiple cards in the field are supported: up to 5 cards per RF-technology (A, B, F, V) and discovery cycle, 20 cards in total, as in the SDK's example application. The limit per technology can be lowered on the *Polling* tab.
 The SDK's card registry holds up to 32 cards (`PTX_RUL_MAX_SUPPORTED_DEVICES`), the per-technology limit is set by `PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH`.
 
 When cards are found, the UI thread is updated and the cards are displayed in a table, one row per card:
@@ -138,7 +138,7 @@ The RESET button clears the displayed card information and restarts discovery.
 
 ### NDEF read
 
-NDEF messages are read when discovery is started with the READ button on the *NDEF* tab, and reading is stopped with the STOP button.
+NDEF messages are read when discovery is started with the READ button on the *NDEF* tab, and reading is stopped with the STOP button. The CLEAR button clears the output.
 If a card is activated, its NDEF message is read and the output starts with a one-line card summary:
 ```
 Card: RF-Tech <technology>, Protocol <protocol>, ID <hex>
@@ -172,13 +172,14 @@ The message cannot be larger than 256 bytes. A record that would exceed this lim
 
 Clicking WRITE starts discovery and writes the message to the first activated card, then stops discovery.
 If no card is activated within 10 polling cycles, discovery stops and a message is displayed.
-The RUL does not report polling cycles, so the limit is a time budget of 10 times the polling-loop cycle time (about 1.5 s).
+The RUL does not report polling cycles, so the limit is a time budget of 10 times the polling-loop cycle time: the idle time set on the *Polling* tab plus an estimated 50 ms of polling (about 1.5 s with the default idle time of 100 ms).
 The status label below displays the result: success, no card found, card is not NDEF-formatted, or the error code of a failed write.
 The card has to be NDEF-formatted, formatting cards is not supported.
 
 While discovery is running, the READ button is disabled; while no discovery is running, the STOP button is disabled.
 After STOP is clicked, READ is enabled again once the reader has been switched off.
-While a write is in progress, the record editor and both the READ and STOP buttons are disabled.
+CLEAR is only enabled while no NDEF read or write is running.
+While a write is in progress, the record editor and the READ, STOP and CLEAR buttons are disabled.
 While an NDEF read is running, the WRITE button is disabled.
 
 The following record types are available:
@@ -208,12 +209,34 @@ Record types are defined by a table in `ptx_ExampleNdefRecords.c`.
 To add a new type, define its fields (`NdefFieldDef` array) and its encoder function, which turns the field values into an NDEF record, and add a row to the `RECORD_TYPES` table.
 The record type picker and the input form of the *NDEF* tab are generated from the table, no UI changes are needed.
 
+### Polling
+
+The *Polling* tab exposes the RF-discovery settings (`ptx_RUL_DiscoverConfig_t`) used by the application:
+
+| Setting | Range | Meaning |
+| ------- | ----- | ------- |
+| Idle time between polling cycles | 0 - 10000 ms (default 100) | `IdleTime`, the system idles after every full polling-loop cycle |
+| Low power card detection (LPCD) | Disable, Use in every polling cycle, Use in every n-th cycle (n = 2 - 255) | `EnableLPCD`: 0, 1 or n - with n, regular polling is used in every n-th cycle and LPCD in the other cycles |
+| Enabled (per technology) | on / off | Poll for Type-A, -B, -F, -V (`PollTypeA`, `PollTypeB`, `PollTypeF212`/`PollTypeF424`, `PollTypeV`) |
+| Poll every n-th cycle (per technology) | 1 - 10 (default 1) | `PollType*PollFrequency`, 1 = poll in every cycle |
+| Max. devices (per technology) | 1 - 5 (default 5) | `PollType*DeviceLimit`, max. number of cards resolved per cycle, up to `PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH` |
+| Bit rate (Type-F) | 212 or 424 kbit/s (default 212) | `PollTypeF212` or `PollTypeF424`, mutually exclusive |
+
+By default, all technologies are polled in every cycle with up to 5 devices each, and LPCD is disabled.
+The poll mode is always NFC Forum (`ptx_RUL_PollMode_NfcForum`), polling is always enabled and Listen-mode (card emulation) is always disabled, these settings are not shown.
+At least one technology has to stay enabled, and LPCD requires an idle time of at least 1 ms (the SDK rejects LPCD without idle time).
+RESTORE DEFAULTS resets all settings.
+
+The settings are used when discovery is started the next time (START, READ or WRITE); they cannot be changed while discovery is running, as the tabs are locked.
+The settings are not stored, the defaults are used whenever the application is launched.
+
 ## The UI
 
-The main window has two tabs, *Discovery* and *NDEF*, and a menu button.
+The main window has three tabs, *Discovery*, *NDEF* and *Polling*, and a menu button.
 The *Discovery* tab has the START/STOP and RESET buttons, the number of detected cards and a table with the information of all detected cards.
-The *NDEF* tab has a read section with the READ and STOP buttons on top and a text box for the NDEF message, and a write section with the WRITE button, the record type picker and the ADD, REMOVE and CLEAR buttons on top.
+The *NDEF* tab has a read section with the READ, STOP and CLEAR buttons on top and a text box for the NDEF message, and a write section with the WRITE button, the record type picker and the ADD, REMOVE and CLEAR buttons on top.
 The write section also has the input fields of the selected record type, the list of records, the raw bytes of the message and a status label.
+The *Polling* tab has the general discovery settings (idle time, LPCD), a table with the settings per RF-technology and the RESTORE DEFAULTS button.
 There's also a window for the preferences and the about information, which can be opened from the menu.
 
 Menu items:

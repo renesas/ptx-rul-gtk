@@ -118,6 +118,12 @@
                             <property name="tooltip-text">Stop discovery</property>
                           </object>
                         </child>
+                        <child>
+                          <object id="ndefReadClear" class="GtkButton">
+                            <property name="label">CLEAR</property>
+                            <property name="tooltip-text">Clear the NDEF read output</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
                     <child>
@@ -254,6 +260,434 @@
                                 <property name="hexpand">True</property>
                               </object>
                             </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">polling</property>
+            <property name="title">Polling</property>
+            <property name="child">
+              <object id="pollingScroll" class="GtkScrolledWindow">
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object id="pollingBox" class="GtkBox">
+                    <property name="orientation">vertical</property>
+                    <property name="spacing">12</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="margin-top">8</property>
+                    <property name="margin-bottom">8</property>
+                    <child>
+                      <object id="pollingGeneralGrid" class="GtkGrid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;General&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Idle time between polling cycles (ms)</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollIdleTime" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">0</property>
+                                <property name="upper">10000</property>
+                                <property name="step-increment">10</property>
+                                <property name="page-increment">100</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Low power card detection (LPCD)</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollLpcdMode" class="GtkDropDown">
+                            <property name="model">
+                              <object class="GtkStringList">
+                                <items>
+                                  <item>Disable</item>
+                                  <item>Use in every polling cycle</item>
+                                  <item>Use in every n-th cycle</item>
+                                </items>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollLpcdCycles" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">Regular polling in every n-th cycle, LPCD in the other cycles</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">2</property>
+                                <property name="upper">255</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">2</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="pollingTechGrid" class="GtkGrid">
+                        <property name="row-spacing">6</property>
+                        <property name="column-spacing">12</property>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Technology&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Enabled&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Poll every n-th cycle&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">2</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Max. devices&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">3</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">&lt;b&gt;Bit rate&lt;/b&gt;</property>
+                            <property name="use-markup">True</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">4</property>
+                              <property name="row">0</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Type-A</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollAEnabled" class="GtkCheckButton">
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollAFrequency" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">1 = poll in every cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">10</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">2</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollADevices" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">Max. number of devices resolved per cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">5</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">3</property>
+                              <property name="row">1</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Type-B</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollBEnabled" class="GtkCheckButton">
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollBFrequency" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">1 = poll in every cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">10</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">2</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollBDevices" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">Max. number of devices resolved per cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">5</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">3</property>
+                              <property name="row">2</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Type-F</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">3</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollFEnabled" class="GtkCheckButton">
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">3</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollFFrequency" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">1 = poll in every cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">10</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">2</property>
+                              <property name="row">3</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollFDevices" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">Max. number of devices resolved per cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">5</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">3</property>
+                              <property name="row">3</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <child>
+                              <object id="pollF212" class="GtkCheckButton">
+                                <property name="label">212 kbit/s</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="pollF424" class="GtkCheckButton">
+                                <property name="label">424 kbit/s</property>
+                                <property name="group">pollF212</property>
+                              </object>
+                            </child>
+                            <layout>
+                              <property name="column">4</property>
+                              <property name="row">3</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="GtkLabel">
+                            <property name="label">Type-V</property>
+                            <property name="xalign">0</property>
+                            <layout>
+                              <property name="column">0</property>
+                              <property name="row">4</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollVEnabled" class="GtkCheckButton">
+                            <layout>
+                              <property name="column">1</property>
+                              <property name="row">4</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollVFrequency" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">1 = poll in every cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">10</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">2</property>
+                              <property name="row">4</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollVDevices" class="GtkSpinButton">
+                            <property name="numeric">True</property>
+                            <property name="tooltip-text">Max. number of devices resolved per cycle</property>
+                            <property name="adjustment">
+                              <object class="GtkAdjustment">
+                                <property name="lower">1</property>
+                                <property name="upper">5</property>
+                                <property name="step-increment">1</property>
+                                <property name="page-increment">10</property>
+                              </object>
+                            </property>
+                            <layout>
+                              <property name="column">3</property>
+                              <property name="row">4</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object id="pollingRestoreDefaults" class="GtkButton">
+                            <property name="label">RESTORE DEFAULTS</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="pollingNote" class="GtkLabel">
+                            <property name="label">Changes apply when discovery is started next time.</property>
+                            <property name="xalign">0</property>
+                            <property name="wrap">True</property>
+                            <property name="hexpand">True</property>
                           </object>
                         </child>
                       </object>
