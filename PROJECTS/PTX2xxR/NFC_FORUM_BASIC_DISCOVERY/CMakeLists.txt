@@ -334,6 +334,7 @@ ${SOURCES}
 	../../../SRC/API/RUL/ptx_RUL_CardHandler.c
 	../../../SRC/API/RUL/ptx_RUL_DataProcessor.c
 	../../../SRC/API/RUL/ptx_RUL_Extension.c
+	../../../SRC/API/RUL_HCE/ptx_RUL_HCE.c
 	../../../SRC/EXAMPLES/Utils/ptx_Utils_Print.c
 	../../../SRC/EXAMPLES/Utils/ptx_Utils_CardInfo.c
 	../../../SRC/EXAMPLES/Utils/ptx_Utils_VersionInfo.c
@@ -387,6 +388,7 @@ ${HEADER_DIRS}
 	../../../SRC/API/NATIVE_TAG/T2T
 	../../../SRC/API/NDEF/GENERIC
 	../../../SRC/API/NDEF/RECORDS
+	../../../SRC/API/RUL_HCE
 )
 
 # Build Target Configuration
@@ -411,6 +413,7 @@ add_executable(${TARGET_EXE_NAME})
 target_sources(${TARGET_EXE_NAME} PRIVATE
 	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.c
 	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleNdefRecords.c
+	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/HCE_T4T/ptx_HCET4T.c
 )
 
 # link GTK
@@ -442,6 +445,7 @@ configure_file(
 target_include_directories(${TARGET_EXE_NAME} PUBLIC 
 	../../../SRC/EXAMPLES
 	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery
+	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/HCE_T4T
 
 )
 

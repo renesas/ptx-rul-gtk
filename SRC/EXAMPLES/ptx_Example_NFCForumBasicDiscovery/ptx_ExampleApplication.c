@@ -51,6 +51,13 @@
                   writes the message to the first activated card, then stops discovery.
                   On the Polling tab, the discovery settings (idle time, LPCD, per-technology
                   enable / poll frequency / device limit, Type-F bit rate) can be changed.
+                  On the HCE tab, the PTX205R emulates an NFC-A Type 4 Tag (host card emulation, listen
+                  mode, see HCE_T4T/ptx_HCET4T.c) that carries an NDEF message composed with the same
+                  editor as on the NDEF tab (default: URI https://www.renesas.com/en/products/ptx205r).
+                  The START button starts and the STOP button stops the emulation, an emulation log is
+                  displayed. The tag is writable: if a reader writes a new NDEF message to it, the message
+                  is displayed decoded together with its raw bytes. Every START resets the emulated tag to
+                  the message of the editor.
                   When the app is launched, the PTX is initialized and discovery can be
                   started/stopped by clicking the START/STOP button on the Discovery tab
                   (RESET clears the displayed card information and restarts discovery), or
@@ -72,6 +79,8 @@
 #include "ptx_ExampleApplication.h"
 #include "ptx_Status.h"
 #include "ptx_RUL.h"
+#include "ptx_RUL_HCE.h"
+#include "ptx_HCET4T.h"
 #include "ptx_Utils_AppParameters.h"
 #include "ptx_Utils_Print.h"
 #include "ptx_Utils_VersionInfo.h"
@@ -160,11 +169,23 @@ static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 #define CWD_BUFFER_SIZE     4096u
 #define ERROR_MSG_SIZE      512u
 
+/* Host card emulation (HCE tab): the PTX emulates an NFC-A Type 4 Tag. */
+#define HCE_BUFFER_SIZE     512u       /* Rx / Tx buffer size of the HCE component */
+
+/* Size of the emulated NDEF file (2 bytes NLEN + NDEF message). It must be at least 512 bytes: ptx_HCET4T.c checks
+ * READ BINARY and UPDATE BINARY against its internal PTX_HCET4T_NDEF_MESSAGE_FILE_SIZE (512), not against the size
+ * passed to ptx_HCET4T_Init(), so a smaller buffer would allow out-of-bounds accesses. */
+#define HCE_NDEF_FILE_SIZE  512u
+#define HCE_CC_FILE_SIZE    15u        /* Capability container file size */
+#define HCE_NFC_ID_LEN      4u         /* Length of the NFCID1 used for the emulated tag */
+#define HCE_ISO_DEP_ATS_LEN 5u         /* Length of the ATS used for the emulated tag */
+
 /* What the discovery loop does with an activated card */
 typedef enum {
     DiscoveryMode_CardInfo,                    /* Display card information (Discovery tab) */
     DiscoveryMode_NdefRead,                    /* Read NDEF message (NDEF tab) */
-    DiscoveryMode_NdefWrite                    /* Write default NDEF message, then stop (NDEF tab) */
+    DiscoveryMode_NdefWrite,                   /* Write default NDEF message, then stop (NDEF tab) */
+    DiscoveryMode_Hce                          /* Emulate a Type 4 Tag (HCE tab) */
 } DiscoveryMode;
 
 /* Outcome of an NDEF write attempt */
@@ -221,6 +242,10 @@ typedef struct {
     uint32_t writeMsgLen;                      /* Length of the NDEF message to write */
     guint writeRecordCount;                    /* Number of records in the NDEF message to write */
 
+    /* HCE: NDEF message to emulate, set by the UI when the emulation is started */
+    uint8_t hceNdefMsg[NDEF_BUFFER_SIZE];
+    uint32_t hceNdefMsgLen;
+
     /* Card state of the NDEF tab (single card) - the Discovery tab uses listedCards */
     ptx_RUL_CardParams_t activeCard;           /* Was sActiveCard (volatile) */
     ptx_RUL_CardProtocolType_t activeProtocol; /* Was sActiveProtocol (volatile) */
@@ -254,6 +279,11 @@ static uint8_t sNdefRxBuffer[NDEF_BUFFER_SIZE];
 static uint8_t sNdefTxBuffer[NDEF_BUFFER_SIZE];
 static uint8_t sNdefWorkBuffer[NDEF_BUFFER_SIZE];
 
+/* HCE work buffers (worker thread only) */
+static uint8_t sHceRxBuffer[HCE_BUFFER_SIZE];
+static uint8_t sHceTxBuffer[HCE_BUFFER_SIZE];
+static uint8_t sHceNdefFile[HCE_NDEF_FILE_SIZE];
+
 /* PTX device handle (protected by application synchronization, not by sSharedState mutex) */
 static ptx_RUL_t sRul = {0};
 
@@ -261,7 +291,30 @@ typedef struct {
     ptx_Status_t errorCode;
 } ErrorCallbackData;
 
+/* NDEF message written to the emulated tag by a reader, handed over to the UI thread */
 typedef struct {
+    uint32_t len;                              /* Length of the NDEF message */
+    uint8_t data[];                            /* NDEF message */
+} HceWrittenMsg;
+
+typedef struct AppState AppState;
+
+/* NDEF message editor (NDEF tab: message to write, HCE tab: message to emulate) */
+typedef struct {
+    GtkDropDown *typeDropDown;                 /* Record type picker */
+    GtkGrid *fieldsGrid;                       /* Input form of the selected record type */
+    GtkListBox *recordsList;                   /* Records of the message */
+    GtkLabel *rawBytesLabel;                   /* Raw bytes of the NDEF message */
+    GtkLabel *statusLabel;                     /* Summary / error of the message */
+    GtkWidget *editor;                         /* Fields and record list */
+    GtkWidget *editControls;                   /* Record type picker, ADD, REMOVE and CLEAR buttons */
+    GPtrArray *fieldWidgets;                   /* Input widget per field of the selected record type */
+    GPtrArray *records;                        /* NdefRecordData* of the message */
+    const char *actionHint;                    /* What to press to use the message, e.g. "WRITE to write them to a card" */
+    AppState *app;
+} NdefEditor;
+
+struct AppState {
     gboolean darkMode;
     GtkLabel *cardStatusLabel;                 /* Discovery tab: status and number of cards */
     GtkGrid *cardTable;                        /* Discovery tab: one row per card */
@@ -273,15 +326,13 @@ typedef struct {
     GtkButton *ndefReadClearButton;
     GtkTextView *ndefTextView;
     GtkButton *ndefWriteButton;
-    GtkLabel *ndefWriteStatusLabel;
-    GtkWidget *ndefWriteEditor;                /* Fields and record list */
-    GtkWidget *ndefWriteEditControls;          /* Record type picker, ADD, REMOVE and CLEAR buttons */
-    GtkDropDown *ndefWriteTypeDropDown;
-    GtkGrid *ndefWriteFieldsGrid;
-    GtkListBox *ndefWriteRecordsList;
-    GtkLabel *ndefWriteRawBytesLabel;          /* Raw bytes of the NDEF message to write */
-    GPtrArray *writeFieldWidgets;              /* Input widget per field of the selected record type */
-    GPtrArray *writeRecords;                   /* NdefRecordData* of the message to write */
+    NdefEditor ndefEditor;                     /* NDEF tab: message to write */
+    GtkButton *hceStartStopButton;             /* HCE tab */
+    GtkTextView *hceWrittenText;               /* Message written by a reader */
+    GtkTextView *hceLog;                       /* Emulation log */
+    NdefEditor hceEditor;                      /* HCE tab: message to emulate */
+    gboolean hceRunning;                       /* HCE emulation running (until the reader is idle again) */
+    gboolean hceStopping;                      /* STOP clicked, waiting for the reader to become idle */
     gboolean ptxReady;                         /* PTX initialized and no fatal error */
     gboolean ndefReadRunning;                  /* NDEF read discovery running (until the reader is idle again) */
     gboolean ndefReadStopping;                 /* STOP clicked, waiting for the reader to become idle */
@@ -302,7 +353,7 @@ typedef struct {
     GtkWindow *aboutWindow;
     GThread *workerThread;
     GThread *initThread;
-} AppState;
+};
 
 
 /*
@@ -312,6 +363,11 @@ typedef struct {
  */
 static void appendToTextBuffer(GtkTextBuffer *buffer, const char *fmt, ...);
 static void updateNdefButtons(AppState *state);
+static void updateHceButtons(AppState *state);
+static void postHceLog(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
+static gboolean onHceStopped(gpointer data);
+static gboolean onHceMessageWritten(gpointer data);
+static ptx_Status_t runHceEmulation(ptx_RUL_t *rul);
 typedef GtkWindow* (*LoadWindowFunc)(GtkApplication *app, AppState *state, GtkWindow *parent);
 static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplication *app, AppState *state);
 static ptx_Status_t runDemo();
@@ -413,7 +469,18 @@ static gboolean displayDiscoveryLoopError(gpointer data)
     updateNdefButtons(state);
     gtk_widget_set_sensitive(state->stackSwitcher, TRUE);
 
-    gtk_label_set_text(state->ndefWriteStatusLabel, content);
+    gtk_label_set_text(state->ndefEditor.statusLabel, content);
+
+    gtk_label_set_text(state->hceEditor.statusLabel, content);
+    if (state->hceRunning)
+    {
+        gtk_button_set_label(state->hceStartStopButton, "START");
+        gtk_widget_set_sensitive(state->hceEditor.editor, TRUE);
+        gtk_widget_set_sensitive(state->hceEditor.editControls, TRUE);
+    }
+    state->hceRunning = FALSE;
+    state->hceStopping = FALSE;
+    updateHceButtons(state);
 
     g_free(errorData);
     return FALSE;
@@ -1203,6 +1270,7 @@ static gint onInitDone(gpointer userData)
         gtk_widget_set_sensitive(GTK_WIDGET(state->startStopButton), TRUE);
         state->ptxReady = TRUE;
         updateNdefButtons(state);
+        updateHceButtons(state);
         GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
         GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
         g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), TRUE);
@@ -1341,17 +1409,17 @@ static void updateNdefButtons(AppState *state)
     gtk_widget_set_sensitive(GTK_WIDGET(state->ndefReadClearButton), idle);
     gtk_widget_set_sensitive(GTK_WIDGET(state->ndefStopButton),
                              state->ptxReady && state->ndefReadRunning && !state->ndefReadStopping);
-    gtk_widget_set_sensitive(GTK_WIDGET(state->ndefWriteButton), idle && (state->writeRecords->len > 0u));
+    gtk_widget_set_sensitive(GTK_WIDGET(state->ndefWriteButton), idle && (state->ndefEditor.records->len > 0u));
 }
 
-/* Shows the number of records, the size and the raw bytes of the NDEF message to write. */
-static void updateWriteSummary(AppState *state)
+/* Shows the number of records, the size and the raw bytes of the NDEF message of the editor. */
+static void updateWriteSummary(NdefEditor *ed)
 {
-    gtk_label_set_text(state->ndefWriteRawBytesLabel, "Raw bytes: -");
+    gtk_label_set_text(ed->rawBytesLabel, "Raw bytes: -");
 
-    if (0u == state->writeRecords->len)
+    if (0u == ed->records->len)
     {
-        gtk_label_set_text(state->ndefWriteStatusLabel, "No records - pick a record type, fill in the fields and press ADD.");
+        gtk_label_set_text(ed->statusLabel, "No records - pick a record type, fill in the fields and press ADD.");
         return;
     }
 
@@ -1360,16 +1428,16 @@ static void updateWriteSummary(AppState *state)
     GError *error = NULL;
     char content[APP_TEXT_BUFFER_SIZE];
 
-    if (ptx_ExampleNdef_BuildMessage(state->writeRecords, message, &len, &error))
+    if (ptx_ExampleNdef_BuildMessage(ed->records, message, &len, &error))
     {
-        snprintf(content, sizeof(content), "%u record(s), %u / %u bytes. Press WRITE to write them to a card.",
-                 state->writeRecords->len, len, NDEF_BUFFER_SIZE);
+        snprintf(content, sizeof(content), "%u record(s), %u / %u bytes. Press %s.",
+                 ed->records->len, len, NDEF_BUFFER_SIZE, ed->actionHint);
 
         /* Raw bytes may exceed APP_TEXT_BUFFER_SIZE so build the text dynamically */
         GString *rawBytes = g_string_new(NULL);
         g_string_append_printf(rawBytes, "Raw bytes (%u): ", len);
         appendHexString(rawBytes, message, len);
-        gtk_label_set_text(state->ndefWriteRawBytesLabel, rawBytes->str);
+        gtk_label_set_text(ed->rawBytesLabel, rawBytes->str);
         g_string_free(rawBytes, TRUE);
     }
     else
@@ -1377,45 +1445,52 @@ static void updateWriteSummary(AppState *state)
         snprintf(content, sizeof(content), "%s", error->message);
         g_error_free(error);
     }
-    gtk_label_set_text(state->ndefWriteStatusLabel, content);
+    gtk_label_set_text(ed->statusLabel, content);
 }
 
-static void refreshWriteRecordList(AppState *state)
+static void refreshWriteRecordList(NdefEditor *ed)
 {
-    gtk_list_box_remove_all(state->ndefWriteRecordsList);
+    gtk_list_box_remove_all(ed->recordsList);
 
-    for (guint i = 0; i < state->writeRecords->len; ++i)
+    for (guint i = 0; i < ed->records->len; ++i)
     {
-        const NdefRecordData *data = g_ptr_array_index(state->writeRecords, i);
+        const NdefRecordData *data = g_ptr_array_index(ed->records, i);
         gchar *text = g_strdup_printf("%u. %s", i + 1u, data->summary);
         GtkWidget *label = gtk_label_new(text);
         gtk_label_set_xalign(GTK_LABEL(label), 0.0f);
         gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
         gtk_widget_set_margin_start(label, 4);
         gtk_widget_set_margin_end(label, 4);
-        gtk_list_box_append(state->ndefWriteRecordsList, label);
+        gtk_list_box_append(ed->recordsList, label);
         g_free(text);
     }
 
-    updateNdefButtons(state);
+    updateNdefButtons(ed->app);
+    updateHceButtons(ed->app);
 }
 
-static const NdefRecordTypeDef *getSelectedRecordType(AppState *state)
+/* The editor is locked while its message is being written or emulated. */
+static gboolean isEditorLocked(const NdefEditor *ed)
+{
+    return (ed == &ed->app->ndefEditor) ? ed->app->ndefWriteRunning : ed->app->hceRunning;
+}
+
+static const NdefRecordTypeDef *getSelectedRecordType(NdefEditor *ed)
 {
     guint count = 0;
     const NdefRecordTypeDef *types = ptx_ExampleNdef_GetRecordTypes(&count);
-    guint selected = gtk_drop_down_get_selected(state->ndefWriteTypeDropDown);
+    guint selected = gtk_drop_down_get_selected(ed->typeDropDown);
     return (selected < count) ? &types[selected] : NULL;
 }
 
 /* Returns the current field values (borrowed strings, free the array only). */
-static const gchar **collectWriteFieldValues(AppState *state)
+static const gchar **collectWriteFieldValues(NdefEditor *ed)
 {
-    const gchar **values = g_new0(const gchar *, state->writeFieldWidgets->len + 1u);
+    const gchar **values = g_new0(const gchar *, ed->fieldWidgets->len + 1u);
 
-    for (guint i = 0; i < state->writeFieldWidgets->len; ++i)
+    for (guint i = 0; i < ed->fieldWidgets->len; ++i)
     {
-        GtkWidget *widget = g_ptr_array_index(state->writeFieldWidgets, i);
+        GtkWidget *widget = g_ptr_array_index(ed->fieldWidgets, i);
         if (GTK_IS_DROP_DOWN(widget))
         {
             GObject *item = gtk_drop_down_get_selected_item(GTK_DROP_DOWN(widget));
@@ -1433,16 +1508,16 @@ static const gchar **collectWriteFieldValues(AppState *state)
 static void onWriteAdd(GtkWidget *widget, gpointer userData);
 
 /* Builds the input form of the selected record type from its field definitions. */
-static void rebuildWriteFields(AppState *state, GtkApplication *app)
+static void rebuildWriteFields(NdefEditor *ed)
 {
     GtkWidget *child;
-    while (NULL != (child = gtk_widget_get_first_child(GTK_WIDGET(state->ndefWriteFieldsGrid))))
+    while (NULL != (child = gtk_widget_get_first_child(GTK_WIDGET(ed->fieldsGrid))))
     {
-        gtk_grid_remove(state->ndefWriteFieldsGrid, child);
+        gtk_grid_remove(ed->fieldsGrid, child);
     }
-    g_ptr_array_set_size(state->writeFieldWidgets, 0);
+    g_ptr_array_set_size(ed->fieldWidgets, 0);
 
-    const NdefRecordTypeDef *def = getSelectedRecordType(state);
+    const NdefRecordTypeDef *def = getSelectedRecordType(ed);
     if (NULL == def)
         return;
 
@@ -1469,13 +1544,13 @@ static void rebuildWriteFields(AppState *state, GtkApplication *app)
             input = gtk_entry_new();
             gtk_editable_set_text(GTK_EDITABLE(input), (NULL != field->defaultValue) ? field->defaultValue : "");
             gtk_entry_set_placeholder_text(GTK_ENTRY(input), field->required ? "required" : "optional");
-            g_signal_connect(input, "activate", G_CALLBACK(onWriteAdd), app);
+            g_signal_connect(input, "activate", G_CALLBACK(onWriteAdd), ed);
         }
         gtk_widget_set_hexpand(input, TRUE);
 
-        gtk_grid_attach(state->ndefWriteFieldsGrid, label, 0, (int)i, 1, 1);
-        gtk_grid_attach(state->ndefWriteFieldsGrid, input, 1, (int)i, 1, 1);
-        g_ptr_array_add(state->writeFieldWidgets, input);
+        gtk_grid_attach(ed->fieldsGrid, label, 0, (int)i, 1, 1);
+        gtk_grid_attach(ed->fieldsGrid, input, 1, (int)i, 1, 1);
+        g_ptr_array_add(ed->fieldWidgets, input);
     }
 }
 
@@ -1483,82 +1558,81 @@ static void onWriteTypeChanged(GObject *object, GParamSpec *pspec, gpointer user
 {
     (void)object;
     (void)pspec;
-    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
-    rebuildWriteFields(state, GTK_APPLICATION(userData));
+    rebuildWriteFields((NdefEditor *)userData);
 }
 
 /* Encodes the record from the form and adds it to the message, if the message still fits into the buffer. */
 static void onWriteAdd(GtkWidget *widget, gpointer userData)
 {
     (void)widget;
-    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
-    const NdefRecordTypeDef *def = getSelectedRecordType(state);
+    NdefEditor *ed = (NdefEditor *)userData;
+    const NdefRecordTypeDef *def = getSelectedRecordType(ed);
 
-    if ((NULL == def) || state->ndefWriteRunning)
+    if ((NULL == def) || isEditorLocked(ed))
         return;
 
-    const gchar **values = collectWriteFieldValues(state);
+    const gchar **values = collectWriteFieldValues(ed);
     GError *error = NULL;
     NdefRecordData *data = ptx_ExampleNdef_EncodeRecord(def, values, &error);
     g_free(values);
 
     if (NULL == data)
     {
-        gtk_label_set_text(state->ndefWriteStatusLabel, error->message);
+        gtk_label_set_text(ed->statusLabel, error->message);
         g_error_free(error);
         return;
     }
 
-    g_ptr_array_add(state->writeRecords, data);
+    g_ptr_array_add(ed->records, data);
 
     uint8_t message[NDEF_BUFFER_SIZE];
     uint32_t len = (uint32_t)sizeof(message);
-    if (!ptx_ExampleNdef_BuildMessage(state->writeRecords, message, &len, &error))
+    if (!ptx_ExampleNdef_BuildMessage(ed->records, message, &len, &error))
     {
-        g_ptr_array_remove_index(state->writeRecords, state->writeRecords->len - 1u);
+        g_ptr_array_remove_index(ed->records, ed->records->len - 1u);
         gchar *text = g_strdup_printf("Record not added - %s", error->message);
-        gtk_label_set_text(state->ndefWriteStatusLabel, text);
+        gtk_label_set_text(ed->statusLabel, text);
         g_free(text);
         g_error_free(error);
         return;
     }
 
-    refreshWriteRecordList(state);
-    updateWriteSummary(state);
+    refreshWriteRecordList(ed);
+    updateWriteSummary(ed);
 }
 
 static void onWriteRemove(GtkWidget *widget, gpointer userData)
 {
     (void)widget;
-    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
-    GtkListBoxRow *row = gtk_list_box_get_selected_row(state->ndefWriteRecordsList);
+    NdefEditor *ed = (NdefEditor *)userData;
+    GtkListBoxRow *row = gtk_list_box_get_selected_row(ed->recordsList);
 
     if (NULL == row)
     {
-        gtk_label_set_text(state->ndefWriteStatusLabel, "Select a record in the list to remove it.");
+        gtk_label_set_text(ed->statusLabel, "Select a record in the list to remove it.");
         return;
     }
 
     int index = gtk_list_box_row_get_index(row);
-    if ((index >= 0) && ((guint)index < state->writeRecords->len))
+    if ((index >= 0) && ((guint)index < ed->records->len))
     {
-        g_ptr_array_remove_index(state->writeRecords, (guint)index);
+        g_ptr_array_remove_index(ed->records, (guint)index);
     }
-    refreshWriteRecordList(state);
-    updateWriteSummary(state);
+    refreshWriteRecordList(ed);
+    updateWriteSummary(ed);
 }
 
 static void onWriteClear(GtkWidget *widget, gpointer userData)
 {
     (void)widget;
-    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
-    g_ptr_array_set_size(state->writeRecords, 0);
-    refreshWriteRecordList(state);
-    updateWriteSummary(state);
+    NdefEditor *ed = (NdefEditor *)userData;
+    g_ptr_array_set_size(ed->records, 0);
+    refreshWriteRecordList(ed);
+    updateWriteSummary(ed);
 }
 
-/* Adds a record of the first record type (URI) with its default values, so WRITE works out of the box. */
-static void addDefaultWriteRecord(AppState *state)
+/* Adds a record of the first record type (URI) with its default values, so WRITE / START works out of the box. */
+static void addDefaultWriteRecord(NdefEditor *ed)
 {
     guint count = 0;
     const NdefRecordTypeDef *def = ptx_ExampleNdef_GetRecordTypes(&count);
@@ -1572,9 +1646,59 @@ static void addDefaultWriteRecord(AppState *state)
     NdefRecordData *data = ptx_ExampleNdef_EncodeRecord(def, values, NULL);
     if (NULL != data)
     {
-        g_ptr_array_add(state->writeRecords, data);
+        g_ptr_array_add(ed->records, data);
     }
     g_free(values);
+}
+
+/*
+ * Looks up the widgets of an NDEF editor in window.ui (IDs <prefix>Editor, <prefix>Type, <prefix>Fields, ...),
+ * fills the record type picker and connects the signals. Returns FALSE if a widget is missing.
+ */
+static gboolean bindNdefEditor(GtkBuilder *builder, const char *prefix, NdefEditor *ed, AppState *state, const char *actionHint)
+{
+    static const char * const suffixes[] = { "Editor", "Type", "Fields", "Records", "Add", "Remove", "Clear",
+                                             "RawBytes", "EditControls", "Status" };
+    GObject *objects[G_N_ELEMENTS(suffixes)];
+
+    for (guint i = 0; i < G_N_ELEMENTS(suffixes); ++i)
+    {
+        char id[64];
+        snprintf(id, sizeof(id), "%s%s", prefix, suffixes[i]);
+        objects[i] = gtk_builder_get_object(builder, id);
+        if(objects[i] == NULL) {
+            g_warning("Failed to load '%s' from window.ui - cannot compose NDEF messages", id);
+            return FALSE;
+        }
+    }
+
+    ed->app = state;
+    ed->actionHint = actionHint;
+    ed->editor = GTK_WIDGET(objects[0]);
+    ed->typeDropDown = GTK_DROP_DOWN(objects[1]);
+    ed->fieldsGrid = GTK_GRID(objects[2]);
+    ed->recordsList = GTK_LIST_BOX(objects[3]);
+    g_signal_connect(objects[4], "clicked", G_CALLBACK(onWriteAdd), ed);
+    g_signal_connect(objects[5], "clicked", G_CALLBACK(onWriteRemove), ed);
+    g_signal_connect(objects[6], "clicked", G_CALLBACK(onWriteClear), ed);
+    ed->rawBytesLabel = GTK_LABEL(objects[7]);
+    ed->editControls = GTK_WIDGET(objects[8]);
+    ed->statusLabel = GTK_LABEL(objects[9]);
+
+    /* The record type picker is populated from the record type table */
+    guint recordTypeCount = 0;
+    const NdefRecordTypeDef *recordTypes = ptx_ExampleNdef_GetRecordTypes(&recordTypeCount);
+    GtkStringList *recordTypeNames = gtk_string_list_new(NULL);
+    for (guint i = 0; i < recordTypeCount; ++i)
+    {
+        gtk_string_list_append(recordTypeNames, recordTypes[i].name);
+    }
+    gtk_drop_down_set_model(ed->typeDropDown, G_LIST_MODEL(recordTypeNames));
+    g_object_unref(recordTypeNames);
+    g_signal_connect(ed->typeDropDown, "notify::selected", G_CALLBACK(onWriteTypeChanged), ed);
+    rebuildWriteFields(ed);
+
+    return TRUE;
 }
 
 static void onNdefRead(GtkWidget *widget, gpointer userData)
@@ -1644,7 +1768,7 @@ static void onNdefWrite(GtkWidget *widget, gpointer userData)
 
     if(isRunning)
     {
-        gtk_label_set_text(state->ndefWriteStatusLabel, "Discovery is still being stopped - please try again.");
+        gtk_label_set_text(state->ndefEditor.statusLabel, "Discovery is still being stopped - please try again.");
         return;
     }
 
@@ -1652,9 +1776,9 @@ static void onNdefWrite(GtkWidget *widget, gpointer userData)
     uint32_t len = (uint32_t)sizeof(message);
     GError *error = NULL;
 
-    if (!ptx_ExampleNdef_BuildMessage(state->writeRecords, message, &len, &error))
+    if (!ptx_ExampleNdef_BuildMessage(state->ndefEditor.records, message, &len, &error))
     {
-        gtk_label_set_text(state->ndefWriteStatusLabel, error->message);
+        gtk_label_set_text(state->ndefEditor.statusLabel, error->message);
         g_error_free(error);
         return;
     }
@@ -1662,14 +1786,14 @@ static void onNdefWrite(GtkWidget *widget, gpointer userData)
     lockSharedState();
     memcpy(sSharedState.writeMsgBuffer, message, len);
     sSharedState.writeMsgLen = len;
-    sSharedState.writeRecordCount = state->writeRecords->len;
+    sSharedState.writeRecordCount = state->ndefEditor.records->len;
     unlockSharedState();
 
     state->ndefWriteRunning = TRUE;
     updateNdefButtons(state);
-    gtk_widget_set_sensitive(state->ndefWriteEditor, FALSE);
-    gtk_widget_set_sensitive(state->ndefWriteEditControls, FALSE);
-    gtk_label_set_text(state->ndefWriteStatusLabel, "Waiting for card ...");
+    gtk_widget_set_sensitive(state->ndefEditor.editor, FALSE);
+    gtk_widget_set_sensitive(state->ndefEditor.editControls, FALSE);
+    gtk_label_set_text(state->ndefEditor.statusLabel, "Waiting for card ...");
     startDiscovery(state, DiscoveryMode_NdefWrite);
 }
 
@@ -1713,13 +1837,190 @@ static gboolean onNdefWriteDone(gpointer data)
             snprintf(content, sizeof(content), "No card found within %u polling cycles.", NDEF_WRITE_MAX_POLLING_CYCLES);
             break;
     }
-    gtk_label_set_text(state->ndefWriteStatusLabel, content);
+    gtk_label_set_text(state->ndefEditor.statusLabel, content);
 
     state->ndefWriteRunning = FALSE;
     updateNdefButtons(state);
-    gtk_widget_set_sensitive(state->ndefWriteEditor, TRUE);
-    gtk_widget_set_sensitive(state->ndefWriteEditControls, TRUE);
+    gtk_widget_set_sensitive(state->ndefEditor.editor, TRUE);
+    gtk_widget_set_sensitive(state->ndefEditor.editControls, TRUE);
     gtk_widget_set_sensitive(state->stackSwitcher, TRUE);
+
+    return FALSE;
+}
+
+/*
+ * Sets the sensitivity of the HCE tab's START/STOP button: it requires an initialized PTX and is disabled while
+ * the emulation is being stopped. An empty editor is allowed, START falls back to the default message.
+ */
+static void updateHceButtons(AppState *state)
+{
+    gtk_widget_set_sensitive(GTK_WIDGET(state->hceStartStopButton), state->ptxReady && !state->hceStopping);
+}
+
+/* Appends a line to the emulation log (UI thread). Takes ownership of the string. */
+static gboolean appendHceLog(gpointer data)
+{
+    gchar *text = (gchar *)data;
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+
+    if (state != NULL)
+    {
+        GtkTextBuffer *buffer = gtk_text_view_get_buffer(state->hceLog);
+        GtkTextIter iter;
+
+        gtk_text_buffer_get_end_iter(buffer, &iter);
+        gtk_text_buffer_insert(buffer, &iter, text, -1);
+        gtk_text_buffer_insert(buffer, &iter, "\n", 1);
+
+        /* Scroll to the end */
+        GtkTextMark *mark = gtk_text_buffer_create_mark(buffer, NULL, &iter, FALSE);
+        gtk_text_view_scroll_to_mark(state->hceLog, mark, 0.0, FALSE, 0.0, 0.0);
+        gtk_text_buffer_delete_mark(buffer, mark);
+    }
+
+    g_free(text);
+    return FALSE;
+}
+
+/* Posts a line to the emulation log, may be called from the worker thread. */
+static void postHceLog(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    gchar *text = g_strdup_vprintf(fmt, args);
+    va_end(args);
+
+    g_idle_add(appendHceLog, text);
+}
+
+static void onHceStartStop(GtkWidget *widget, gpointer userData)
+{
+    (void)widget;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+    NdefEditor *ed = &state->hceEditor;
+
+    if (state->hceRunning)
+    {
+        if (state->hceStopping)
+            return;
+
+        state->hceStopping = TRUE;
+        updateHceButtons(state);
+        stopDiscovery(state);
+
+        /* Keep the tabs locked until the reader is idle again */
+        gtk_widget_set_sensitive(state->stackSwitcher, FALSE);
+        gtk_label_set_text(ed->statusLabel, "Stopping emulation ...");
+        return;
+    }
+
+    lockSharedState();
+    gboolean isRunning = sSharedState.doRunDiscovery;
+    unlockSharedState();
+
+    if (isRunning)
+    {
+        gtk_label_set_text(ed->statusLabel, "Discovery is still being stopped - please try again.");
+        return;
+    }
+
+    /* An empty editor falls back to the default message, which is also shown in the editor */
+    if (0u == ed->records->len)
+    {
+        addDefaultWriteRecord(ed);
+        refreshWriteRecordList(ed);
+        updateWriteSummary(ed);
+    }
+
+    uint8_t message[NDEF_BUFFER_SIZE];
+    uint32_t len = (uint32_t)sizeof(message);
+    GError *error = NULL;
+
+    if (!ptx_ExampleNdef_BuildMessage(ed->records, message, &len, &error))
+    {
+        gtk_label_set_text(ed->statusLabel, error->message);
+        g_error_free(error);
+        return;
+    }
+
+    /* Every START resets the emulated NDEF file to the message of the editor */
+    lockSharedState();
+    memcpy(sSharedState.hceNdefMsg, message, len);
+    sSharedState.hceNdefMsgLen = len;
+    unlockSharedState();
+
+    gtk_text_buffer_set_text(gtk_text_view_get_buffer(state->hceLog), "", -1);
+    gtk_text_buffer_set_text(gtk_text_view_get_buffer(state->hceWrittenText), "No message written yet.", -1);
+
+    state->hceRunning = TRUE;
+    gtk_button_set_label(state->hceStartStopButton, "STOP");
+    gtk_widget_set_sensitive(ed->editor, FALSE);
+    gtk_widget_set_sensitive(ed->editControls, FALSE);
+
+    char content[APP_TEXT_BUFFER_SIZE];
+    snprintf(content, sizeof(content), "Emulating T4T (%u record(s), %u bytes) - hold a phone/reader to the antenna.",
+             ed->records->len, len);
+    gtk_label_set_text(ed->statusLabel, content);
+
+    startDiscovery(state, DiscoveryMode_Hce);
+    updateHceButtons(state);
+}
+
+/* Called when a reader has written a new NDEF message to the emulated tag. Takes ownership of the message. */
+static gboolean onHceMessageWritten(gpointer data)
+{
+    HceWrittenMsg *msg = (HceWrittenMsg *)data;
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+
+    if (state == NULL)
+    {
+        g_free(msg);
+        return FALSE;
+    }
+
+    /* Decoded records and raw bytes may exceed APP_TEXT_BUFFER_SIZE so build the text dynamically */
+    GString *text = g_string_new(NULL);
+    GDateTime *now = g_date_time_new_now_local();
+    gchar *time = g_date_time_format(now, "%H:%M:%S");
+
+    g_string_append_printf(text, "Written at %s\n", time);
+    g_string_append_printf(text, "NDEF message (%u bytes):\n", msg->len);
+    appendNdefRecords(text, msg->data, msg->len, 0);
+    g_string_append_printf(text, "Raw bytes (%u): ", msg->len);
+    appendHexString(text, msg->data, msg->len);
+    g_string_append_c(text, '\n');
+
+    gtk_text_buffer_set_text(gtk_text_view_get_buffer(state->hceWrittenText), text->str, (int)text->len);
+    gtk_label_set_text(state->hceEditor.statusLabel, "New NDEF message written by reader - served until STOP.");
+
+    g_string_free(text, TRUE);
+    g_free(time);
+    g_date_time_unref(now);
+    g_free(msg);
+
+    return FALSE;
+}
+
+/* Called once the emulation has been stopped. */
+static gboolean onHceStopped(gpointer data)
+{
+    (void)data;
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+
+    if (state == NULL)
+        return FALSE;
+
+    state->hceRunning = FALSE;
+    state->hceStopping = FALSE;
+    gtk_button_set_label(state->hceStartStopButton, "START");
+    gtk_widget_set_sensitive(state->hceEditor.editor, TRUE);
+    gtk_widget_set_sensitive(state->hceEditor.editControls, TRUE);
+    gtk_label_set_text(state->hceEditor.statusLabel, "Emulation stopped.");
+    gtk_widget_set_sensitive(state->stackSwitcher, TRUE);
+    updateHceButtons(state);
 
     return FALSE;
 }
@@ -2050,8 +2351,10 @@ static void onPollingRestoreDefaults(GtkWidget *widget, gpointer userData)
 
 static void freeAppState(AppState *state)
 {
-    g_ptr_array_unref(state->writeFieldWidgets);
-    g_ptr_array_unref(state->writeRecords);
+    g_ptr_array_unref(state->ndefEditor.fieldWidgets);
+    g_ptr_array_unref(state->ndefEditor.records);
+    g_ptr_array_unref(state->hceEditor.fieldWidgets);
+    g_ptr_array_unref(state->hceEditor.records);
     g_free(state);
 }
 
@@ -2064,8 +2367,10 @@ static void onActivate(GtkApplication *app, gpointer userData)
 
     // intialize app state
     AppState *state = g_new0(AppState, 1);
-    state->writeFieldWidgets = g_ptr_array_new();
-    state->writeRecords = g_ptr_array_new_with_free_func((GDestroyNotify)ptx_ExampleNdef_RecordDataFree);
+    state->ndefEditor.fieldWidgets = g_ptr_array_new();
+    state->ndefEditor.records = g_ptr_array_new_with_free_func((GDestroyNotify)ptx_ExampleNdef_RecordDataFree);
+    state->hceEditor.fieldWidgets = g_ptr_array_new();
+    state->hceEditor.records = g_ptr_array_new_with_free_func((GDestroyNotify)ptx_ExampleNdef_RecordDataFree);
     g_object_set_data_full(G_OBJECT(app), "app-state", state, (GDestroyNotify)freeAppState);
 
     // set up settings
@@ -2171,51 +2476,45 @@ static void onActivate(GtkApplication *app, gpointer userData)
     gtk_widget_set_sensitive(GTK_WIDGET(state->ndefWriteButton), FALSE);
     g_signal_connect(state->ndefWriteButton, "clicked", G_CALLBACK(onNdefWrite), app);
 
-    obj = gtk_builder_get_object(windowBuilder, "ndefWriteStatus");
-    if(obj == NULL) {
-        g_warning("Failed to load 'ndefWriteStatus' from window.ui - cannot display NDEF write status");
+    /* NDEF write editor: record type picker, field form, record list, their buttons and the status */
+    if(!bindNdefEditor(windowBuilder, "ndefWrite", &state->ndefEditor, state, "WRITE to write them to a card")) {
         g_object_unref(windowBuilder);
         return;
     }
-    state->ndefWriteStatusLabel = GTK_LABEL(obj);
+    addDefaultWriteRecord(&state->ndefEditor);
 
-    /* NDEF write editor: record type picker, field form, record list and their buttons */
-    const char * const writeEditorIds[] = { "ndefWriteEditor", "ndefWriteType", "ndefWriteFields", "ndefWriteRecords",
-                                            "ndefWriteAdd", "ndefWriteRemove", "ndefWriteClear", "ndefWriteRawBytes", "ndefWriteEditControls" };
-    GObject *writeEditorObjects[G_N_ELEMENTS(writeEditorIds)];
-    for (guint i = 0; i < G_N_ELEMENTS(writeEditorIds); ++i)
-    {
-        writeEditorObjects[i] = gtk_builder_get_object(windowBuilder, writeEditorIds[i]);
-        if(writeEditorObjects[i] == NULL) {
-            g_warning("Failed to load '%s' from window.ui - cannot compose NDEF messages", writeEditorIds[i]);
-            g_object_unref(windowBuilder);
-            return;
-        }
+    /* HCE tab: START/STOP button, message editor, message written by a reader and emulation log */
+    obj = gtk_builder_get_object(windowBuilder, "hceStartStop");
+    if(obj == NULL) {
+        g_warning("Failed to load 'hceStartStop' button from window.ui - application may not function correctly");
+        g_object_unref(windowBuilder);
+        return;
     }
-    state->ndefWriteEditor = GTK_WIDGET(writeEditorObjects[0]);
-    state->ndefWriteTypeDropDown = GTK_DROP_DOWN(writeEditorObjects[1]);
-    state->ndefWriteFieldsGrid = GTK_GRID(writeEditorObjects[2]);
-    state->ndefWriteRecordsList = GTK_LIST_BOX(writeEditorObjects[3]);
-    g_signal_connect(writeEditorObjects[4], "clicked", G_CALLBACK(onWriteAdd), app);
-    g_signal_connect(writeEditorObjects[5], "clicked", G_CALLBACK(onWriteRemove), app);
-    g_signal_connect(writeEditorObjects[6], "clicked", G_CALLBACK(onWriteClear), app);
-    state->ndefWriteRawBytesLabel = GTK_LABEL(writeEditorObjects[7]);
-    state->ndefWriteEditControls = GTK_WIDGET(writeEditorObjects[8]);
+    state->hceStartStopButton = GTK_BUTTON(obj);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->hceStartStopButton), FALSE);
+    g_signal_connect(state->hceStartStopButton, "clicked", G_CALLBACK(onHceStartStop), app);
 
-    /* The record type picker is populated from the record type table */
-    guint recordTypeCount = 0;
-    const NdefRecordTypeDef *recordTypes = ptx_ExampleNdef_GetRecordTypes(&recordTypeCount);
-    GtkStringList *recordTypeNames = gtk_string_list_new(NULL);
-    for (guint i = 0; i < recordTypeCount; ++i)
-    {
-        gtk_string_list_append(recordTypeNames, recordTypes[i].name);
+    obj = gtk_builder_get_object(windowBuilder, "hceWrittenText");
+    if(obj == NULL) {
+        g_warning("Failed to load 'hceWrittenText' from window.ui - cannot display the message written by a reader");
+        g_object_unref(windowBuilder);
+        return;
     }
-    gtk_drop_down_set_model(state->ndefWriteTypeDropDown, G_LIST_MODEL(recordTypeNames));
-    g_object_unref(recordTypeNames);
-    g_signal_connect(state->ndefWriteTypeDropDown, "notify::selected", G_CALLBACK(onWriteTypeChanged), app);
-    rebuildWriteFields(state, app);
+    state->hceWrittenText = GTK_TEXT_VIEW(obj);
 
-    addDefaultWriteRecord(state);
+    obj = gtk_builder_get_object(windowBuilder, "hceLog");
+    if(obj == NULL) {
+        g_warning("Failed to load 'hceLog' from window.ui - cannot display the emulation log");
+        g_object_unref(windowBuilder);
+        return;
+    }
+    state->hceLog = GTK_TEXT_VIEW(obj);
+
+    if(!bindNdefEditor(windowBuilder, "hce", &state->hceEditor, state, "START to emulate them")) {
+        g_object_unref(windowBuilder);
+        return;
+    }
+    addDefaultWriteRecord(&state->hceEditor);
 
     /* Polling tab: discovery settings */
     static const char TECH_LETTERS[POLL_TECH_COUNT] = { 'A', 'B', 'F', 'V' };
@@ -2271,8 +2570,10 @@ static void onActivate(GtkApplication *app, gpointer userData)
     PollingValues pollingDefaults;
     getDefaultPollingValues(&pollingDefaults);
     loadPollingUi(state, &pollingDefaults);
-    refreshWriteRecordList(state);
-    updateWriteSummary(state);
+    refreshWriteRecordList(&state->ndefEditor);
+    updateWriteSummary(&state->ndefEditor);
+    refreshWriteRecordList(&state->hceEditor);
+    updateWriteSummary(&state->hceEditor);
 
     gtk_label_set_text(state->cardStatusLabel, "Initializing ...");
 
@@ -2307,6 +2608,9 @@ static void onActivate(GtkApplication *app, gpointer userData)
 
     // initialze the PTX
     state->initThread = g_thread_new("init", initThread, app);
+
+    /* Show the Discovery tab at startup (the Polling tab is the first one) */
+    gtk_stack_set_visible_child_name(GTK_STACK(gtk_builder_get_object(windowBuilder, "mainStack")), "discovery");
 
     gtk_widget_set_visible(GTK_WIDGET (window), TRUE);
 
@@ -2401,18 +2705,27 @@ static ptx_Status_t runDemo()
         gboolean doRun = FALSE;
         gboolean doReset = FALSE;
         gboolean doStop = FALSE;
+        DiscoveryMode mode = DiscoveryMode_CardInfo;
         int exitFlag = 0;
 
         do
         {
             lockSharedState();
             doRun = sSharedState.doRunDiscovery;
+            mode = sSharedState.mode;
             doReset = sSharedState.doReset;
             doStop = sSharedState.doStopDiscovery;
             if(doReset)
                 sSharedState.doReset = false;
             exitFlag = sSharedState.gExit;
             unlockSharedState();
+
+            if(doRun && (DiscoveryMode_Hce == mode))
+            {
+                /* Card emulation runs its own loop until it is stopped, the reader state machine is not used */
+                status = runHceEmulation(&sRul);
+                continue;
+            }
 
             if(doRun)
             {
@@ -2944,6 +3257,309 @@ static ptx_Status_t processStateDeactivateReader(ptx_RUL_t *rul, demoState_t *de
             ptx_Utils_Print("ERROR [RF-Field deactivation failed]: %s (0x%04X)\n", getErrorDescription(status), status);
             *demoState = demoStateExit;
         }
+    }
+
+    return status;
+}
+
+/* Returns the name of an ISO 7816 instruction used by the Type 4 Tag protocol. */
+static const char* getHceInsName(uint8_t ins, char *buffer, size_t size)
+{
+    switch(ins) {
+        case PTX_HCET4T_ISO7816_INS_SELECT: return "SELECT";
+        case PTX_HCET4T_ISO7816_INS_READ_BINARY: return "READ BINARY";
+        case PTX_HCET4T_ISO7816_INS_UPDATE_BINARY: return "UPDATE BINARY";
+        default:
+            snprintf(buffer, size, "INS 0x%02X", ins);
+            return buffer;
+    }
+}
+
+/*
+ * Hands the NDEF message in the emulated NDEF file over to the UI, if its length (NLEN) is valid.
+ * NFC Forum T4T writers set NLEN to 0, write the message and finally write the new NLEN, so the message is
+ * complete once a valid NLEN has been written.
+ */
+static void publishHceWrittenMessage(gboolean *ndefWritten)
+{
+    uint32_t nlen = ((uint32_t)sHceNdefFile[0] << 8) | (uint32_t)sHceNdefFile[1];
+
+    if ((nlen > 0u) && (nlen <= (HCE_NDEF_FILE_SIZE - 2u)))
+    {
+        HceWrittenMsg *msg = g_malloc(sizeof(HceWrittenMsg) + nlen);
+        msg->len = nlen;
+        memcpy(msg->data, &sHceNdefFile[2], nlen);
+        g_idle_add(onHceMessageWritten, msg);
+
+        postHceLog("NDEF message written by reader (%u bytes)", nlen);
+        *ndefWritten = FALSE;
+    }
+}
+
+/* Processes a C-APDU of the reader and sends the response. Errors are logged, the emulation continues. */
+static void processHceData(ptx_RUL_HCE_t *hce, ptx_HCET4T_t *t4t, uint8_t *rx, uint32_t rxLen, gboolean *ndefWritten)
+{
+    char insName[16];
+    uint8_t ins = (rxLen > PTX_HCET4T_ISO7816_OFFSET_INS) ? rx[PTX_HCET4T_ISO7816_OFFSET_INS] : 0u;
+    uint32_t fileOffset = (rxLen > PTX_HCET4T_ISO7816_OFFSET_P2) ?
+        (((uint32_t)rx[PTX_HCET4T_ISO7816_OFFSET_P1] << 8) | (uint32_t)rx[PTX_HCET4T_ISO7816_OFFSET_P2]) : 0xFFFFu;
+    uint32_t txLen = HCE_BUFFER_SIZE;
+
+    ptx_Status_t status = ptx_HCET4T_CommandProcess(t4t, rx, rxLen, sHceTxBuffer, &txLen);
+
+    if ((PTX_STATUS_SUCCESS == status) && (txLen >= PTX_HCET4T_ISO7816_SW_LEN))
+    {
+        uint16_t sw = (uint16_t)(((uint16_t)sHceTxBuffer[txLen - 2u] << 8) | (uint16_t)sHceTxBuffer[txLen - 1u]);
+
+        status = ptx_RUL_HCE_SendData(hce, sHceTxBuffer, txLen);
+        postHceLog("C-APDU %s - SW %04X", getHceInsName(ins, insName, sizeof(insName)), sw);
+
+        if (PTX_STATUS_SUCCESS != status)
+        {
+            postHceLog("Sending the response failed: ERROR 0x%04X", status);
+        }
+        else if ((PTX_HCET4T_ISO7816_INS_UPDATE_BINARY == ins) && (PTX_HCET4T_ISO7816_SW_SUCCESS == sw))
+        {
+            *ndefWritten = TRUE;
+
+            /* The message is complete once the final NLEN has been written (offset 0 - 1) */
+            if (fileOffset < 2u)
+            {
+                publishHceWrittenMessage(ndefWritten);
+            }
+        }
+    }
+    else
+    {
+        postHceLog("C-APDU %s - processing failed: ERROR 0x%04X", getHceInsName(ins, insName, sizeof(insName)), status);
+    }
+}
+
+/* Handles an event of the HCE component. */
+static ptx_Status_t processHceEvent(ptx_RUL_HCE_t *hce, ptx_HCET4T_t *t4t, const ptx_RUL_HCE_EventRecord_t *record, gboolean *ndefWritten)
+{
+    ptx_Status_t status = PTX_STATUS_SUCCESS;
+
+    switch (record->EventID)
+    {
+        case RUL_HCE_EventType_ExtFieldOn:
+            status = ptx_HCET4T_Reset(t4t);
+            postHceLog("Field on");
+            break;
+
+        case RUL_HCE_EventType_ExtFieldOff:
+            if (*ndefWritten)
+            {
+                publishHceWrittenMessage(ndefWritten);
+            }
+            status = ptx_HCET4T_Reset(t4t);
+            postHceLog("Field off");
+            break;
+
+        case RUL_HCE_EventType_Activated:
+            postHceLog("Activated by reader");
+            break;
+
+        case RUL_HCE_EventType_Data:
+            processHceData(hce, t4t, record->RxMsgData, record->RxMsgDataLen, ndefWritten);
+            break;
+
+        case RUL_HCE_EventType_Deactivated:
+            /* Reason: 0x01 = deactivate command finished, 0x02 = DESELECT / SLEEP, 0x03 = RELEASE, 0x04 = field turned off */
+            if (*ndefWritten)
+            {
+                publishHceWrittenMessage(ndefWritten);
+            }
+            postHceLog("Deactivated (reason %u)", (unsigned int)record->RxMsgDataShortMsgData[0]);
+            break;
+
+        case RUL_HCE_EventType_Error:
+            postHceLog("RF error %u", (unsigned int)record->RxMsgDataShortMsgData[0]);
+            break;
+
+        case RUL_HCE_EventType_NoEvent:
+        default:
+            break;
+    }
+
+    return status;
+}
+
+/*
+ * Emulates an NFC-A Type 4 Tag (NFC Forum T4T, writable) with the NDEF message of the HCE tab until the
+ * emulation is stopped or an error occurs. Closely follows the SDK's HCE T4T example.
+ */
+static ptx_Status_t runHceEmulation(ptx_RUL_t *rul)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    ptx_RUL_HCE_t hce = {0};
+    ptx_RUL_HCE_InitParams_t hceInit = {0};
+    ptx_HCET4T_t t4t = {0};
+    ptx_HCET4T_InitParams_t t4tInit = {0};
+    ptx_RUL_Status_Params_t statusInfo = {0};
+    ptx_RUL_DiscoverConfig_t discConfig;
+    ptx_RUL_HCE_EventRecord_t *record = NULL;
+    gboolean hceReady = FALSE;
+    gboolean t4tReady = FALSE;
+    gboolean initiateDiscovery = TRUE;
+    gboolean ndefWritten = FALSE;
+
+    /* Capability container: read and write access 0x00 (writable tag), max. NDEF file size HCE_NDEF_FILE_SIZE */
+    uint8_t ccFile[HCE_CC_FILE_SIZE] = {0x00, 0x0f, 0x20, 0x00, 0x80, 0x00, 0x80, 0x04, 0x06, 0xe1, 0x04,
+                                        (HCE_NDEF_FILE_SIZE >> 8) & 0xFFu, HCE_NDEF_FILE_SIZE & 0xFFu, 0x00, 0x00};
+
+    const uint8_t nfcId[HCE_NFC_ID_LEN] = { 0x08, 0x01, 0x02, 0x03 };
+    const uint8_t sensRes[PTX_NSC_RF_DISCOVER_SENSRES_LEN] = { 0x01, 0x00 };
+    const uint8_t isoDepAts[HCE_ISO_DEP_ATS_LEN] = { 0x05, 0x78, 0x00, 0x71, 0x02 };
+
+    if (PTX_COMP_CHECK(rul, Comp_RUL))
+    {
+        /* Reset the emulated NDEF file to the message of the editor: NLEN (big-endian) followed by the message. */
+        lockSharedState();
+        uint32_t msgLen = sSharedState.hceNdefMsgLen;
+        if (msgLen <= (HCE_NDEF_FILE_SIZE - 2u))
+        {
+            memset(sHceNdefFile, 0, sizeof(sHceNdefFile));
+            sHceNdefFile[0] = (uint8_t)((msgLen >> 8) & 0xFFu);
+            sHceNdefFile[1] = (uint8_t)(msgLen & 0xFFu);
+            memcpy(&sHceNdefFile[2], sSharedState.hceNdefMsg, msgLen);
+            status = PTX_STATUS_SUCCESS;
+        }
+        unlockSharedState();
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            hceInit.AppRxBuffer = sHceRxBuffer;
+            hceInit.AppRxBufferSize = HCE_BUFFER_SIZE;
+            hceInit.Rul = rul;
+            hceInit.Log = &rul->Log;
+            status = ptx_RUL_HCE_Init(&hce, &hceInit);
+            hceReady = (PTX_STATUS_SUCCESS == status);
+        }
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            t4tInit.NDEFFile = sHceNdefFile;
+            t4tInit.NDEFFileSize = HCE_NDEF_FILE_SIZE;
+            t4tInit.CCFile = ccFile;
+            t4tInit.CCFileSize = (uint32_t)sizeof(ccFile);
+            status = ptx_HCET4T_Init(&t4t, &t4tInit);
+            t4tReady = (PTX_STATUS_SUCCESS == status);
+        }
+
+        if (PTX_STATUS_SUCCESS != status)
+        {
+            ptx_Utils_Print("ERROR [HCE initialization failed]: %s (0x%04X)\n", getErrorDescription(status), status);
+        }
+
+        while (PTX_STATUS_SUCCESS == status)
+        {
+            lockSharedState();
+            gboolean doStop = sSharedState.doStopDiscovery;
+            int exitFlag = sSharedState.gExit;
+            unlockSharedState();
+
+            if (doStop || (0 != exitFlag))
+                break;
+
+            /* Check regularly for System-state/-health (e.g. temperature/over-current errors etc.) */
+            statusInfo.Type = ptx_RUL_StatusType_System;
+            status = ptx_RUL_GetStatusInfo(rul, &statusInfo);
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                if (ptx_RUL_StatusInfoSystem_ErrorStandby == statusInfo.Info.System)
+                {
+                    initiateDiscovery = TRUE;
+                }
+                else if (ptx_RUL_StatusInfoSystem_OK != statusInfo.Info.System)
+                {
+                    lockSharedState();
+                    sSharedState.ptxStatus = PTX_STATUS_E_GEN_INTERNAL;
+                    unlockSharedState();
+                    ptx_Utils_Print("ERROR [System error: status code %d]: %s (0x%04X)\n", statusInfo.Info.System, getErrorDescription(PTX_STATUS_E_GEN_INTERNAL), PTX_STATUS_E_GEN_INTERNAL);
+                    status = PTX_STATUS_E_GEN_INTERNAL;
+                }
+            }
+
+            if ((PTX_STATUS_SUCCESS == status) && initiateDiscovery)
+            {
+                /* Listen mode only (no polling): Type-A with field on/off notifications, internal ISO-DEP handling. */
+                memset(&discConfig, 0, sizeof(discConfig));
+                discConfig.EnablePolling = 0u;
+                discConfig.ListenMode = 3u;
+                discConfig.ListenTypeA = 1u;
+                discConfig.ListenIsoDep = 1u;
+
+                discConfig.ListenTypeANfcIdLen = HCE_NFC_ID_LEN;
+                memcpy(discConfig.ListenTypeANfcId, nfcId, HCE_NFC_ID_LEN);
+                discConfig.ListenTypeASensResLen = PTX_NSC_RF_DISCOVER_SENSRES_LEN;
+                memcpy(discConfig.ListenTypeASensRes, sensRes, PTX_NSC_RF_DISCOVER_SENSRES_LEN);
+                discConfig.ListenIsoDepAtsLen = HCE_ISO_DEP_ATS_LEN;
+                memcpy(discConfig.ListenIsoDepAts, isoDepAts, HCE_ISO_DEP_ATS_LEN);
+
+                status = ptx_RUL_InitiateDiscovery(rul, &discConfig);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    initiateDiscovery = FALSE;
+                    ptx_Utils_Print("Starting T4T-A emulation!\n");
+                }
+                else
+                {
+                    ptx_Utils_Print("ERROR [RF-Discovery initialization failed]: %s (0x%04X)\n", getErrorDescription(status), status);
+                }
+            }
+            else if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_RUL_HCE_GetEvent(&hce, &record);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    if (RUL_HCE_EventType_NoEvent != record->EventID)
+                    {
+                        status = processHceEvent(&hce, &t4t, record, &ndefWritten);
+                    }
+                }
+                else if (PTX_STATUS_E_GEN_NOT_FOUND == status)
+                {
+                    /* No event - stay in the loop, but don't busy-wait */
+                    status = ptx_RUL_Sleep(rul, PTX_DEMO_APP_NO_CARD_SLEEP_MS);
+                }
+                else
+                {
+                    ptx_Utils_Print("ERROR [HCE event processing failed]: %s (0x%04X)\n", getErrorDescription(status), status);
+                }
+            }
+        }
+
+        if (t4tReady)
+        {
+            (void)ptx_HCET4T_DeInit(&t4t);
+        }
+        if (hceReady)
+        {
+            (void)ptx_RUL_HCE_DeInit(&hce);
+        }
+
+        /* Generic deactivation -> switch listen mode off and switch to IDLE-state. */
+        ptx_RUL_DeactivateParams_t deactParams = {0};
+        deactParams.Type = ptx_RUL_DeactivateType_Generic;
+        deactParams.State = ptx_RUL_DeactivateState_Idle;
+        ptx_Status_t deactStatus = ptx_RUL_Deactivate(rul, &deactParams);
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            status = deactStatus;
+        }
+
+        lockSharedState();
+        sSharedState.doStopDiscovery = false;
+        sSharedState.doRunDiscovery = false;
+        unlockSharedState();
+
+        g_idle_add(onHceStopped, NULL);
     }
 
     return status;

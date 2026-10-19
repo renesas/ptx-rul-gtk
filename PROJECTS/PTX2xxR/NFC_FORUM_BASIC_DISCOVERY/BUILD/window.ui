@@ -23,253 +23,7 @@
         <property name="hexpand">True</property>
         <property name="vexpand">True</property>
         <property name="transition-type">crossfade</property>
-        <child>
-          <object class="GtkStackPage">
-            <property name="name">discovery</property>
-            <property name="title">Discovery</property>
-            <property name="child">
-              <object id="contentBox" class="GtkBox">
-                <property name="orientation">vertical</property>
-                <child>
-                  <object id="controlsBox" class="GtkBox">
-                    <property name="orientation">horizontal</property>
-                    <property name="spacing">4</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
-                    <child>
-                      <object id="startstop" class="GtkButton">
-                        <property name="label">START</property>
-                      </object>
-                    </child>
-                    <child>
-                      <object id="reset" class="GtkButton">
-                        <property name="label">RESET</property>
-                        <property name="action-name">app.reset</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object id="cardStatus" class="GtkLabel">
-                    <property name="xalign">0</property>
-                    <property name="wrap">True</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
-                    <property name="margin-bottom">4</property>
-                  </object>
-                </child>
-                <child>
-                  <object id="scrollableArea" class="GtkScrolledWindow">
-                    <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
-                    <property name="margin-bottom">4</property>
-                    <child>
-                      <object id="cardTable" class="GtkGrid">
-                        <property name="column-spacing">16</property>
-                        <property name="row-spacing">4</property>
-                        <property name="margin-start">4</property>
-                        <property name="margin-end">4</property>
-                        <property name="margin-top">4</property>
-                        <property name="margin-bottom">4</property>
-                        <property name="valign">start</property>
-                        <property name="halign">start</property>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </property>
-          </object>
-        </child>
-        <child>
-          <object class="GtkStackPage">
-            <property name="name">ndef</property>
-            <property name="title">NDEF</property>
-            <property name="child">
-              <object id="ndefBox" class="GtkBox">
-                <property name="orientation">vertical</property>
-                <property name="hexpand">True</property>
-                <property name="vexpand">True</property>
-                <child>
-                  <object id="ndefReadFrame" class="GtkFrame">
-                    <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
-                    <property name="margin-top">4</property>
-                    <property name="margin-bottom">4</property>
-                    <child type="label">
-                      <object id="ndefControlsBox" class="GtkBox">
-                        <property name="orientation">horizontal</property>
-                        <property name="spacing">4</property>
-                        <child>
-                          <object id="ndefRead" class="GtkButton">
-                            <property name="label">READ</property>
-                            <property name="tooltip-text">Start discovery and read the NDEF message of activated cards</property>
-                          </object>
-                        </child>
-                        <child>
-                          <object id="ndefStop" class="GtkButton">
-                            <property name="label">STOP</property>
-                            <property name="tooltip-text">Stop discovery</property>
-                          </object>
-                        </child>
-                        <child>
-                          <object id="ndefReadClear" class="GtkButton">
-                            <property name="label">CLEAR</property>
-                            <property name="tooltip-text">Clear the NDEF read output</property>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                    <child>
-                      <object id="ndefReadBox" class="GtkBox">
-                        <property name="orientation">vertical</property>
-                        <child>
-                          <object id="ndefScrollableArea" class="GtkScrolledWindow">
-                            <property name="hexpand">True</property>
-                            <property name="vexpand">True</property>
-                            <property name="margin-start">4</property>
-                            <property name="margin-end">4</property>
-                            <property name="margin-bottom">4</property>
-                            <child>
-                              <object id="ndefText" class="GtkTextView">
-                                <property name="editable">False</property>
-                                <property name="wrap-mode">word</property>
-                                <property name="cursor-visible">False</property>
-                              </object>
-                            </child>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
-                  <object id="ndefWriteFrame" class="GtkFrame">
-                    <property name="hexpand">True</property>
-                    <property name="vexpand">True</property>
-                    <property name="margin-start">4</property>
-                    <property name="margin-end">4</property>
-                    <property name="margin-bottom">4</property>
-                    <child type="label">
-                      <object id="ndefWriteControlsBox" class="GtkBox">
-                        <property name="orientation">horizontal</property>
-                        <property name="spacing">8</property>
-                        <child>
-                          <object id="ndefWrite" class="GtkButton">
-                            <property name="label">WRITE</property>
-                            <property name="tooltip-text">Start discovery and write the NDEF message to the first activated card</property>
-                          </object>
-                        </child>
-                        <child>
-                          <object id="ndefWriteEditControls" class="GtkBox">
-                            <property name="orientation">horizontal</property>
-                            <property name="spacing">4</property>
-                            <child>
-                              <object id="ndefWriteType" class="GtkDropDown">
-                                <property name="tooltip-text">Record type</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object id="ndefWriteAdd" class="GtkButton">
-                                <property name="label">ADD</property>
-                                <property name="tooltip-text">Add a record with the values below to the message</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object id="ndefWriteRemove" class="GtkButton">
-                                <property name="label">REMOVE</property>
-                                <property name="tooltip-text">Remove the selected record from the message</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object id="ndefWriteClear" class="GtkButton">
-                                <property name="label">CLEAR</property>
-                                <property name="tooltip-text">Remove all records from the message</property>
-                              </object>
-                            </child>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                    <child>
-                      <object id="ndefWriteBox" class="GtkBox">
-                        <property name="orientation">vertical</property>
-                        <child>
-                          <object id="ndefWriteEditor" class="GtkBox">
-                            <property name="orientation">vertical</property>
-                            <property name="vexpand">True</property>
-                            <child>
-                              <object id="ndefWriteFields" class="GtkGrid">
-                                <property name="row-spacing">4</property>
-                                <property name="column-spacing">8</property>
-                                <property name="margin-start">4</property>
-                                <property name="margin-end">4</property>
-                                <property name="margin-bottom">4</property>
-                              </object>
-                            </child>
-                            <child>
-                              <object id="ndefWriteRecordsScroll" class="GtkScrolledWindow">
-                                <property name="hexpand">True</property>
-                                <property name="vexpand">True</property>
-                                <property name="min-content-height">60</property>
-                                <property name="margin-start">4</property>
-                                <property name="margin-end">4</property>
-                                <property name="margin-bottom">4</property>
-                                <child>
-                                  <object id="ndefWriteRecords" class="GtkListBox">
-                                    <property name="selection-mode">single</property>
-                                  </object>
-                                </child>
-                              </object>
-                            </child>
-                            <child>
-                              <object id="ndefWriteRawBytes" class="GtkLabel">
-                                <property name="label">Raw bytes: -</property>
-                                <property name="xalign">0</property>
-                                <property name="wrap">True</property>
-                                <property name="wrap-mode">char</property>
-                                <property name="selectable">True</property>
-                                <property name="margin-start">4</property>
-                                <property name="margin-end">4</property>
-                                <property name="margin-bottom">4</property>
-                                <style>
-                                  <class name="monospace"/>
-                                </style>
-                              </object>
-                            </child>
-                          </object>
-                        </child>
-                        <child>
-                          <object id="ndefWriteActionsBox" class="GtkBox">
-                            <property name="orientation">horizontal</property>
-                            <property name="spacing">8</property>
-                            <property name="margin-start">4</property>
-                            <property name="margin-end">4</property>
-                            <property name="margin-bottom">4</property>
-                            <child>
-                              <object id="ndefWriteStatus" class="GtkLabel">
-                                <property name="label">Add records and press WRITE to write them to a card.</property>
-                                <property name="xalign">0</property>
-                                <property name="wrap">True</property>
-                                <property name="hexpand">True</property>
-                              </object>
-                            </child>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-              </object>
-            </property>
-          </object>
-        </child>
+        <property name="visible-child-name">discovery</property>
         <child>
           <object class="GtkStackPage">
             <property name="name">polling</property>
@@ -688,6 +442,442 @@
                             <property name="xalign">0</property>
                             <property name="wrap">True</property>
                             <property name="hexpand">True</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">discovery</property>
+            <property name="title">Discovery</property>
+            <property name="child">
+              <object id="contentBox" class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object id="controlsBox" class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">4</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child>
+                      <object id="startstop" class="GtkButton">
+                        <property name="label">START</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="reset" class="GtkButton">
+                        <property name="label">RESET</property>
+                        <property name="action-name">app.reset</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object id="cardStatus" class="GtkLabel">
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-bottom">4</property>
+                  </object>
+                </child>
+                <child>
+                  <object id="scrollableArea" class="GtkScrolledWindow">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child>
+                      <object id="cardTable" class="GtkGrid">
+                        <property name="column-spacing">16</property>
+                        <property name="row-spacing">4</property>
+                        <property name="margin-start">4</property>
+                        <property name="margin-end">4</property>
+                        <property name="margin-top">4</property>
+                        <property name="margin-bottom">4</property>
+                        <property name="valign">start</property>
+                        <property name="halign">start</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">ndef</property>
+            <property name="title">NDEF</property>
+            <property name="child">
+              <object id="ndefBox" class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object id="ndefReadFrame" class="GtkFrame">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-top">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child type="label">
+                      <object id="ndefControlsBox" class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">4</property>
+                        <child>
+                          <object id="ndefRead" class="GtkButton">
+                            <property name="label">READ</property>
+                            <property name="tooltip-text">Start discovery and read the NDEF message of activated cards</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="ndefStop" class="GtkButton">
+                            <property name="label">STOP</property>
+                            <property name="tooltip-text">Stop discovery</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="ndefReadClear" class="GtkButton">
+                            <property name="label">CLEAR</property>
+                            <property name="tooltip-text">Clear the NDEF read output</property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="ndefReadBox" class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object id="ndefScrollableArea" class="GtkScrolledWindow">
+                            <property name="hexpand">True</property>
+                            <property name="vexpand">True</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                            <property name="margin-bottom">4</property>
+                            <child>
+                              <object id="ndefText" class="GtkTextView">
+                                <property name="editable">False</property>
+                                <property name="wrap-mode">word</property>
+                                <property name="cursor-visible">False</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object id="ndefWriteFrame" class="GtkFrame">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child type="label">
+                      <object id="ndefWriteControlsBox" class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object id="ndefWrite" class="GtkButton">
+                            <property name="label">WRITE</property>
+                            <property name="tooltip-text">Start discovery and write the NDEF message to the first activated card</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="ndefWriteEditControls" class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">4</property>
+                            <child>
+                              <object id="ndefWriteType" class="GtkDropDown">
+                                <property name="tooltip-text">Record type</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="ndefWriteAdd" class="GtkButton">
+                                <property name="label">ADD</property>
+                                <property name="tooltip-text">Add a record with the values below to the message</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="ndefWriteRemove" class="GtkButton">
+                                <property name="label">REMOVE</property>
+                                <property name="tooltip-text">Remove the selected record from the message</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="ndefWriteClear" class="GtkButton">
+                                <property name="label">CLEAR</property>
+                                <property name="tooltip-text">Remove all records from the message</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="ndefWriteBox" class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object id="ndefWriteEditor" class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="vexpand">True</property>
+                            <child>
+                              <object id="ndefWriteFields" class="GtkGrid">
+                                <property name="row-spacing">4</property>
+                                <property name="column-spacing">8</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <property name="margin-bottom">4</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="ndefWriteRecordsScroll" class="GtkScrolledWindow">
+                                <property name="hexpand">True</property>
+                                <property name="vexpand">True</property>
+                                <property name="min-content-height">60</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <property name="margin-bottom">4</property>
+                                <child>
+                                  <object id="ndefWriteRecords" class="GtkListBox">
+                                    <property name="selection-mode">single</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="ndefWriteRawBytes" class="GtkLabel">
+                                <property name="label">Raw bytes: -</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="wrap-mode">char</property>
+                                <property name="selectable">True</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <property name="margin-bottom">4</property>
+                                <style>
+                                  <class name="monospace"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="ndefWriteActionsBox" class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                            <property name="margin-bottom">4</property>
+                            <child>
+                              <object id="ndefWriteStatus" class="GtkLabel">
+                                <property name="label">Add records and press WRITE to write them to a card.</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="hexpand">True</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">hce</property>
+            <property name="title">HCE</property>
+            <property name="child">
+              <object id="hceTabBox" class="GtkBox">
+                <property name="orientation">vertical</property>
+                <child>
+                  <object id="hceFrame" class="GtkFrame">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child type="label">
+                      <object id="hceControlsBox" class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">8</property>
+                        <child>
+                          <object id="hceStartStop" class="GtkButton">
+                            <property name="label">START</property>
+                            <property name="tooltip-text">Start/stop emulating a Type 4 Tag with the NDEF message below</property>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="hceEditControls" class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">4</property>
+                            <child>
+                              <object id="hceType" class="GtkDropDown">
+                                <property name="tooltip-text">Record type</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="hceAdd" class="GtkButton">
+                                <property name="label">ADD</property>
+                                <property name="tooltip-text">Add a record with the values below to the message</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="hceRemove" class="GtkButton">
+                                <property name="label">REMOVE</property>
+                                <property name="tooltip-text">Remove the selected record from the message</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="hceClear" class="GtkButton">
+                                <property name="label">CLEAR</property>
+                                <property name="tooltip-text">Remove all records from the message</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="hceBox" class="GtkBox">
+                        <property name="orientation">vertical</property>
+                        <child>
+                          <object id="hceEditor" class="GtkBox">
+                            <property name="orientation">vertical</property>
+                            <property name="vexpand">True</property>
+                            <child>
+                              <object id="hceFields" class="GtkGrid">
+                                <property name="row-spacing">4</property>
+                                <property name="column-spacing">8</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <property name="margin-bottom">4</property>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="hceRecordsScroll" class="GtkScrolledWindow">
+                                <property name="hexpand">True</property>
+                                <property name="vexpand">True</property>
+                                <property name="min-content-height">60</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <property name="margin-bottom">4</property>
+                                <child>
+                                  <object id="hceRecords" class="GtkListBox">
+                                    <property name="selection-mode">single</property>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object id="hceRawBytes" class="GtkLabel">
+                                <property name="label">Raw bytes: -</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="wrap-mode">char</property>
+                                <property name="selectable">True</property>
+                                <property name="margin-start">4</property>
+                                <property name="margin-end">4</property>
+                                <property name="margin-bottom">4</property>
+                                <style>
+                                  <class name="monospace"/>
+                                </style>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object id="hceActionsBox" class="GtkBox">
+                            <property name="orientation">horizontal</property>
+                            <property name="spacing">8</property>
+                            <property name="margin-start">4</property>
+                            <property name="margin-end">4</property>
+                            <property name="margin-bottom">4</property>
+                            <child>
+                              <object id="hceStatus" class="GtkLabel">
+                                <property name="label">Add records and press START to emulate them.</property>
+                                <property name="xalign">0</property>
+                                <property name="wrap">True</property>
+                                <property name="hexpand">True</property>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Message written by reader</property>
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">False</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="min-content-height">80</property>
+                        <child>
+                          <object id="hceWrittenText" class="GtkTextView">
+                            <property name="editable">False</property>
+                            <property name="wrap-mode">word</property>
+                            <property name="cursor-visible">False</property>
+                            <property name="buffer">
+                              <object class="GtkTextBuffer">
+                                <property name="text">No message written yet.</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame">
+                    <property name="label">Emulation log</property>
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <property name="margin-start">4</property>
+                    <property name="margin-end">4</property>
+                    <property name="margin-bottom">4</property>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="min-content-height">100</property>
+                        <child>
+                          <object id="hceLog" class="GtkTextView">
+                            <property name="editable">False</property>
+                            <property name="wrap-mode">word</property>
+                            <property name="cursor-visible">False</property>
+                            <style>
+                              <class name="monospace"/>
+                            </style>
+                            <property name="buffer">
+                              <object class="GtkTextBuffer">
+                                <property name="text"></property>
+                              </object>
+                            </property>
                           </object>
                         </child>
                       </object>

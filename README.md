@@ -5,7 +5,7 @@ GTK4 application using the PTX205R and the RUL SDK 1.2.1 reference implementatio
 ## Modifications made to the SDK example
 
 The project is based on the SDK's `NFC_FORUM_BASIC_DISCOVERY` example.
-`CMakeLists.txt` under `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY` was modified to work with GTK and NDEF reading/writing. In addition to the NDEF component of the SDK, it also builds the SDK's NDEF record sources (`SRC/API/NDEF/RECORDS`).
+`CMakeLists.txt` under `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY` was modified to work with GTK and NDEF reading/writing. In addition to the NDEF component of the SDK, it also builds the SDK's NDEF record sources (`SRC/API/NDEF/RECORDS`) and, for the *HCE* tab, the RUL HCE component (`SRC/API/RUL_HCE`, `ptx_RUL_HCE.c`) and the Type 4 Tag emulation add-on `ptx_HCET4T.c` (copied unchanged from the SDK's `ptx_Example_HCET4T` example to `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/HCE_T4T`).
 The source and header files under `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery` were modified and unnecessary pieces of application code were removed.
 `ptx_ExampleNdefRecords.c` and `ptx_ExampleNdefRecords.h` were added there, they contain the definitions of the standard NDEF record types that can be written.
 The basic structure of the SDK deliverable was kept, only unnecessary project and example files and directories were removed.
@@ -99,10 +99,11 @@ The settings schema file `app.gschema.xml` is only required for compiling the se
 ## Under the hood
 
 When the application is launched, UI files and settings are loaded, and the PTX is initialized in a separate thread.
-If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab. The discovery settings are configured on the *Polling* tab.
+If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab. The discovery settings are configured on the *Polling* tab. On the *HCE* tab, the PTX emulates a Type 4 Tag.
 Discovery and the NDEF operations share one discovery loop, which runs in a separate thread and polls for RF-technologies A, B, F, V.
 The *Discovery* tab supports multiple cards in the field, the *NDEF* tab supports only one single card.
-While discovery is running, the tabs cannot be switched.
+The card emulation of the *HCE* tab runs in the same thread, instead of the discovery loop.
+While discovery or the emulation is running, the tabs cannot be switched.
 
 If the initialization fails, an error message will be displayed and the application must be closed.
 If discovery fails to start or the discovery loop ends with an error, an error message will be displayed and the application must be closed.
@@ -209,6 +210,24 @@ Record types are defined by a table in `ptx_ExampleNdefRecords.c`.
 To add a new type, define its fields (`NdefFieldDef` array) and its encoder function, which turns the field values into an NDEF record, and add a row to the `RECORD_TYPES` table.
 The record type picker and the input form of the *NDEF* tab are generated from the table, no UI changes are needed.
 
+### HCE
+
+The *HCE* tab (host card emulation) makes the PTX205R emulate an NFC-A Type 4 Tag (NFC Forum T4T) that carries an NDEF message, as in the SDK's `ptx_Example_HCET4T` example.
+The emulation is started and stopped with the START/STOP button.
+The NDEF message is composed with the same editor as the write section of the *NDEF* tab (record type picker, ADD, REMOVE and CLEAR buttons, input fields, record list, raw bytes).
+The default message is a single URI record, `https://www.renesas.com/en/products/ptx205r`.
+Every START resets the emulated NDEF file to the message of the editor; if the editor is empty, the default record is added to the editor first.
+The editor is locked while the emulation is running.
+
+The tag is writable (read and write access 0x00 in the capability container, max. NDEF file size 512 bytes, so readers can write messages of up to 510 bytes).
+When a reader writes a new NDEF message, it is displayed in the *Message written by reader* box: the decoded records, as on the *NDEF* tab, and the raw bytes.
+The message is detected when a reader has written a valid NLEN (the NFC Forum procedure sets NLEN to 0, writes the message and finally writes the new NLEN), or, as a fallback, when the reader deactivates the tag or switches the field off.
+A written message is served until STOP, the next START resets the tag to the message of the editor.
+The *Emulation log* lists the events: field on/off, activation and deactivation by the reader, the C-APDUs (SELECT, READ BINARY, UPDATE BINARY) with their status words, and RF errors.
+
+The tag uses the NFCID1 `08 01 02 03`, SENS_RES `01 00` and ATS `05 78 00 71 02` of the SDK example; the PTX is in listen mode only (no polling).
+The Polling tab settings and the RESET menu item do not apply to the emulation.
+
 ### Polling
 
 The *Polling* tab exposes the RF-discovery settings (`ptx_RUL_DiscoverConfig_t`) used by the application:
@@ -232,11 +251,12 @@ The settings are not stored, the defaults are used whenever the application is l
 
 ## The UI
 
-The main window has three tabs, *Discovery*, *NDEF* and *Polling*, and a menu button.
+The main window has four tabs, *Polling*, *Discovery*, *NDEF* and *HCE* (in this order), and a menu button. The *Discovery* tab is shown when the application is launched.
+The *Polling* tab has the general discovery settings (idle time, LPCD), a table with the settings per RF-technology and the RESTORE DEFAULTS button.
 The *Discovery* tab has the START/STOP and RESET buttons, the number of detected cards and a table with the information of all detected cards.
 The *NDEF* tab has a read section with the READ, STOP and CLEAR buttons on top and a text box for the NDEF message, and a write section with the WRITE button, the record type picker and the ADD, REMOVE and CLEAR buttons on top.
 The write section also has the input fields of the selected record type, the list of records, the raw bytes of the message and a status label.
-The *Polling* tab has the general discovery settings (idle time, LPCD), a table with the settings per RF-technology and the RESTORE DEFAULTS button.
+The *HCE* tab has a frame with the START/STOP button, the record type picker and the ADD, REMOVE and CLEAR buttons on top, the input fields, the list of records, the raw bytes of the message and a status label, followed by the *Message written by reader* box and the *Emulation log*.
 There's also a window for the preferences and the about information, which can be opened from the menu.
 
 Menu items:

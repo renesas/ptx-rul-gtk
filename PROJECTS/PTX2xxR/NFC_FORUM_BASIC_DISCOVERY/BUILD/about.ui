@@ -10,11 +10,13 @@
 
 Polls for RF-technologies A, B, F, V.
 
+Polling tab: the discovery settings - idle time, low power card detection (LPCD) and, per RF-technology, enable, poll frequency, max. number of devices and the Type-F bit rate (212 or 424 kbit/s). Settings are used the next time discovery is started and are not stored.
+
 Discovery tab: all cards in the field (up to 5 per RF-technology, 20 in total per discovery cycle) are displayed in a table, with RF-technology, protocol, nominal bit rate, ID, the number of detections and technology-specific details. Detected cards stay in the list until discovery is restarted (STOP and START, or RESET). Discovery is started and stopped with START/STOP, RESET clears the list and restarts discovery.
 
 NDEF tab: only one single card in the field is supported. READ starts discovery and reads the NDEF message of activated cards, STOP stops it and CLEAR clears the output. If a card is activated, a one-line card summary (RF-technology, protocol, ID) is displayed, followed by the NDEF records of the card in decoded form (URI, Text, Smart Poster, MIME, absolute URI, external types) and the raw bytes of the NDEF message. NDEF messages can also be composed from standard record types (URI, Text, Smart Poster, Phone, Email, SMS, Geo location, vCard, MIME, Wi-Fi, Android app) and written to a card with WRITE. Writing waits for a card for max. 10 polling cycles, then stops discovery.
 
-Polling tab: the discovery settings - idle time, low power card detection (LPCD) and, per RF-technology, enable, poll frequency, max. number of devices and the Type-F bit rate (212 or 424 kbit/s). Settings are used the next time discovery is started and are not stored.
+HCE tab: host card emulation - the PTX205R emulates an NFC-A Type 4 Tag carrying an NDEF message, composed with the same editor as on the NDEF tab (default: URI https://www.renesas.com/en/products/ptx205r). The emulation is started and stopped with START/STOP. The tag is writable: an NDEF message written by a reader is displayed, together with an emulation log. Every START resets the tag to the message of the editor.
 
 LICENSE INFORMATION
 
