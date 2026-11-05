@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "linux-spi",
+      "displayName": "Linux, SPI, console printing, file logging",
+      "binaryDir": "${sourceDir}/BUILD",
+      "cacheVariables": {
+        "PTX_BUILD_LIN": "ON",
+        "PTX_ENABLE_SPI": "ON",
+        "PTX_UTILITY_PRINTING": "Console",
+        "PTX_LOGGING": "File"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "linux-spi", "configurePreset": "linux-spi" }
+  ]
+}

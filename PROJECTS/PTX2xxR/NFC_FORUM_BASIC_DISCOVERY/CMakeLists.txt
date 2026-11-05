@@ -419,11 +419,15 @@ target_sources(${TARGET_EXE_NAME} PRIVATE
 # link GTK
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE PkgConfig::GTK4)
 
-# Embed the UI files (BUILD/*.ui) into the executable as a GResource
+# Application sources: UI files, GSettings schema, desktop integration
+set(APP_DIR "${CMAKE_SOURCE_DIR}/../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery")
+
+# Embed the UI files (UI/*.ui) into the executable as a GResource
 pkg_get_variable(GLIB_COMPILE_RESOURCES gio-2.0 glib_compile_resources)
-set(APP_RESOURCE_XML "${CMAKE_SOURCE_DIR}/ptx_App.gresource.xml")
+pkg_get_variable(GLIB_COMPILE_SCHEMAS gio-2.0 glib_compile_schemas)
+set(APP_RESOURCE_XML "${APP_DIR}/UI/ptx_App.gresource.xml")
 set(APP_RESOURCE_SRC "${CMAKE_BINARY_DIR}/ptx_App_resources.c")
-set(APP_UI_DIR "${CMAKE_SOURCE_DIR}/BUILD")
+set(APP_UI_DIR "${APP_DIR}/UI")
 set(APP_UI_FILES ${APP_UI_DIR}/window.ui ${APP_UI_DIR}/menu.ui ${APP_UI_DIR}/prefs.ui ${APP_UI_DIR}/about.ui)
 add_custom_command(
 	OUTPUT "${APP_RESOURCE_SRC}"
@@ -432,6 +436,20 @@ add_custom_command(
 	COMMENT "Compiling UI resources"
 )
 target_sources(${TARGET_EXE_NAME} PRIVATE "${APP_RESOURCE_SRC}")
+
+# Compile the GSettings schema into BUILD/schemas (the executable looks there at runtime)
+set(APP_SCHEMA_XML "${APP_DIR}/DATA/com.renesas.nfc.gschema.xml")
+set(APP_SCHEMA_DIR "${CMAKE_BINARY_DIR}/schemas")
+add_custom_command(
+	OUTPUT "${APP_SCHEMA_DIR}/gschemas.compiled"
+	COMMAND ${CMAKE_COMMAND} -E make_directory ${APP_SCHEMA_DIR}
+	COMMAND ${CMAKE_COMMAND} -E copy ${APP_SCHEMA_XML} ${APP_SCHEMA_DIR}/
+	COMMAND ${GLIB_COMPILE_SCHEMAS} ${APP_SCHEMA_DIR}
+	DEPENDS ${APP_SCHEMA_XML}
+	COMMENT "Compiling GSettings schema"
+)
+add_custom_target(app_schemas ALL DEPENDS "${APP_SCHEMA_DIR}/gschemas.compiled")
+add_dependencies(${TARGET_EXE_NAME} app_schemas)
 
 if (PTX_BUILD_MCU)
 	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL RA4M2_NFC_FORUM_BASIC_DISCOVERY)
@@ -461,11 +479,11 @@ if (NOT PTX_BUILD_MCU)
 	set_target_properties(${TARGET_EXE_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 	install(TARGETS ${TARGET_EXE_NAME} RUNTIME DESTINATION bin)
 	install(TARGETS RUL LIBRARY DESTINATION lib)
-	install(FILES "${CMAKE_SOURCE_DIR}/BUILD/app.gschema.xml" DESTINATION share/glib-2.0/schemas)
+	install(FILES "${APP_SCHEMA_XML}" DESTINATION share/glib-2.0/schemas)
 	install(FILES "${CMAKE_SOURCE_DIR}/../../../COPYING" "${CMAKE_SOURCE_DIR}/../../../COPYING.LESSER" "${CMAKE_SOURCE_DIR}/../../../DEPENDENCIES.md"
 		DESTINATION share/doc/ptx205r-gtk)
-	install(FILES "${CMAKE_SOURCE_DIR}/../../../tools/appimage/com.renesas.nfc.desktop" DESTINATION share/applications)
-	install(FILES "${CMAKE_SOURCE_DIR}/../../../tools/appimage/com.renesas.nfc.png" DESTINATION share/icons/hicolor/256x256/apps)
+	install(FILES "${APP_DIR}/DATA/com.renesas.nfc.desktop" DESTINATION share/applications)
+	install(FILES "${APP_DIR}/DATA/com.renesas.nfc.png" DESTINATION share/icons/hicolor/256x256/apps)
 endif()
 
 target_include_directories(${TARGET_EXE_NAME} PUBLIC 

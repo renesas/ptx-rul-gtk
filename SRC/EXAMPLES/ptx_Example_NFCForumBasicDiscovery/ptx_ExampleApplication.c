@@ -166,7 +166,6 @@ static const uint8_t EXAMPLE_NUMBER_OF_TIMERS = 2;
 #define NDEF_RECORD_TYPE_RTD_SMART_POSTER_LEN (2u)
 #define APP_TEXT_BUFFER_SIZE 256u
 #define HEX_BUFFER_SIZE     256u
-#define CWD_BUFFER_SIZE     4096u
 #define ERROR_MSG_SIZE      512u
 
 /* Host card emulation (HCE tab): the PTX emulates an NFC-A Type 4 Tag. */
@@ -2364,16 +2363,16 @@ static void onActivate(GtkApplication *app, gpointer userData)
     g_object_set_data_full(G_OBJECT(app), "app-state", state, (GDestroyNotify)freeAppState);
 
     // set up settings
-    g_setenv("GSETTINGS_SCHEMA_DIR", ".", FALSE); // compiled schema file is expected to be inside the current working directory
-    char cwdPath[CWD_BUFFER_SIZE];
-    gchar *cwd = g_get_current_dir();
-    if (!cwd) {
-        g_warning("Failed to get current directory, using fallback");
-        cwd = g_strdup(".");
-    }
-    snprintf(cwdPath, sizeof(cwdPath), "%s/", cwd);
-    state->settings = g_settings_new_with_path("app", cwdPath);
-    g_free(cwd);
+    // The compiled schema is expected in the "schemas" directory next to the executable (created by cmake),
+    // unless GSETTINGS_SCHEMA_DIR is already set (e.g. by the AppImage)
+    gchar *exePath = g_file_read_link("/proc/self/exe", NULL);
+    gchar *exeDir = exePath ? g_path_get_dirname(exePath) : g_strdup(".");
+    gchar *schemaDir = g_build_filename(exeDir, "schemas", NULL);
+    g_setenv("GSETTINGS_SCHEMA_DIR", schemaDir, FALSE);
+    g_free(schemaDir);
+    g_free(exeDir);
+    g_free(exePath);
+    state->settings = g_settings_new("com.renesas.nfc");
     /* The setting is the single source of truth for the theme: GTK follows it on startup and whenever it changes
      * (the switch in the Preferences window is bound to the same key). */
     g_settings_bind(state->settings, "dark-mode", gtk_settings_get_default(), "gtk-application-prefer-dark-theme",

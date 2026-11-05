@@ -37,64 +37,61 @@ Connect the PTX board via USB-C for power.
 - GTK4 - install the `libgtk-4-dev` package
 - cmake
 
+## Project layout
+
+The sources of the GUI are next to the application code in `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery`:
+- `UI/` - the GTK UI files (`window.ui`, `menu.ui`, `prefs.ui`, `about.ui`) and `ptx_App.gresource.xml`, the list of files embedded into the executable
+- `DATA/` - the settings schema `com.renesas.nfc.gschema.xml`, the desktop file and the icon (used for the AppImage)
+
+The `BUILD` directory under `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY` only contains generated files and can be deleted at any time.
+
 ## Application settings
 
 The application permanently stores preferences using `GSettings`.
-The settings are defined in `app.gschema.xml`, and actual settings are stored in `gschemas.compiled`.
-Both files are located in the `BUILD` directory.
+The settings are defined in `DATA/com.renesas.nfc.gschema.xml`. During the build, cmake compiles the schema into `BUILD/schemas/gschemas.compiled`.
+The executable looks for the compiled schema in the `schemas` directory next to it (unless `GSETTINGS_SCHEMA_DIR` is set), so it can be started from any directory.
+The values themselves are stored by GSettings in the user's settings backend (dconf), not in the schema file.
 
-Each time settings are modified, the settings file must be compiled again, by running the following command from the `BUILD` directory:
-```
-glib-compile-schemas .
-```
 For the sake of demonstration, there's one setting implemented, which is a switch to enable or disable dark mode.
 It can be accessed by clicking the menu button and *Preferences*.
-The state of the switch is bound to the setting stored in `gschemas.compiled`.
-When the switch is changed, `gschemas.compiled` is updated.
-Upon launching the application, the setting is retrieved from `gschemas.compiled` and applied.
-When opening the *Preferences* window, the state of the switch is set according to the setting in `gschemas.compiled`.
-The presence of a compiled settings file with the expected settings is necessary for running the application.
+The state of the switch is bound to the setting, and the setting is bound to GTK's dark theme property, so the theme changes when the switch is changed.
+Upon launching the application, the stored value is applied.
+A compiled schema with the expected settings is necessary for running the application.
 
 ## Build and run
 
-Change to the build directory: `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY/BUILD`.
-
-Configure cmake for Linux, SPI and the Console for printing log messages and File for internal logging:
+Configure and build with the preset, from `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY`:
+```
+cmake --preset linux-spi
+cmake --build --preset linux-spi
+```
+The preset (`CMakePresets.json`) builds in `BUILD` for Linux and SPI, with the Console for printing log messages and File for internal logging.
+This is the same as running the following from the `BUILD` directory:
 ```
 cmake .. -DPTX_BUILD_LIN=ON -DPTX_ENABLE_SPI=ON -DPTX_UTILITY_PRINTING=Console -DPTX_LOGGING=File
-```
-
-Build:
-```
 cmake --build .
 ```
 
 Run:
 ```
-./NFC_FORUM_BASIC_DISCOVERY
+./BUILD/NFC_FORUM_BASIC_DISCOVERY
 ```
-
-The `.ui` files in `BUILD` are embedded at build time, so after editing one of them the application must be rebuilt (`cmake --build .`).
 
 The application can also be launched by double-clicking the executable.
 If the application is run from the command line, information will be printed there.
+The UI files are embedded at build time, so after editing one of them the application must be rebuilt.
 
 ## Necessary files for running the application
 
-All necessary files for running the application are inside the `BUILD` directory, from where it must be launched.
-
-The UI files (`window.ui`, `prefs.ui`, `menu.ui`, `about.ui`) are compiled into the executable as a GResource (`ptx_App.gresource.xml`), so they are not needed at runtime.
-
-For running the executable outside the `BUILD` directory, the following files must be copied and they must be inside the same directory as the executable:
-- `libRUL.so` - RUL shared library - need to run `export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH` from `BUILD` once in order to add the path
-- `gschemas.compiled` - the compiled settings file, where the actual settings are stored
+The `BUILD` directory contains everything that is needed.
+The following files must be inside the same directory as the executable:
+- `libRUL.so` - RUL shared library - for running from another directory, `LD_LIBRARY_PATH` must contain its directory, e.g. `export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH` from `BUILD`
+- `schemas/gschemas.compiled` - the compiled settings schema
 
 When distributing the application, the following license files must also be included alongside the executable (they are copied to the `BUILD` directory by cmake):
 - `COPYING` - LGPL v2.1 full text
 - `COPYING.LESSER` - LGPL v2.1 clarification
 - `DEPENDENCIES.md` - list of dependencies and their licenses
-
-The settings schema file `app.gschema.xml` is only required for compiling the settings file once, not for running the application.
 
 ## AppImage
 
@@ -107,7 +104,7 @@ Requirements on the target Raspberry Pi 5:
 - FUSE 2 (`libfuse2t64`), or run with `--appimage-extract-and-run`
 
 Notes:
-- The settings are stored with the GSettings keyfile backend in `~/.config/glib-2.0/settings/keyfile`, not in `gschemas.compiled`.
+- The settings are stored with the GSettings keyfile backend in `~/.config/glib-2.0/settings/keyfile`.
 - The AppImage uses GTK's built-in default theme (light or dark according to the setting).
 - `LogOutput.txt` is written to the current working directory.
 - The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files are in `usr/share/doc/ptx205r-gtk`.

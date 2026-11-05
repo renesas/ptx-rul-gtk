@@ -68,16 +68,9 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 
-# sdk
-**/BUILD/LogOutput.txt
-**/BUILD/ptx_App_resources.c
-/LogOutput.txt
-**/BUILD/NFC_FORUM_BASIC_DISCOVERY
-
-# license
-**/BUILD/COPYING
-**/BUILD/COPYING.LESSER
-**/BUILD/DEPENDENCIES.md
+# build output (everything inside BUILD is generated)
+**/BUILD/*
+!**/BUILD/.gitkeep
 
 # vscode
 .vscode/
@@ -86,3 +79,4 @@ CMakeUserPresets.json
 tools/appimage/.cache/
 tools/appimage/build/
 *.AppImage
+/LogOutput.txt
