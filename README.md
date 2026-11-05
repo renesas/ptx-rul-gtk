@@ -74,6 +74,8 @@ Run:
 ./NFC_FORUM_BASIC_DISCOVERY
 ```
 
+The `.ui` files in `BUILD` are embedded at build time, so after editing one of them the application must be rebuilt (`cmake --build .`).
+
 The application can also be launched by double-clicking the executable.
 If the application is run from the command line, information will be printed there.
 
@@ -81,12 +83,10 @@ If the application is run from the command line, information will be printed the
 
 All necessary files for running the application are inside the `BUILD` directory, from where it must be launched.
 
+The UI files (`window.ui`, `prefs.ui`, `menu.ui`, `about.ui`) are compiled into the executable as a GResource (`ptx_App.gresource.xml`), so they are not needed at runtime.
+
 For running the executable outside the `BUILD` directory, the following files must be copied and they must be inside the same directory as the executable:
 - `libRUL.so` - RUL shared library - need to run `export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH` from `BUILD` once in order to add the path
-- `window.ui` - main window file
-- `prefs.ui` - preferences window file
-- `menu.ui` - menu file
-- `about.ui` - about window file
 - `gschemas.compiled` - the compiled settings file, where the actual settings are stored
 
 When distributing the application, the following license files must also be included alongside the executable (they are copied to the `BUILD` directory by cmake):
@@ -95,6 +95,21 @@ When distributing the application, the following license files must also be incl
 - `DEPENDENCIES.md` - list of dependencies and their licenses
 
 The settings schema file `app.gschema.xml` is only required for compiling the settings file once, not for running the application.
+
+## AppImage
+
+`tools/appimage/build-appimage.sh` builds a portable AppImage (`PTX205R_Discovery-<version>-<arch>.AppImage` in the repository root).
+It builds the application, installs it into an AppDir (CMake `install()` rules) and bundles GTK4 and its dependencies and `libRUL.so` with linuxdeploy and its GTK plugin (downloaded to `tools/appimage/.cache` on first use, internet access needed).
+The AppImage runs on systems with the same or a newer glibc than the build machine, so build it on the oldest OS that must be supported (e.g. Raspberry Pi OS Trixie).
+
+Requirements on the target Raspberry Pi 5:
+- SPI enabled (`dtparam=spi=on`), and the user must be allowed to access `/dev/spidev0.0` and `/dev/gpiochip0` (groups `spi` and `gpio`)
+- FUSE 2 (`libfuse2t64`), or run with `--appimage-extract-and-run`
+
+Notes:
+- The settings are stored with the GSettings keyfile backend in `~/.config/glib-2.0/settings/keyfile`, not in `gschemas.compiled`.
+- `LogOutput.txt` is written to the current working directory.
+- The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files are in `usr/share/doc/ptx205r-gtk`.
 
 ## Under the hood
 

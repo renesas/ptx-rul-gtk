@@ -70,6 +70,8 @@ CMakeUserPresets.json
 
 # sdk
 **/BUILD/LogOutput.txt
+**/BUILD/ptx_App_resources.c
+/LogOutput.txt
 **/BUILD/NFC_FORUM_BASIC_DISCOVERY
 
 # license
@@ -79,3 +81,8 @@ CMakeUserPresets.json
 
 # vscode
 .vscode/
+
+# appimage
+tools/appimage/.cache/
+tools/appimage/build/
+*.AppImage

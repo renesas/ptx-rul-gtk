@@ -419,6 +419,20 @@ target_sources(${TARGET_EXE_NAME} PRIVATE
 # link GTK
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE PkgConfig::GTK4)
 
+# Embed the UI files (BUILD/*.ui) into the executable as a GResource
+pkg_get_variable(GLIB_COMPILE_RESOURCES gio-2.0 glib_compile_resources)
+set(APP_RESOURCE_XML "${CMAKE_SOURCE_DIR}/ptx_App.gresource.xml")
+set(APP_RESOURCE_SRC "${CMAKE_BINARY_DIR}/ptx_App_resources.c")
+set(APP_UI_DIR "${CMAKE_SOURCE_DIR}/BUILD")
+set(APP_UI_FILES ${APP_UI_DIR}/window.ui ${APP_UI_DIR}/menu.ui ${APP_UI_DIR}/prefs.ui ${APP_UI_DIR}/about.ui)
+add_custom_command(
+	OUTPUT "${APP_RESOURCE_SRC}"
+	COMMAND ${GLIB_COMPILE_RESOURCES} --target=${APP_RESOURCE_SRC} --sourcedir=${APP_UI_DIR} --generate-source ${APP_RESOURCE_XML}
+	DEPENDS ${APP_RESOURCE_XML} ${APP_UI_FILES}
+	COMMENT "Compiling UI resources"
+)
+target_sources(${TARGET_EXE_NAME} PRIVATE "${APP_RESOURCE_SRC}")
+
 if (PTX_BUILD_MCU)
 	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL RA4M2_NFC_FORUM_BASIC_DISCOVERY)
 else()
@@ -441,6 +455,18 @@ configure_file(
 	"${CMAKE_BINARY_DIR}/DEPENDENCIES.md"
 	COPYONLY
 )
+
+# AppImage / install layout (see tools/appimage/build-appimage.sh)
+if (NOT PTX_BUILD_MCU)
+	set_target_properties(${TARGET_EXE_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+	install(TARGETS ${TARGET_EXE_NAME} RUNTIME DESTINATION bin)
+	install(TARGETS RUL LIBRARY DESTINATION lib)
+	install(FILES "${CMAKE_SOURCE_DIR}/BUILD/app.gschema.xml" DESTINATION share/glib-2.0/schemas)
+	install(FILES "${CMAKE_SOURCE_DIR}/../../../COPYING" "${CMAKE_SOURCE_DIR}/../../../COPYING.LESSER" "${CMAKE_SOURCE_DIR}/../../../DEPENDENCIES.md"
+		DESTINATION share/doc/ptx205r-gtk)
+	install(FILES "${CMAKE_SOURCE_DIR}/../../../tools/appimage/com.renesas.nfc.desktop" DESTINATION share/applications)
+	install(FILES "${CMAKE_SOURCE_DIR}/../../../tools/appimage/com.renesas.nfc.png" DESTINATION share/icons/hicolor/256x256/apps)
+endif()
 
 target_include_directories(${TARGET_EXE_NAME} PUBLIC 
 	../../../SRC/EXAMPLES

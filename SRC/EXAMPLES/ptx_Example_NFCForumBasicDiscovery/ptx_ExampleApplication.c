@@ -2077,17 +2077,20 @@ static void setupAboutWindow(GtkBuilder *builder, AppState *state)
     }
 }
 
+/* The UI files are compiled into the executable (ptx_App.gresource.xml) */
+#define APP_RESOURCE_PATH "/com/renesas/nfc/"
+
 /* Generic window loader that handles common setup */
-static GtkWindow* loadWindowFromUI(const char *filename, const char *objectName,
+static GtkWindow* loadWindowFromUI(const char *resourcePath, const char *objectName,
                                     GtkApplication *app, GtkWindow *parent,
                                     AppState *state,
                                     void (*setupFn)(GtkBuilder*, AppState*))
 {
-    GtkBuilder *builder = gtk_builder_new_from_file(filename);
+    GtkBuilder *builder = gtk_builder_new_from_resource(resourcePath);
     GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, objectName));
 
     if (!window) {
-        g_warning("Failed to load '%s' from %s", objectName, filename);
+        g_warning("Failed to load '%s' from %s", objectName, resourcePath);
         g_object_unref(builder);
         return NULL;
     }
@@ -2103,12 +2106,12 @@ static GtkWindow* loadWindowFromUI(const char *filename, const char *objectName,
 
 static GtkWindow *loadPrefsWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
 {
-    return loadWindowFromUI("prefs.ui", "prefsWindow", app, parent, state, setupPrefsWindow);
+    return loadWindowFromUI(APP_RESOURCE_PATH "prefs.ui", "prefsWindow", app, parent, state, setupPrefsWindow);
 }
 
 static GtkWindow *loadAboutWindow(GtkApplication *app, AppState *state, GtkWindow *parent)
 {
-    return loadWindowFromUI("about.ui", "aboutWindow", app, parent, state, setupAboutWindow);
+    return loadWindowFromUI(APP_RESOURCE_PATH "about.ui", "aboutWindow", app, parent, state, setupAboutWindow);
 }
 
 static void onReset(GSimpleAction *action, GVariant *parameter, gpointer userData)
@@ -2388,7 +2391,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", state->darkMode, NULL);
 
     // set up UI
-    GtkBuilder *windowBuilder = gtk_builder_new_from_file("window.ui");
+    GtkBuilder *windowBuilder = gtk_builder_new_from_resource(APP_RESOURCE_PATH "window.ui");
     /* Connect signal handlers to the constructed widgets. */
     GObject *window = gtk_builder_get_object(windowBuilder, "window");
     gtk_window_set_application(GTK_WINDOW(window), app);
@@ -2579,7 +2582,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
 
     // set up menu
     GObject *menuButton = gtk_builder_get_object(windowBuilder, "menu");
-    GtkBuilder *menuBuilder = gtk_builder_new_from_file("menu.ui");
+    GtkBuilder *menuBuilder = gtk_builder_new_from_resource(APP_RESOURCE_PATH "menu.ui");
     GMenuModel *menuModel = G_MENU_MODEL(gtk_builder_get_object(menuBuilder, "menu"));
     gtk_menu_button_set_menu_model(GTK_MENU_BUTTON(menuButton), menuModel);
 
