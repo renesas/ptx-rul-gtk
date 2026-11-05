@@ -315,7 +315,6 @@ typedef struct {
 } NdefEditor;
 
 struct AppState {
-    gboolean darkMode;
     GtkLabel *cardStatusLabel;                 /* Discovery tab: status and number of cards */
     GtkGrid *cardTable;                        /* Discovery tab: one row per card */
     guint cardRowsShown;                       /* Number of card rows in the table */
@@ -2035,25 +2034,13 @@ static void onCloseRequest(GtkApplication *app, gpointer userData)
     gtk_window_destroy(GTK_WINDOW(userData));
 }
 
-static gboolean onDarkModeSwitchSet(GtkSwitch *self, gboolean state, gpointer userData)
-{
-    (void)self;
-    (void)userData;
-    
-    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", state, NULL);
-    // Return FALSE to let the switch change its visual state normally
-    return FALSE; 
-}
-
 /* Setup function for preferences window */
 static void setupPrefsWindow(GtkBuilder *builder, AppState *state)
 {
     state->darkModeSwitch = GTK_SWITCH(gtk_builder_get_object(builder, "darkModeSwitch"));
-    gtk_switch_set_active(state->darkModeSwitch, state->darkMode);
     g_settings_bind(state->settings, "dark-mode",
                     state->darkModeSwitch, "active",
                     G_SETTINGS_BIND_DEFAULT);
-    g_signal_connect(state->darkModeSwitch, "state-set", G_CALLBACK(onDarkModeSwitchSet), NULL);
 }
 
 /* Setup function for about window: show the application version in the window and header bar title */
@@ -2387,8 +2374,10 @@ static void onActivate(GtkApplication *app, gpointer userData)
     snprintf(cwdPath, sizeof(cwdPath), "%s/", cwd);
     state->settings = g_settings_new_with_path("app", cwdPath);
     g_free(cwd);
-    state->darkMode = g_settings_get_boolean(state->settings, "dark-mode");
-    g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme", state->darkMode, NULL);
+    /* The setting is the single source of truth for the theme: GTK follows it on startup and whenever it changes
+     * (the switch in the Preferences window is bound to the same key). */
+    g_settings_bind(state->settings, "dark-mode", gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
+                    G_SETTINGS_BIND_GET);
 
     // set up UI
     GtkBuilder *windowBuilder = gtk_builder_new_from_resource(APP_RESOURCE_PATH "window.ui");

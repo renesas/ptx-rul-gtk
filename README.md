@@ -108,6 +108,7 @@ Requirements on the target Raspberry Pi 5:
 
 Notes:
 - The settings are stored with the GSettings keyfile backend in `~/.config/glib-2.0/settings/keyfile`, not in `gschemas.compiled`.
+- The AppImage uses GTK's built-in default theme (light or dark according to the setting).
 - `LogOutput.txt` is written to the current working directory.
 - The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files are in `usr/share/doc/ptx205r-gtk`.
 

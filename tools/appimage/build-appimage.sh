@@ -38,6 +38,9 @@ glib-compile-schemas "$APPDIR/usr/share/glib-2.0/schemas"
 mkdir -p "$APPDIR/apprun-hooks"
 cat > "$APPDIR/apprun-hooks/ptx-env.sh" <<'HOOK'
 export GSETTINGS_BACKEND=keyfile
+# The GTK plugin forces GTK_THEME="Adwaita:light" / "Adwaita:dark". Remove it so that GTK behaves as in the plain
+# build and honours gtk-application-prefer-dark-theme (the app's dark-mode switch).
+unset GTK_THEME
 HOOK
 
 # 3. Bundle the libraries and create the AppImage
