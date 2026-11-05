@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <object id="window" class="GtkWindow">
-    <property name="title">PTX205R</property>
+    <property name="title">PTX205R NFC Explorer</property>
     <property name="default-width">700</property>
     <property name="default-height">600</property>
     <child type="titlebar">

@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=PTX205R Discovery
+Name=PTX205R NFC Explorer
 Comment=NFC discovery, NDEF and card emulation with the PTX205R reader
-Exec=NFC_FORUM_BASIC_DISCOVERY
+Exec=ptx205r-nfc-explorer
 Icon=com.renesas.nfc
 Categories=Utility;
 Terminal=false

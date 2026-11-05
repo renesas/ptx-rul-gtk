@@ -1,12 +1,12 @@
-# GTK4 Discovery Application
+# PTX205R NFC Explorer
 
-GTK4 application using the PTX205R and the RUL SDK 1.2.1 reference implementation for the Raspberry Pi and SPI.
+GTK4 application (NFC discovery, NDEF read/write and card emulation) using the PTX205R and the RUL SDK 1.2.1 reference implementation for the Raspberry Pi and SPI.
 
 ## Modifications made to the SDK example
 
-The project is based on the SDK's `NFC_FORUM_BASIC_DISCOVERY` example.
-`CMakeLists.txt` under `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY` was modified to work with GTK and NDEF reading/writing. In addition to the NDEF component of the SDK, it also builds the SDK's NDEF record sources (`SRC/API/NDEF/RECORDS`) and, for the *HCE* tab, the RUL HCE component (`SRC/API/RUL_HCE`, `ptx_RUL_HCE.c`) and the Type 4 Tag emulation add-on `ptx_HCET4T.c` (copied unchanged from the SDK's `ptx_Example_HCET4T` example to `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/HCE_T4T`).
-The source and header files under `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery` were modified and unnecessary pieces of application code were removed.
+The project is based on the SDK's `NFC_FORUM_BASIC_DISCOVERY` example. The project directory (`PROJECTS/PTX2xxR/NFC_EXPLORER`), the source directory (`SRC/EXAMPLES/ptx_NFCExplorer`) and the executable (`ptx205r-nfc-explorer`) were renamed, as the application differs a lot from the example.
+`CMakeLists.txt` under `PROJECTS/PTX2xxR/NFC_EXPLORER` was modified to work with GTK and NDEF reading/writing. In addition to the NDEF component of the SDK, it also builds the SDK's NDEF record sources (`SRC/API/NDEF/RECORDS`) and, for the *HCE* tab, the RUL HCE component (`SRC/API/RUL_HCE`, `ptx_RUL_HCE.c`) and the Type 4 Tag emulation add-on `ptx_HCET4T.c` (copied unchanged from the SDK's `ptx_Example_HCET4T` example to `SRC/EXAMPLES/ptx_NFCExplorer/HCE_T4T`).
+The source and header files under `SRC/EXAMPLES/ptx_NFCExplorer` were modified and unnecessary pieces of application code were removed.
 `ptx_ExampleNdefRecords.c` and `ptx_ExampleNdefRecords.h` were added there, they contain the definitions of the standard NDEF record types that can be written.
 The basic structure of the SDK deliverable was kept, only unnecessary project and example files and directories were removed.
 The SDK sources themselves are not modified.
@@ -39,11 +39,11 @@ Connect the PTX board via USB-C for power.
 
 ## Project layout
 
-The sources of the GUI are next to the application code in `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery`:
+The sources of the GUI are next to the application code in `SRC/EXAMPLES/ptx_NFCExplorer`:
 - `UI/` - the GTK UI files (`window.ui`, `menu.ui`, `prefs.ui`, `about.ui`) and `ptx_App.gresource.xml`, the list of files embedded into the executable
 - `DATA/` - the settings schema `com.renesas.nfc.gschema.xml`, the desktop file and the icon (used for the AppImage)
 
-The `BUILD` directory under `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY` only contains generated files and can be deleted at any time.
+The `BUILD` directory under `PROJECTS/PTX2xxR/NFC_EXPLORER` only contains generated files and can be deleted at any time.
 
 ## Application settings
 
@@ -60,7 +60,7 @@ A compiled schema with the expected settings is necessary for running the applic
 
 ## Build and run
 
-Configure and build with the preset, from `PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY`:
+Configure and build with the preset, from `PROJECTS/PTX2xxR/NFC_EXPLORER`:
 ```
 cmake --preset linux-spi
 cmake --build --preset linux-spi
@@ -74,7 +74,7 @@ cmake --build .
 
 Run:
 ```
-./BUILD/NFC_FORUM_BASIC_DISCOVERY
+./BUILD/ptx205r-nfc-explorer
 ```
 
 The application can also be launched by double-clicking the executable.
@@ -95,7 +95,7 @@ When distributing the application, the following license files must also be incl
 
 ## AppImage
 
-`tools/appimage/build-appimage.sh` builds a portable AppImage (`PTX205R_Discovery-<version>-<arch>.AppImage` in the repository root).
+`tools/appimage/build-appimage.sh` builds a portable AppImage (`PTX205R_NFC_Explorer-<version>-<arch>.AppImage` in the repository root).
 It builds the application, installs it into an AppDir (CMake `install()` rules) and bundles GTK4 and its dependencies and `libRUL.so` with linuxdeploy and its GTK plugin (downloaded to `tools/appimage/.cache` on first use, internet access needed).
 The AppImage runs on systems with the same or a newer glibc than the build machine, so build it on the oldest OS that must be supported (e.g. Raspberry Pi OS Trixie).
 
@@ -107,7 +107,7 @@ Notes:
 - The settings are stored with the GSettings keyfile backend in `~/.config/glib-2.0/settings/keyfile`.
 - The AppImage uses GTK's built-in default theme (light or dark according to the setting).
 - `LogOutput.txt` is written to the current working directory.
-- The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files are in `usr/share/doc/ptx205r-gtk`.
+- The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files are in `usr/share/doc/ptx205r-nfc-explorer`.
 
 ## Under the hood
 
@@ -280,9 +280,9 @@ Menu items:
 ## Versioning
 
 The application uses semantic versioning (MAJOR.MINOR.PATCH): MAJOR for incompatible changes, MINOR for new features, PATCH for fixes.
-The version is defined in `SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_Version.h` by `PTX_VERSION_MAJOR`, `PTX_VERSION_MINOR` and `PTX_VERSION_PATCH`, `PTX_VERSION_STRING` holds the full version string (e.g. `0.0.0`).
+The version is defined in `SRC/EXAMPLES/ptx_NFCExplorer/ptx_Version.h` by `PTX_VERSION_MAJOR`, `PTX_VERSION_MINOR` and `PTX_VERSION_PATCH`, `PTX_VERSION_STRING` holds the full version string (e.g. `0.0.0`).
 To change the version, update these three values and rebuild the application.
-The version is displayed in the title of the *About* window, e.g. "PTX205R Discovery (0.0.0)".
+The version is displayed in the title of the *About* window, e.g. "PTX205R NFC Explorer (0.0.0)".
 
 ## Licensing and Compliance
 

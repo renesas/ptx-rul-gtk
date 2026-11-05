@@ -34,7 +34,7 @@
 
 cmake_minimum_required(VERSION 3.15)
 
-project("NFC_FORUM_BASIC_DISCOVERY")
+project("PTX205R_NFC_EXPLORER")
 
 # Use pkg-config to locate GTK 4
 find_package(PkgConfig REQUIRED)
@@ -393,9 +393,9 @@ ${HEADER_DIRS}
 
 # Build Target Configuration
 if (PTX_BUILD_MCU)
-	add_library(RA4M2_NFC_FORUM_BASIC_DISCOVERY OBJECT ${RA_SRCS} ${RA_CFG_SRCS} ${RA_GEN_SRCS} ${SRCS})
-	target_sources(RA4M2_NFC_FORUM_BASIC_DISCOVERY INTERFACE ${RA_HDRS} ${RA_CFG_HDRS} ${RA_GEN_HDRS} ${SRC_HDRS} ${BUILD_HDRS})
-	target_include_directories(RA4M2_NFC_FORUM_BASIC_DISCOVERY PUBLIC ${RA_HDR_DIRS} ${RA_CFG_HDR_DIRS} ${RA_GEN_HDR_DIRS} ${SRC_HDR_DIRS} ${BUILD_HDR_DIRS})
+	add_library(RA4M2_NFC_EXPLORER OBJECT ${RA_SRCS} ${RA_CFG_SRCS} ${RA_GEN_SRCS} ${SRCS})
+	target_sources(RA4M2_NFC_EXPLORER INTERFACE ${RA_HDRS} ${RA_CFG_HDRS} ${RA_GEN_HDRS} ${SRC_HDRS} ${BUILD_HDRS})
+	target_include_directories(RA4M2_NFC_EXPLORER PUBLIC ${RA_HDR_DIRS} ${RA_CFG_HDR_DIRS} ${RA_GEN_HDR_DIRS} ${SRC_HDR_DIRS} ${BUILD_HDR_DIRS})
 	add_library(RUL STATIC)
 else()
 	add_library(RUL SHARED)
@@ -405,22 +405,22 @@ target_sources(RUL PRIVATE ${HEADER_DIRS} ${SOURCES})
 target_include_directories(RUL PUBLIC ${HEADER_DIRS})
 
 if (PTX_BUILD_MCU)
-	target_link_libraries(RUL PRIVATE RA4M2_NFC_FORUM_BASIC_DISCOVERY)
+	target_link_libraries(RUL PRIVATE RA4M2_NFC_EXPLORER)
 endif()
 
-set(TARGET_EXE_NAME "NFC_FORUM_BASIC_DISCOVERY")
+set(TARGET_EXE_NAME "ptx205r-nfc-explorer")
 add_executable(${TARGET_EXE_NAME})
 target_sources(${TARGET_EXE_NAME} PRIVATE
-	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.c
-	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleNdefRecords.c
-	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/HCE_T4T/ptx_HCET4T.c
+	../../../SRC/EXAMPLES/ptx_NFCExplorer/ptx_ExampleApplication.c
+	../../../SRC/EXAMPLES/ptx_NFCExplorer/ptx_ExampleNdefRecords.c
+	../../../SRC/EXAMPLES/ptx_NFCExplorer/HCE_T4T/ptx_HCET4T.c
 )
 
 # link GTK
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE PkgConfig::GTK4)
+target_link_libraries(${TARGET_EXE_NAME} PRIVATE PkgConfig::GTK4)
 
 # Application sources: UI files, GSettings schema, desktop integration
-set(APP_DIR "${CMAKE_SOURCE_DIR}/../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery")
+set(APP_DIR "${CMAKE_SOURCE_DIR}/../../../SRC/EXAMPLES/ptx_NFCExplorer")
 
 # Embed the UI files (UI/*.ui) into the executable as a GResource
 pkg_get_variable(GLIB_COMPILE_RESOURCES gio-2.0 glib_compile_resources)
@@ -452,7 +452,7 @@ add_custom_target(app_schemas ALL DEPENDS "${APP_SCHEMA_DIR}/gschemas.compiled")
 add_dependencies(${TARGET_EXE_NAME} app_schemas)
 
 if (PTX_BUILD_MCU)
-	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL RA4M2_NFC_FORUM_BASIC_DISCOVERY)
+	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL RA4M2_NFC_EXPLORER)
 else()
 	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL)
 endif()
@@ -481,15 +481,15 @@ if (NOT PTX_BUILD_MCU)
 	install(TARGETS RUL LIBRARY DESTINATION lib)
 	install(FILES "${APP_SCHEMA_XML}" DESTINATION share/glib-2.0/schemas)
 	install(FILES "${CMAKE_SOURCE_DIR}/../../../COPYING" "${CMAKE_SOURCE_DIR}/../../../COPYING.LESSER" "${CMAKE_SOURCE_DIR}/../../../DEPENDENCIES.md"
-		DESTINATION share/doc/ptx205r-gtk)
+		DESTINATION share/doc/ptx205r-nfc-explorer)
 	install(FILES "${APP_DIR}/DATA/com.renesas.nfc.desktop" DESTINATION share/applications)
 	install(FILES "${APP_DIR}/DATA/com.renesas.nfc.png" DESTINATION share/icons/hicolor/256x256/apps)
 endif()
 
 target_include_directories(${TARGET_EXE_NAME} PUBLIC 
 	../../../SRC/EXAMPLES
-	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery
-	../../../SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/HCE_T4T
+	../../../SRC/EXAMPLES/ptx_NFCExplorer
+	../../../SRC/EXAMPLES/ptx_NFCExplorer/HCE_T4T
 
 )
 

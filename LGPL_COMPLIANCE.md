@@ -46,7 +46,7 @@ The application uses **dynamic linking** to GTK4 and related libraries:
 
 - GTK4 is linked via `pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4)` in CMakeLists.txt
 - Produces dynamic dependencies: `libgtk-4.so`, `libglib-2.0.so`, `libgio-2.0.so`
-- Users can verify with: `ldd ./NFC_FORUM_BASIC_DISCOVERY`
+- Users can verify with: `ldd ./ptx205r-nfc-explorer`
 - Users can replace/upgrade GTK4 independently without recompiling the application
 
 **LGPL Advantage**: Dynamic linking means the application code itself is not subject to LGPL copyleft requirements. Users can use unmodified LGPL libraries without affecting the application's BSD-3-Clause license.
@@ -84,7 +84,7 @@ If you are packaging or distributing binaries of this application:
 Include the following in your distribution package:
 
 ```
-/usr/bin/NFC_FORUM_BASIC_DISCOVERY          (executable)
+/usr/bin/ptx205r-nfc-explorer          (executable)
 /usr/share/applications/                     (desktop shortcut, if applicable)
 /usr/share/doc/ptx-rul-gtk/
     ├── COPYING                              (LGPL v2.1 full text)
@@ -150,7 +150,7 @@ After building and before distribution, verify:
 - [ ] CMakeLists.txt includes configure_file() commands for COPYING files
 - [ ] Build output includes COPYING and COPYING.LESSER in BUILD/ directory
 - [ ] Application source code is accessible (repository, source distribution, etc.)
-- [ ] Run `ldd ./NFC_FORUM_BASIC_DISCOVERY` shows dynamic linking to libgtk-4.so
+- [ ] Run `ldd ./ptx205r-nfc-explorer` shows dynamic linking to libgtk-4.so
 - [ ] No GTK4 code is embedded or statically linked
 - [ ] README.md includes licensing and source availability information
 - [ ] No source files have been removed or renamed without documentation

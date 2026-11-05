@@ -36,7 +36,7 @@
 
     Project     : PTX2xxR/W
     Module      : SDK Example (NFC Forum Basic Discovery)
-    File        : EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_ExampleApplication.c
+    File        : EXAMPLES/ptx_NFCExplorer/ptx_ExampleApplication.c
 
     Description : GTK4 application using the PTX205R and the RUL SDK's reference implementation
                   for the Raspberry Pi and SPI.
@@ -2047,7 +2047,7 @@ static void setupAboutWindow(GtkBuilder *builder, AppState *state)
 {
     (void)state;
 
-    const char *titleWithVersion = "PTX205R Discovery (" PTX_VERSION_STRING ")";
+    const char *titleWithVersion = "PTX205R NFC Explorer (" PTX_VERSION_STRING ")";
 
     GObject *window = gtk_builder_get_object(builder, "aboutWindow");
     if (GTK_IS_WINDOW(window)) {

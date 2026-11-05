@@ -6,7 +6,7 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
-PROJECT="$ROOT/PROJECTS/PTX2xxR/NFC_FORUM_BASIC_DISCOVERY"
+PROJECT="$ROOT/PROJECTS/PTX2xxR/NFC_EXPLORER"
 BUILD="$HERE/build"
 APPDIR="$BUILD/AppDir"
 CACHE="$HERE/.cache"
@@ -14,7 +14,7 @@ ARCH="$(uname -m)"
 GH="https://github.com/linuxdeploy"
 
 VERSION="$(sed -n 's/^#define PTX_VERSION_\(MAJOR\|MINOR\|PATCH\) \([0-9]*\).*/\2/p' \
-    "$ROOT/SRC/EXAMPLES/ptx_Example_NFCForumBasicDiscovery/ptx_Version.h" | head -3 | paste -sd. -)"
+    "$ROOT/SRC/EXAMPLES/ptx_NFCExplorer/ptx_Version.h" | head -3 | paste -sd. -)"
 export VERSION
 
 mkdir -p "$CACHE"
@@ -50,12 +50,12 @@ export DEPLOY_GTK_VERSION=4
 export LINUXDEPLOY_OUTPUT_VERSION="$VERSION"
 cd "$BUILD"
 "$CACHE/linuxdeploy" --appdir "$APPDIR" --plugin gtk \
-    --executable "$APPDIR/usr/bin/NFC_FORUM_BASIC_DISCOVERY" \
+    --executable "$APPDIR/usr/bin/ptx205r-nfc-explorer" \
     --library "$APPDIR/usr/lib/libRUL.so" \
     --desktop-file "$APPDIR/usr/share/applications/com.renesas.nfc.desktop" \
     --icon-file "$APPDIR/usr/share/icons/hicolor/256x256/apps/com.renesas.nfc.png" \
     --output appimage
 
-OUT="$ROOT/PTX205R_Discovery-$VERSION-$ARCH.AppImage"
+OUT="$ROOT/PTX205R_NFC_Explorer-$VERSION-$ARCH.AppImage"
 mv -f "$BUILD"/*.AppImage "$OUT"
 echo "Created $OUT"
