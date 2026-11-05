@@ -37,14 +37,8 @@
     Module      : Utils
     File        : ptx_Utils_Print.c
 
-    Description : Implementation of the print module. There are 2 different implementations specific for underlying platforms (system).
-                  Those 2 versions are included/excluded by specific compile switches.
-
-                  To enable the version for Renesas RA4M2 MCU platform, PTX_PLATFORM_MCU must be defined. This version relies on specific
-                  project MCU configuration, i.e. it uses specific predefined UART port and FSP library to print out the messages.
-
-                  To enable the version for Windows/Linux platform, PTX_PLATFORM_OS must be defined. This version prints out the messages
-                  to the standard output console by using native printf API.
+    Description : Implementation of the print module. The messages are printed to the standard output console by using the
+                  native printf API, if PTX_UTILITY_PRINTING_CONSOLE is defined. Otherwise, printing is disabled.
 */
 
 
@@ -61,9 +55,6 @@
 #include <stdarg.h>
 
 
-#if defined (PTX_UTILITY_PRINTING_SERIAL)
-    #include "hal_data.h"
-#endif
 
 
 /*
@@ -76,29 +67,6 @@
 #define PTX_ASCII_SPACE                           (0x20U)     /* ASCII table SPACE character. */
 #define PTX_PRINT_LINE_LENGTH                     80U
 
-#if defined (PTX_UTILITY_PRINTING_SERIAL)
-
-#define PTX_UTILS_UART_DEFAULT_BAUDRATE           (256000u)   /* Baudrate */
-#define PTX_UTILS_UART_DEFAULT_BAUDRATE_ERROR     (3000u)     /* Baudrate error, 3% Error, Calculation: x / 1000 */
-/* "SCIU" in ASCII.  Used to determine if the control block is open. */
-#define SCI_UART_OPEN                             (0x53434955U)
-
-/*
- * Uart states.
- */
-typedef enum ptx_Utils_UartState
-{
-    Uart_State_Idle,
-    Uart_State_TxOngoing,
-    Uart_State_TxDone,
-    Uart_State_TxError
-} ptx_Utils_UartState_t;
-
-void ptx_Utils_Print_Callback(uart_callback_args_t *p_args);
-
-static volatile ptx_Utils_UartState_t sUartState = Uart_State_Idle;
-
-#endif
 
 static void ptx_Utils_Write(char *msgBuffer, uint32_t msgLen);
 
@@ -178,90 +146,7 @@ void ptx_Utils_Print_Buffer(uint8_t *buffer, uint16_t bufferLength, uint8_t addN
  * ####################################################################################################################
  */
 
-#if defined (PTX_UTILITY_PRINTING_SERIAL)
-
-static void ptx_Utils_Write(char *msgBuffer, uint32_t msgLen)
-{
-    /* Send message to MCU UART. Direct access to FSP API. */
-
-    /*
-     * NOTE: it is expected here that ptx_uart_dbg uart module instance is valid. No special checking done here.
-     *       The instance is typically defined in e2studio project configuration and made available through
-     *       automatically generated hal_data module.
-     *
-     *       This example uses r_sci_uart module. If another UART module is used e.g. r_sci_b_uart, adjust the names if needed
-     *       for the call to calculate baudrate API.
-     */
-
-    if ((NULL != msgBuffer) && (0 != msgLen))
-    {
-        /* First, check if interface is open. */
-        fsp_err_t err = FSP_ERR_NOT_ENABLED;
-        sci_uart_instance_ctrl_t *p_ctrl = (sci_uart_instance_ctrl_t *) ptx_uart_dbg.p_ctrl;
-        if (SCI_UART_OPEN != p_ctrl->open)
-        {
-            /* It is not open. Open and configure it here. */
-            err = R_SCI_UART_Open(ptx_uart_dbg.p_ctrl, ptx_uart_dbg.p_cfg);
-
-            if (FSP_SUCCESS == err)
-            {
-                err = R_SCI_UART_CallbackSet(ptx_uart_dbg.p_ctrl, ptx_Utils_Print_Callback, NULL, NULL);
-            }
-
-            if (FSP_SUCCESS == err)
-            {
-                baud_setting_t baud_setting;
-                err = R_SCI_UART_BaudCalculate(PTX_UTILS_UART_DEFAULT_BAUDRATE, 0, PTX_UTILS_UART_DEFAULT_BAUDRATE_ERROR, &baud_setting);
-                if (FSP_SUCCESS == err)
-                {
-                    err = R_SCI_UART_BaudSet(ptx_uart_dbg.p_ctrl, (void *) &baud_setting);
-                }
-            }
-        }
-        else
-        {
-            /* Uart interface is already open. Just proceed. */
-            err = FSP_SUCCESS;
-        }
-
-        if (FSP_SUCCESS == err)
-        {
-            /* Interface is ready. */
-            sUartState = Uart_State_TxOngoing;
-            err = R_SCI_UART_Write(ptx_uart_dbg.p_ctrl, (uint8_t*)msgBuffer, (uint32_t)msgLen);
-
-            if (FSP_SUCCESS == err)
-            {
-                while (Uart_State_TxOngoing == sUartState)
-                {
-                    /* Wait for the transfer to finish. */
-                }
-            }
-        }
-    }
-}
-
-void ptx_Utils_Print_Callback(uart_callback_args_t * p_args)
-{
-    /*
-     * This callback (name) is predefined in e2studio configuration.
-     */
-    if (NULL != p_args)
-    {
-        switch (p_args->event)
-        {
-            case UART_EVENT_TX_COMPLETE:
-                sUartState = Uart_State_TxDone;
-                break;
-
-            default:
-                /* Transfer error. */
-                break;
-        }
-    }
-}
-
-#elif defined(PTX_UTILITY_PRINTING_CONSOLE)
+#if defined(PTX_UTILITY_PRINTING_CONSOLE)
 
 static void ptx_Utils_Write(char *msgBuffer, uint32_t msgLen)
 {

@@ -51,11 +51,7 @@ pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4)
 
 # Platform the sources are compiled for
 #
-# Currently there are three different platforms available:
-#
-# * MCU ... Compiles the target for the MCU Platform. The default platform is the RA4M2 platform.
-#           Please make sure that all the Renesas FSP sources are generated before attempting to
-#           configure and compile the project.
+# Currently there are two different platforms available:
 #
 # * LIN ... Compiles the target for Native Linux.
 #
@@ -63,7 +59,6 @@ pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4)
 #
 # Only one platform is allowed during compilation! Please select the platform accordingly.
 #
-option(PTX_BUILD_MCU  "Build for MCU (RA4M2) platform" OFF)
 option(PTX_BUILD_WIN  "Native Windows build" OFF)
 option(PTX_BUILD_LIN  "Native Linux build" OFF)
 
@@ -89,13 +84,7 @@ option(PTX_ENABLE_UART "Enable UART driver" OFF)
 # This configuration allows logging to be turned on and off. In the default configuration
 # logging is turned off. Currently the logger supports the following options:
 #
-# Be aware, that PTX_LOGGING and PTX_UTILITY_PRINTING cannot be both set to "Serial", as both use the same UART interface 
-# for the RA4M2 reference implementation.
-#
 # * None 	... This is the default configuration, and logging is disabled for the project
-#
-# * Serial 	... Enables serial logging. It is only available for MCU based projects.
-#              	To enable serial logging make sure that PTX_BUILD_MCU is set to ON!
 #
 # * Console ... Enables logging to the console where the program is run.
 #               This logging option is only available if either PTX_BUILD_LIN or PTX_BUILD_WIN is set to ON!
@@ -104,7 +93,7 @@ option(PTX_ENABLE_UART "Enable UART driver" OFF)
 #               This logging option is only available if either PTX_BUILD_LIN or PTX_BUILD_WIN is set to ON!
 #
 set(PTX_LOGGING "None" CACHE STRING "Log Variant Definition")
-set_property(CACHE PTX_LOGGING PROPERTY STRINGS None Serial Console File)
+set_property(CACHE PTX_LOGGING PROPERTY STRINGS None Console File)
 
 # Utility Print configuration 
 #
@@ -112,33 +101,21 @@ set_property(CACHE PTX_LOGGING PROPERTY STRINGS None Serial Console File)
 # simplified Logging module to easily print formatted strings to an output. In default configuration, it is deactivated
 # and set to None. Currently the utility print module supports the following options:
 #
-# Be aware, that PTX_LOGGING and PTX_UTILITY_PRINTING cannot be both set to "Serial", as both use the same UART interface 
-# for the RA4M2 reference implementation.
-#
 # * None 	... This is the default configuration, and printing to any output is disabled for the project.
-#
-# * Serial 	... Enables serial printing. It is only available for MCU based projects.
-#              	To enable serial printing make sure that PTX_BUILD_MCU is set to ON!
 #
 # * Console ... Enables printing to the console where the program is run.
 #               This printing option is only available if either PTX_BUILD_LIN or PTX_BUILD_WIN is set to ON!
 #
 set(PTX_UTILITY_PRINTING "None" CACHE STRING "Print Variant Definition")
-set_property(CACHE PTX_UTILITY_PRINTING PROPERTY STRINGS None Serial Console)
+set_property(CACHE PTX_UTILITY_PRINTING PROPERTY STRINGS None Console)
 
 # Project Configuration
 # ---------------------
-
-# Board configuration
-set(PTX_MCU_DIR "MCU/CUSTOM")
 
 # Logger configuration
 if (${PTX_LOGGING} STREQUAL "None")
 	set(PTX_LOGGING_DIR "NONE")
 	set(PTX_LOGGING_FILE "None")
-elseif(${PTX_LOGGING} STREQUAL "Serial" AND PTX_BUILD_MCU AND (NOT (${PTX_UTILITY_PRINTING} STREQUAL "Serial")))
-	set(PTX_LOGGING_DIR "SERIAL")
-	set(PTX_LOGGING_FILE "Serial")
 elseif(${PTX_LOGGING} STREQUAL "Console" AND (PTX_BUILD_LIN OR PTX_BUILD_WIN))
 	set(PTX_LOGGING_DIR "CONSOLE")
 	set(PTX_LOGGING_FILE "Console")
@@ -150,9 +127,7 @@ else()
 endif()
 
 # Utility Print configuration
-if(${PTX_UTILITY_PRINTING} STREQUAL "Serial" AND PTX_BUILD_MCU AND (NOT (${PTX_LOGGING} STREQUAL "Serial")))
-	add_definitions(-DPTX_UTILITY_PRINTING_SERIAL)
-elseif(${PTX_UTILITY_PRINTING} STREQUAL "Console" AND (PTX_BUILD_LIN OR PTX_BUILD_WIN))
+if(${PTX_UTILITY_PRINTING} STREQUAL "Console" AND (PTX_BUILD_LIN OR PTX_BUILD_WIN))
 	add_definitions(-DPTX_UTILITY_PRINTING_CONSOLE)
 else()
 	message(STATUS "No explicit Utility Print configuration was set! None variant is used and all printing is disabled!")
@@ -180,62 +155,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Platform configuration
-if (PTX_BUILD_MCU)
-	add_definitions(-DPTX_PLATFORM_MCU)
-    add_definitions("-DPTX_APP_DIVERSITY_RA4M2")
-	set(PTX_PLATFORM "MCU/RA4M2")
-	
-	set(OBJECT_GEN_FLAGS "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16 -O2 -fmessage-length=0 -fsigned-char -Wunused -Wuninitialized -Wall -Wextra -Wvla -Wmissing-declarations -Wconversion -Wpointer-arith -Wshadow -Werror -Wlogical-op -Waggregate-return -Wfloat-equal -g -D_RENESAS_RA_ ")
-
-	if (NOT (${CMAKE_BUILD_TYPE} STREQUAL "Debug"))
-		set(OBJECT_GEN_FLAGS "${OBJECT_GEN_FLAGS} -ffunction-sections -fdata-sections")
-	endif()
-
-	set(CMAKE_C_FLAGS   "${OBJECT_GEN_FLAGS} -std=gnu99 -MMD -MP" CACHE INTERNAL "C Compiler options")
-	set(CMAKE_CXX_FLAGS "${OBJECT_GEN_FLAGS} -std=c++11 " CACHE INTERNAL "C++ Compiler options")
-	set(CMAKE_ASM_FLAGS "${OBJECT_GEN_FLAGS} -x assembler-with-cpp " CACHE INTERNAL "ASM Compiler options")
-
-	set(CMAKE_EXE_LINKER_FLAGS "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16 -O0 -fmessage-length=0 -fsigned-char -Wunused -Wuninitialized -Wall -Wextra -Wvla -Wmissing-declarations -Wconversion -Wpointer-arith -Wshadow -Wlogical-op -Waggregate-return -Wfloat-equal  -g -T fsp.ld -Xlinker --gc-sections -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/script/ -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Debug-SPI-NONE -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Debug-SPI-SERIAL -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Release-SPI-NONE -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Release-SPI-SERIAL -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Debug-I2C-NONE -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Debug-I2C-SERIAL -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Release-I2C-NONE -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Release-I2C-SERIAL -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Debug-UART-NONE -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Debug-UART-SERIAL -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Release-UART-NONE -L${CMAKE_SOURCE_DIR}/MCU/CUSTOM/Release-UART-SERIAL -Wl,-Map=${CMAKE_PROJECT_NAME}.map --specs=rdimon.specs --specs=nano.specs " CACHE INTERNAL "Linker options")
-	
-	if (NOT (${CMAKE_BUILD_TYPE} STREQUAL "Debug"))
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -ffunction-sections -fdata-sections")
-	endif()
-
-	macro(HEADER_DIRECTORIES dir return_list)
-		file(GLOB_RECURSE new_list "${dir}/*.h")
-		set(dir_list "")
-		foreach(file_path ${new_list})
-			get_filename_component(dir_path ${file_path} PATH)
-			set(dir_list ${dir_list} ${dir_path})
-		endforeach()
-		list(REMOVE_DUPLICATES dir_list)
-		set(${return_list} ${dir_list})
-	endmacro()
-
-	file(GLOB_RECURSE RA_SRCS "${PTX_MCU_DIR}/ra/*.c")
-	file(GLOB_RECURSE RA_CFG_SRCS "${PTX_MCU_DIR}/ra_cfg/*.c")
-	file(GLOB_RECURSE RA_GEN_SRCS "${PTX_MCU_DIR}/ra_gen/*.c")
-	file(GLOB_RECURSE SRCS "${PTX_MCU_DIR}/src/*.c")
-
-	file(GLOB_RECURSE RA_HDRS "${PTX_MCU_DIR}/ra/*.h")
-	file(GLOB_RECURSE RA_CFG_HDRS "${PTX_MCU_DIR}/ra_cfg/*.h")
-	file(GLOB_RECURSE RA_GEN_HDRS "${PTX_MCU_DIR}/ra_gen/*.h")
-	file(GLOB_RECURSE HDRS "${PTX_MCU_DIR}/src/*.h")
-	file(GLOB_RECURSE BUILD_HDRS "${PTX_MCU_DIR}/${CMAKE_BUILD_TYPE}-${PTX_HAL_INTERFACE}-${PTX_LOGGING_DIR}/bsp_linker_info.h")
-
-	HEADER_DIRECTORIES("${PTX_MCU_DIR}/ra" RA_HDR_DIRS)
-	HEADER_DIRECTORIES("${PTX_MCU_DIR}/ra_cfg" RA_CFG_HDR_DIRS)
-	HEADER_DIRECTORIES("${PTX_MCU_DIR}/ra_gen" RA_GEN_HDR_DIRS)
-	HEADER_DIRECTORIES("${PTX_MCU_DIR}/src" SRC_HDR_DIRS)
-	HEADER_DIRECTORIES("${PTX_MCU_DIR}/${CMAKE_BUILD_TYPE}-${PTX_HAL_INTERFACE}-${PTX_LOGGING_DIR}" BUILD_HDR_DIRS)
-
-	set(SOURCES ${SOURCES}
-		
-	)
-
-	
-
-elseif(PTX_BUILD_LIN)
+if(PTX_BUILD_LIN)
 	add_definitions(-DPTX_PLATFORM_OS)
     add_definitions("-DPTX_APP_DIVERSITY_LINUX")
 	set(PTX_PLATFORM "LIN")
@@ -279,7 +199,7 @@ elseif(PTX_BUILD_WIN)
 	)
 
 else()
-	message(FATAL_ERROR "No platform selected! Please select the proper platform (RA4M2, Linux, or Windows)!")
+	message(FATAL_ERROR "No platform selected! Please select the proper platform (Linux or Windows)!")
 endif()
 
 # Configuration of source and header directories used for the project
@@ -372,7 +292,6 @@ ${HEADER_DIRS}
 	../../../SRC/COMPS/LOG/${PTX_LOGGING_DIR}
 	../../../SRC/COMPS/UTILS
 	../../../SRC/COMPS/HIP/RUL
-	../../../SRC/COMPS/HAL/DRV/MCU
 
 	../../../SRC/API/NATIVE_TAG
 	../../../SRC/API/NDEF
@@ -392,21 +311,10 @@ ${HEADER_DIRS}
 )
 
 # Build Target Configuration
-if (PTX_BUILD_MCU)
-	add_library(RA4M2_NFC_EXPLORER OBJECT ${RA_SRCS} ${RA_CFG_SRCS} ${RA_GEN_SRCS} ${SRCS})
-	target_sources(RA4M2_NFC_EXPLORER INTERFACE ${RA_HDRS} ${RA_CFG_HDRS} ${RA_GEN_HDRS} ${SRC_HDRS} ${BUILD_HDRS})
-	target_include_directories(RA4M2_NFC_EXPLORER PUBLIC ${RA_HDR_DIRS} ${RA_CFG_HDR_DIRS} ${RA_GEN_HDR_DIRS} ${SRC_HDR_DIRS} ${BUILD_HDR_DIRS})
-	add_library(RUL STATIC)
-else()
-	add_library(RUL SHARED)
-endif()
+add_library(RUL SHARED)
 
 target_sources(RUL PRIVATE ${HEADER_DIRS} ${SOURCES})
 target_include_directories(RUL PUBLIC ${HEADER_DIRS})
-
-if (PTX_BUILD_MCU)
-	target_link_libraries(RUL PRIVATE RA4M2_NFC_EXPLORER)
-endif()
 
 set(TARGET_EXE_NAME "ptx205r-nfc-explorer")
 add_executable(${TARGET_EXE_NAME})
@@ -451,11 +359,7 @@ add_custom_command(
 add_custom_target(app_schemas ALL DEPENDS "${APP_SCHEMA_DIR}/gschemas.compiled")
 add_dependencies(${TARGET_EXE_NAME} app_schemas)
 
-if (PTX_BUILD_MCU)
-	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL RA4M2_NFC_EXPLORER)
-else()
-	target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL)
-endif()
+target_link_libraries(${TARGET_EXE_NAME} PRIVATE RUL)
 
 # LGPL Compliance: Copy license files to build directory
 configure_file(
@@ -475,16 +379,14 @@ configure_file(
 )
 
 # AppImage / install layout (see tools/appimage/build-appimage.sh)
-if (NOT PTX_BUILD_MCU)
-	set_target_properties(${TARGET_EXE_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
-	install(TARGETS ${TARGET_EXE_NAME} RUNTIME DESTINATION bin)
-	install(TARGETS RUL LIBRARY DESTINATION lib)
-	install(FILES "${APP_SCHEMA_XML}" DESTINATION share/glib-2.0/schemas)
-	install(FILES "${CMAKE_SOURCE_DIR}/../../../COPYING" "${CMAKE_SOURCE_DIR}/../../../COPYING.LESSER" "${CMAKE_SOURCE_DIR}/../../../DEPENDENCIES.md"
-		DESTINATION share/doc/ptx205r-nfc-explorer)
-	install(FILES "${APP_DIR}/DATA/com.renesas.nfc.desktop" DESTINATION share/applications)
-	install(FILES "${APP_DIR}/DATA/com.renesas.nfc.png" DESTINATION share/icons/hicolor/256x256/apps)
-endif()
+set_target_properties(${TARGET_EXE_NAME} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
+install(TARGETS ${TARGET_EXE_NAME} RUNTIME DESTINATION bin)
+install(TARGETS RUL LIBRARY DESTINATION lib)
+install(FILES "${APP_SCHEMA_XML}" DESTINATION share/glib-2.0/schemas)
+install(FILES "${CMAKE_SOURCE_DIR}/../../../COPYING" "${CMAKE_SOURCE_DIR}/../../../COPYING.LESSER" "${CMAKE_SOURCE_DIR}/../../../DEPENDENCIES.md"
+	DESTINATION share/doc/ptx205r-nfc-explorer)
+install(FILES "${APP_DIR}/DATA/com.renesas.nfc.desktop" DESTINATION share/applications)
+install(FILES "${APP_DIR}/DATA/com.renesas.nfc.png" DESTINATION share/icons/hicolor/256x256/apps)
 
 target_include_directories(${TARGET_EXE_NAME} PUBLIC 
 	../../../SRC/EXAMPLES
@@ -493,31 +395,7 @@ target_include_directories(${TARGET_EXE_NAME} PUBLIC
 
 )
 
-if (PTX_BUILD_MCU)
-	set_target_properties("${TARGET_EXE_NAME}"
-		PROPERTIES
-			OUTPUT_NAME "${TARGET_EXE_NAME}"
-			SUFFIX ".elf"
-	)
-	
-	add_custom_command(TARGET ${TARGET_EXE_NAME}
-		POST_BUILD
-		COMMAND ${CMAKE_SIZE} --format=berkeley ${TARGET_EXE_NAME}.elf
-		COMMENT "Size Summary"
-	)
-
-	add_custom_command(TARGET ${TARGET_EXE_NAME}
-		POST_BUILD
-		COMMAND ${CMAKE_OBJCOPY} -O ihex ${TARGET_EXE_NAME}.elf ${TARGET_EXE_NAME}.hex
-		COMMAND ${CMAKE_OBJCOPY} -O srec ${TARGET_EXE_NAME}.elf ${TARGET_EXE_NAME}.srec
-		COMMAND ${CMAKE_OBJCOPY} -O binary ${TARGET_EXE_NAME}.elf ${TARGET_EXE_NAME}.bin
-		COMMENT "Create object derivates hex, srec, and bin"
-	)
-else()
-	set_target_properties("${TARGET_EXE_NAME}"
-		PROPERTIES
-			OUTPUT_NAME "${TARGET_EXE_NAME}"
-	)
-
-endif()
-
+set_target_properties("${TARGET_EXE_NAME}"
+	PROPERTIES
+		OUTPUT_NAME "${TARGET_EXE_NAME}"
+)
