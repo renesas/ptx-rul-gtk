@@ -123,11 +123,11 @@ Notes:
 ## Under the hood
 
 When the application is launched, UI files and settings are loaded, and the PTX is initialized in a separate thread.
-If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab. The discovery settings are configured on the *Polling* tab. On the *HCE* tab, the PTX emulates a Type 4 Tag.
+If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab. The discovery settings are configured on the *Polling* tab. On the *HCE* tab, the PTX emulates a Type 4 Tag. The *Q-Measurement* tab measures the Q factor of the antenna.
 Discovery and the NDEF operations share one discovery loop, which runs in a separate thread and polls for RF-technologies A, B, F, V.
 The *Discovery* tab supports multiple cards in the field, the *NDEF* tab supports only one single card.
-The card emulation of the *HCE* tab runs in the same thread, instead of the discovery loop.
-While discovery or the emulation is running, the tabs cannot be switched.
+The card emulation of the *HCE* tab and the sweep of the *Q-Measurement* tab run in the same thread, instead of the discovery loop.
+While discovery, the emulation or a measurement is running, the tabs cannot be switched.
 
 If the initialization fails, an error message will be displayed and the application must be closed.
 If discovery fails to start or the discovery loop ends with an error, an error message will be displayed and the application must be closed.
@@ -250,7 +250,7 @@ A written message is served until STOP, the next START resets the tag to the mes
 The *Emulation log* lists the events: field on/off, activation and deactivation by the reader, the C-APDUs (SELECT, READ BINARY, UPDATE BINARY) with their status words, and RF errors.
 
 The tag uses the NFCID1 `08 01 02 03`, SENS_RES `01 00` and ATS `05 78 00 71 02` of the SDK example; the PTX is in listen mode only (no polling).
-The Polling tab settings and the RESET menu item do not apply to the emulation.
+The Polling tab settings and the RESET menu item do not apply to the emulation and the Q-measurement.
 
 ### Polling
 
@@ -273,14 +273,34 @@ RESTORE DEFAULTS resets all settings.
 The settings are used when discovery is started the next time (START, READ or WRITE); they cannot be changed while discovery is running, as the tabs are locked.
 The settings are not stored, the defaults are used whenever the application is launched.
 
+### Q-Measurement
+
+The *Q-Measurement* tab measures the Q factor of the antenna. The PTX sweeps through a frequency range centered on 13.56 MHz and the RF amplitude is measured at every frequency (`ptx_RUL_RfFieldMeasurement`), the same way as the SDK's `ptx_PSL_QMeasurement` does. The application runs the sweep itself, so that the measured amplitudes can be shown in the graph.
+
+| Setting | Range | Meaning |
+| ------- | ----- | ------- |
+| Frequency span | 0.001 - 5000 kHz (default 3000) | The sweep covers 13.56 MHz +/- span/2 |
+| Frequency step | 0.001 kHz up to the span (default 5) | Distance between two measurements |
+| ADC averaging | 1, 2, 4, 8, 16, 32 samples (default 8) | Number of averaged ADC measurements per frequency |
+
+A sweep has span / step + 1 points, at most 1000. The number is shown on the tab, and START is disabled if there are too many points.
+The graph shows the amplitude (ADC LSB) over the frequency and is updated while the sweep is running. STOP ends the sweep early, no result is calculated then.
+When the sweep is complete, the maximum of the amplitude is the resonance frequency, the -3 dB corners are the frequencies on both sides where the amplitude falls to 0.708 of the maximum, and Q = resonance frequency / (upper corner - lower corner). The result is shown next to the graph, and the corners and the -3 dB level are drawn into it.
+If a corner is outside the sweep range (or both are identical), there's no result - increase the span or decrease the step.
+If the ADC clips at a frequency (the signal is too strong), the sweep is stopped and the frequency is displayed.
+
+EXPORT CSV saves the last sweep. The file starts with the settings and the result as `#` comment lines, followed by the header `frequency_hz,amplitude` and one line per point. The amplitude is the raw value, which is the ADC LSB multiplied by 1000.
+The settings are not stored, the defaults are used whenever the application is launched.
+
 ## The UI
 
-The main window has four tabs, *Polling*, *Discovery*, *NDEF* and *HCE* (in this order), and a menu button. The *Discovery* tab is shown when the application is launched.
+The main window has five tabs, *Polling*, *Discovery*, *NDEF*, *HCE* and *Q-Measurement* (in this order), and a menu button. The *Discovery* tab is shown when the application is launched.
 The *Polling* tab has the general discovery settings (idle time, LPCD), a table with the settings per RF-technology and the RESTORE DEFAULTS button.
 The *Discovery* tab has the START/STOP and RESET buttons, the number of detected cards and a table with the information of all detected cards.
 The *NDEF* tab has a read section with the READ, STOP and CLEAR buttons on top and a text box for the NDEF message, and a write section with the WRITE button, the record type picker and the ADD, REMOVE and CLEAR buttons on top.
 The write section also has the input fields of the selected record type, the list of records, the raw bytes of the message and a status label.
 The *HCE* tab has a frame with the START/STOP button, the record type picker and the ADD, REMOVE and CLEAR buttons on top, the input fields, the list of records, the raw bytes of the message and a status label, followed by the *Message written by reader* box and the *Emulation log*.
+The *Q-Measurement* tab has the span, step and averaging settings with the number of points, the START/STOP, EXPORT CSV and RESTORE DEFAULTS buttons, the Q factor, the resonance frequency, the corner frequencies and the bandwidth, a status label and the graph.
 There's also a window for the preferences and the about information, which can be opened from the menu.
 
 Menu items:

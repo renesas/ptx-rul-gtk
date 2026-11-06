@@ -94,6 +94,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <math.h>
 
 #include <gtk/gtk.h>
 
@@ -184,7 +185,8 @@ typedef enum {
     DiscoveryMode_CardInfo,                    /* Display card information (Discovery tab) */
     DiscoveryMode_NdefRead,                    /* Read NDEF message (NDEF tab) */
     DiscoveryMode_NdefWrite,                   /* Write default NDEF message, then stop (NDEF tab) */
-    DiscoveryMode_Hce                          /* Emulate a Type 4 Tag (HCE tab) */
+    DiscoveryMode_Hce,                         /* Emulate a Type 4 Tag (HCE tab) */
+    DiscoveryMode_QMeas                        /* Antenna Q-factor measurement (Q-Measurement tab) */
 } DiscoveryMode;
 
 /* Outcome of an NDEF write attempt */
@@ -221,6 +223,55 @@ typedef struct {
     uint32_t detections;                       /* Number of discovery cycles the card was found in */
 } ListedCard;
 
+/* Q-Measurement tab: the sweep is centered on 13.56 MHz. The limits are the same as in the SDK's ptx_PSL_QMeasurement(). */
+#define QMEAS_CENTER_FREQ_HZ        13560000u
+#define QMEAS_MAX_SPAN_HZ           5000000u
+#define QMEAS_MAX_POINTS            1000u      /* Max. number of frequencies per sweep */
+#define QMEAS_DEFAULT_SPAN_HZ       3000000u
+#define QMEAS_DEFAULT_STEP_HZ       5000u
+#define QMEAS_DEFAULT_AVERAGING     3u         /* Index of the averaging drop-down: 8 samples */
+#define QMEAS_AMP_FACTOR            1000u      /* The measured amplitude is the ADC value (LSB) multiplied by 1000 */
+#define QMEAS_CORNER_NUM            708u       /* -3 dB corner amplitude = max. amplitude * 708 / 1000 */
+#define QMEAS_BATCH_SIZE            20u        /* Samples handed over to the UI thread at once */
+
+/* Sweep settings of the Q-Measurement tab */
+typedef struct {
+    uint32_t span;                             /* Frequency span in Hz (centered on 13.56 MHz) */
+    uint32_t step;                             /* Frequency step in Hz */
+    ptx_RUL_AdcAveraging_t averaging;          /* ADC averaging */
+} QMeasParams;
+
+/* One point of the sweep */
+typedef struct {
+    uint32_t freq;                             /* Frequency in Hz */
+    uint32_t amp;                              /* RF amplitude (ADC LSB * QMEAS_AMP_FACTOR) */
+} QMeasSample;
+
+/* Result of a sweep */
+typedef struct {
+    gboolean valid;                            /* Q factor and corner frequencies were found */
+    uint32_t q100;                             /* Q factor multiplied by 100 */
+    uint32_t resonance;                        /* Resonance frequency in Hz */
+    uint32_t lower;                            /* Lower -3 dB corner frequency in Hz */
+    uint32_t upper;                            /* Upper -3 dB corner frequency in Hz */
+    uint32_t cornerAmp;                        /* Amplitude of the -3 dB corners */
+    const char *note;                          /* Why there is no valid result, NULL if valid */
+} QMeasResult;
+
+/* Samples handed over from the worker thread to the UI thread */
+typedef struct {
+    guint count;
+    QMeasSample samples[QMEAS_BATCH_SIZE];
+} QMeasBatch;
+
+/* Outcome of a sweep, handed over from the worker thread to the UI thread */
+typedef struct {
+    ptx_Status_t status;                       /* Status of the last measurement */
+    gboolean stopped;                          /* Sweep was stopped by the user */
+    uint32_t failFreq;                         /* Frequency of the failed measurement */
+    QMeasResult result;
+} QMeasDone;
+
 /* Consolidated shared state with single mutex protecting all shared data */
 typedef struct {
     GMutex mutex;                              /* Single mutex protecting all shared state */
@@ -240,6 +291,9 @@ typedef struct {
     uint8_t writeMsgBuffer[NDEF_BUFFER_SIZE];  /* NDEF message to write */
     uint32_t writeMsgLen;                      /* Length of the NDEF message to write */
     guint writeRecordCount;                    /* Number of records in the NDEF message to write */
+
+    /* Q-Measurement: sweep settings, set by the UI when the measurement is started */
+    QMeasParams qmeasParams;
 
     /* HCE: NDEF message to emulate, set by the UI when the emulation is started */
     uint8_t hceNdefMsg[NDEF_BUFFER_SIZE];
@@ -345,6 +399,24 @@ struct AppState {
     GtkCheckButton *pollF424;
     GtkLabel *pollingNote;
     gboolean pollingUiLoading;                 /* Widgets are being set, ignore their change signals */
+    GtkSpinButton *qmeasSpan;                  /* Q-Measurement tab widgets */
+    GtkSpinButton *qmeasStep;
+    GtkDropDown *qmeasAveraging;
+    GtkLabel *qmeasPoints;
+    GtkButton *qmeasStartStop;
+    GtkButton *qmeasExport;
+    GtkWidget *qmeasRestoreDefaults;
+    GtkLabel *qmeasQ;
+    GtkLabel *qmeasResonance;
+    GtkLabel *qmeasCorners;
+    GtkLabel *qmeasBandwidth;
+    GtkLabel *qmeasStatus;
+    GtkWidget *qmeasGraph;
+    GArray *qmeasSamples;                      /* QMeasSample of the (running or last) sweep */
+    QMeasParams qmeasShownParams;              /* Settings of the (running or last) sweep */
+    QMeasResult qmeasResult;                   /* Result of the last sweep */
+    gboolean qmeasRunning;                     /* Sweep running (until the reader is idle again) */
+    gboolean qmeasStopping;                    /* STOP clicked, waiting for the sweep to end */
     GtkWindow *prefsWindow;
     GtkSwitch *darkModeSwitch;
     GSettings *settings;
@@ -366,6 +438,10 @@ static void postHceLog(const char *fmt, ...) G_GNUC_PRINTF(1, 2);
 static gboolean onHceStopped(gpointer data);
 static gboolean onHceMessageWritten(gpointer data);
 static ptx_Status_t runHceEmulation(ptx_RUL_t *rul);
+static ptx_Status_t runQMeasurement(ptx_RUL_t *rul);
+static void updateQMeasButtons(AppState *state);
+static gboolean onQMeasSamples(gpointer data);
+static gboolean onQMeasDone(gpointer data);
 typedef GtkWindow* (*LoadWindowFunc)(GtkApplication *app, AppState *state, GtkWindow *parent);
 static void presentWindow(GtkWindow **window, LoadWindowFunc loader, GtkApplication *app, AppState *state);
 static ptx_Status_t runDemo();
@@ -479,6 +555,15 @@ static gboolean displayDiscoveryLoopError(gpointer data)
     state->hceRunning = FALSE;
     state->hceStopping = FALSE;
     updateHceButtons(state);
+
+    if (state->qmeasRunning)
+    {
+        gtk_button_set_label(state->qmeasStartStop, "START");
+    }
+    state->qmeasRunning = FALSE;
+    state->qmeasStopping = FALSE;
+    gtk_label_set_text(state->qmeasStatus, content);
+    updateQMeasButtons(state);
 
     g_free(errorData);
     return FALSE;
@@ -1269,6 +1354,7 @@ static gint onInitDone(gpointer userData)
         state->ptxReady = TRUE;
         updateNdefButtons(state);
         updateHceButtons(state);
+        updateQMeasButtons(state);
         GAction* resetAction = g_action_map_lookup_action(G_ACTION_MAP(app), "reset");
         GAction* prefsAction = g_action_map_lookup_action(G_ACTION_MAP(app), "preferences");
         g_simple_action_set_enabled(G_SIMPLE_ACTION(resetAction), TRUE);
@@ -2023,6 +2109,530 @@ static gboolean onHceStopped(gpointer data)
     return FALSE;
 }
 
+/*
+ * ####################################################################################################################
+ * Q-MEASUREMENT TAB
+ * ####################################################################################################################
+ */
+
+/* Reads the sweep settings from the widgets. Returns FALSE if they are not valid, 'error' then holds the reason. */
+static gboolean qmeasReadParams(AppState *state, QMeasParams *params, uint32_t *points, const char **error)
+{
+    params->span = (uint32_t)lround(gtk_spin_button_get_value(state->qmeasSpan) * 1000.0);
+    params->step = (uint32_t)lround(gtk_spin_button_get_value(state->qmeasStep) * 1000.0);
+    params->averaging = (ptx_RUL_AdcAveraging_t)gtk_drop_down_get_selected(state->qmeasAveraging);
+    *points = 0u;
+    *error = NULL;
+
+    if ((0u == params->span) || (0u == params->step))
+        *error = "Span and step must not be 0.";
+    else if (params->span > QMEAS_MAX_SPAN_HZ)
+        *error = "The span must not exceed 5 MHz.";
+    else if (params->step > params->span)
+        *error = "The step must not exceed the span.";
+    else if (params->averaging >= AdcAveraging_Max)
+        *error = "Select the ADC averaging.";
+    else
+    {
+        *points = (params->span / params->step) + 1u;
+        if (*points > QMEAS_MAX_POINTS)
+            *error = "Too many measurement points - increase the step or decrease the span.";
+    }
+
+    return (NULL == *error);
+}
+
+/* Shows the number of points of the sweep, or why the settings are not valid. */
+static void updateQMeasPoints(AppState *state)
+{
+    QMeasParams params;
+    uint32_t points;
+    const char *error;
+    char text[APP_TEXT_BUFFER_SIZE];
+
+    gboolean valid = qmeasReadParams(state, &params, &points, &error);
+
+    if (valid)
+        snprintf(text, sizeof(text), "%u (max. %u)", points, QMEAS_MAX_POINTS);
+    else
+        snprintf(text, sizeof(text), "%s", error);
+
+    gtk_label_set_text(state->qmeasPoints, text);
+}
+
+/*
+ * Sets the sensitivity of the Q-Measurement tab widgets:
+ * - START/STOP: PTX initialized and valid settings; STOP is available while measuring, but not twice.
+ * - Settings and RESTORE DEFAULTS: not while measuring.
+ * - EXPORT CSV: not while measuring and there are samples.
+ */
+static void updateQMeasButtons(AppState *state)
+{
+    QMeasParams params;
+    uint32_t points;
+    const char *error;
+    gboolean valid = qmeasReadParams(state, &params, &points, &error);
+    gboolean idle = !state->qmeasRunning;
+
+    gtk_widget_set_sensitive(GTK_WIDGET(state->qmeasStartStop),
+                             state->ptxReady && !state->qmeasStopping && (state->qmeasRunning || valid));
+    gtk_widget_set_sensitive(GTK_WIDGET(state->qmeasSpan), idle);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->qmeasStep), idle);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->qmeasAveraging), idle);
+    gtk_widget_set_sensitive(state->qmeasRestoreDefaults, idle);
+    gtk_widget_set_sensitive(GTK_WIDGET(state->qmeasExport), idle && (state->qmeasSamples->len > 0u));
+}
+
+static void clearQMeasResult(AppState *state)
+{
+    state->qmeasResult = (QMeasResult){0};
+    gtk_label_set_text(state->qmeasQ, "-");
+    gtk_label_set_text(state->qmeasResonance, "-");
+    gtk_label_set_text(state->qmeasCorners, "-");
+    gtk_label_set_text(state->qmeasBandwidth, "-");
+}
+
+static void onQMeasParamChanged(GtkWidget *widget, gpointer userData)
+{
+    (void)widget;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+
+    updateQMeasPoints(state);
+    updateQMeasButtons(state);
+}
+
+static void onQMeasRestoreDefaults(GtkWidget *widget, gpointer userData)
+{
+    (void)widget;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+
+    gtk_spin_button_set_value(state->qmeasSpan, QMEAS_DEFAULT_SPAN_HZ / 1000.0);
+    gtk_spin_button_set_value(state->qmeasStep, QMEAS_DEFAULT_STEP_HZ / 1000.0);
+    gtk_drop_down_set_selected(state->qmeasAveraging, QMEAS_DEFAULT_AVERAGING);
+    updateQMeasPoints(state);
+    updateQMeasButtons(state);
+}
+
+static void onQMeasStartStop(GtkWidget *widget, gpointer userData)
+{
+    (void)widget;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+
+    if (state->qmeasRunning)
+    {
+        if (state->qmeasStopping)
+            return;
+
+        state->qmeasStopping = TRUE;
+        updateQMeasButtons(state);
+        stopDiscovery(state);
+
+        /* Keep the tabs locked until the sweep has ended */
+        gtk_widget_set_sensitive(state->stackSwitcher, FALSE);
+        gtk_label_set_text(state->qmeasStatus, "Stopping measurement ...");
+        return;
+    }
+
+    lockSharedState();
+    gboolean isRunning = sSharedState.doRunDiscovery;
+    unlockSharedState();
+
+    if (isRunning)
+    {
+        gtk_label_set_text(state->qmeasStatus, "Discovery is still being stopped - please try again.");
+        return;
+    }
+
+    /* Take over a value that is still being edited */
+    gtk_spin_button_update(state->qmeasSpan);
+    gtk_spin_button_update(state->qmeasStep);
+
+    QMeasParams params;
+    uint32_t points;
+    const char *error;
+    if (!qmeasReadParams(state, &params, &points, &error))
+    {
+        gtk_label_set_text(state->qmeasStatus, error);
+        return;
+    }
+
+    g_array_set_size(state->qmeasSamples, 0);
+    state->qmeasShownParams = params;
+    clearQMeasResult(state);
+
+    lockSharedState();
+    sSharedState.qmeasParams = params;
+    unlockSharedState();
+
+    state->qmeasRunning = TRUE;
+    gtk_button_set_label(state->qmeasStartStop, "STOP");
+    gtk_label_set_text(state->qmeasStatus, "Measuring ...");
+    gtk_widget_queue_draw(state->qmeasGraph);
+
+    startDiscovery(state, DiscoveryMode_QMeas);
+    updateQMeasButtons(state);
+}
+
+/* Called with the next samples of the running sweep. Takes ownership of the batch. */
+static gboolean onQMeasSamples(gpointer data)
+{
+    QMeasBatch *batch = (QMeasBatch *)data;
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+
+    if ((state != NULL) && state->qmeasRunning)
+    {
+        g_array_append_vals(state->qmeasSamples, batch->samples, batch->count);
+        gtk_widget_queue_draw(state->qmeasGraph);
+
+        if (!state->qmeasStopping)
+        {
+            char text[APP_TEXT_BUFFER_SIZE];
+            uint32_t points = (state->qmeasShownParams.span / state->qmeasShownParams.step) + 1u;
+            snprintf(text, sizeof(text), "Measuring ... %u / %u", state->qmeasSamples->len, points);
+            gtk_label_set_text(state->qmeasStatus, text);
+        }
+    }
+
+    g_free(batch);
+    return FALSE;
+}
+
+/* Called when the sweep has ended. Takes ownership of the outcome. */
+static gboolean onQMeasDone(gpointer data)
+{
+    QMeasDone *done = (QMeasDone *)data;
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+
+    if (state == NULL)
+    {
+        g_free(done);
+        return FALSE;
+    }
+
+    char text[APP_TEXT_BUFFER_SIZE];
+
+    state->qmeasRunning = FALSE;
+    state->qmeasStopping = FALSE;
+    state->qmeasResult = done->result;
+    gtk_button_set_label(state->qmeasStartStop, "START");
+    gtk_widget_set_sensitive(state->stackSwitcher, TRUE);
+
+    if (done->result.valid)
+    {
+        snprintf(text, sizeof(text), "%u.%02u", done->result.q100 / 100u, done->result.q100 % 100u);
+        gtk_label_set_text(state->qmeasQ, text);
+        snprintf(text, sizeof(text), "%.3f MHz", done->result.resonance / 1e6);
+        gtk_label_set_text(state->qmeasResonance, text);
+        snprintf(text, sizeof(text), "%.3f MHz / %.3f MHz", done->result.lower / 1e6, done->result.upper / 1e6);
+        gtk_label_set_text(state->qmeasCorners, text);
+        snprintf(text, sizeof(text), "%.1f kHz", (done->result.upper - done->result.lower) / 1e3);
+        gtk_label_set_text(state->qmeasBandwidth, text);
+        snprintf(text, sizeof(text), "Measurement done (%u points).", state->qmeasSamples->len);
+    }
+    else if (PTX_STATUS_E_GEN_ADCCLIPPING == done->status)
+    {
+        snprintf(text, sizeof(text), "ADC clipping at %.3f MHz - the signal is too strong to be measured.",
+                 done->failFreq / 1e6);
+    }
+    else if (PTX_STATUS_SUCCESS != done->status)
+    {
+        snprintf(text, sizeof(text), "ERROR 0x%04X at %.3f MHz - %s", done->status, done->failFreq / 1e6,
+                 getErrorDescription(done->status));
+    }
+    else if (done->stopped)
+    {
+        snprintf(text, sizeof(text), "Measurement stopped.");
+    }
+    else
+    {
+        snprintf(text, sizeof(text), "No result: %s", (done->result.note != NULL) ? done->result.note : "unknown");
+    }
+
+    /* A fatal error is reported by displayDiscoveryLoopError(), which follows and replaces this text */
+    gtk_label_set_text(state->qmeasStatus, text);
+    gtk_widget_queue_draw(state->qmeasGraph);
+    updateQMeasButtons(state);
+
+    g_free(done);
+    return FALSE;
+}
+
+/* Returns a "nice" step (1, 2, 5 * 10^n) for an axis of the given range with about 'ticks' ticks. */
+static double niceTickStep(double range, int ticks)
+{
+    double raw = range / ticks;
+    double magnitude = pow(10.0, floor(log10(raw)));
+    double norm = raw / magnitude;
+    double nice = (norm < 1.5) ? 1.0 : (norm < 3.0) ? 2.0 : (norm < 7.0) ? 5.0 : 10.0;
+
+    return nice * magnitude;
+}
+
+/* Draws text with its right edge (right = TRUE) or its center at x, and its vertical center at y. */
+static void drawText(cairo_t *cr, const char *text, double x, double y, gboolean right)
+{
+    cairo_text_extents_t ext;
+    cairo_text_extents(cr, text, &ext);
+    cairo_move_to(cr, right ? (x - ext.width - ext.x_bearing) : (x - (ext.width / 2.0) - ext.x_bearing),
+                  y - (ext.height / 2.0) - ext.y_bearing);
+    cairo_show_text(cr, text);
+}
+
+static void drawQMeasGraph(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer userData)
+{
+    AppState *state = (AppState *)userData;
+    GdkRGBA fg;
+    gtk_widget_get_color(GTK_WIDGET(area), &fg);
+
+    const double left = 64.0, right = 16.0, top = 16.0, bottom = 40.0;
+    const double plotW = width - left - right;
+    const double plotH = height - top - bottom;
+
+    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, 11.0);
+    cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, fg.alpha);
+
+    if ((plotW < 50.0) || (plotH < 50.0))
+        return;
+
+    guint count = state->qmeasSamples->len;
+    if (0u == count)
+    {
+        drawText(cr, "No measurement", width / 2.0, height / 2.0, FALSE);
+        return;
+    }
+
+    const QMeasSample *samples = (const QMeasSample *)(void *)state->qmeasSamples->data;
+    const QMeasParams *params = &state->qmeasShownParams;
+    const double fMin = (QMEAS_CENTER_FREQ_HZ - (params->span / 2u)) / 1e6;
+    const double fMax = fMin + (((params->span / params->step) * (double)params->step) / 1e6);
+
+    uint32_t maxAmp = 1u;
+    for (guint i = 0; i < count; ++i)
+    {
+        if (samples[i].amp > maxAmp)
+            maxAmp = samples[i].amp;
+    }
+
+    /* The y axis shows ADC LSB */
+    const double yStep = niceTickStep(((double)maxAmp / QMEAS_AMP_FACTOR), 5);
+    const double yMax = ceil(((double)maxAmp / QMEAS_AMP_FACTOR) / yStep) * yStep;
+    const double xStep = niceTickStep(fMax - fMin, 6);
+    const int xDecimals = (int)fmax(0.0, ceil(-log10(xStep) - 1e-9));
+
+#define GRAPH_X(f) (left + (((f) - fMin) / (fMax - fMin)) * plotW)
+#define GRAPH_Y(a) (top + plotH - (((a) / QMEAS_AMP_FACTOR) / yMax) * plotH)
+
+    char label[32];
+    cairo_set_line_width(cr, 1.0);
+
+    /* Grid lines and tick labels */
+    for (double y = 0.0; y <= yMax + (yStep / 2.0); y += yStep)
+    {
+        double py = top + plotH - ((y / yMax) * plotH);
+        cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, 0.15);
+        cairo_move_to(cr, left, py);
+        cairo_line_to(cr, left + plotW, py);
+        cairo_stroke(cr);
+
+        cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, fg.alpha);
+        snprintf(label, sizeof(label), "%g", y);
+        drawText(cr, label, left - 6.0, py, TRUE);
+    }
+
+    for (double x = ceil((fMin - 1e-9) / xStep) * xStep; x <= fMax + 1e-9; x += xStep)
+    {
+        double px = GRAPH_X(x);
+        cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, 0.15);
+        cairo_move_to(cr, px, top);
+        cairo_line_to(cr, px, top + plotH);
+        cairo_stroke(cr);
+
+        cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, fg.alpha);
+        snprintf(label, sizeof(label), "%.*f", xDecimals, x);
+        drawText(cr, label, px, top + plotH + 12.0, FALSE);
+    }
+
+    /* Axes and titles */
+    cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, fg.alpha);
+    cairo_rectangle(cr, left, top, plotW, plotH);
+    cairo_stroke(cr);
+    drawText(cr, "Frequency (MHz)", left + (plotW / 2.0), height - 8.0, FALSE);
+    cairo_save(cr);
+    cairo_translate(cr, 12.0, top + (plotH / 2.0));
+    cairo_rotate(cr, -G_PI / 2.0);
+    drawText(cr, "RF amplitude (ADC LSB)", 0.0, 0.0, FALSE);
+    cairo_restore(cr);
+
+    cairo_save(cr);
+    cairo_rectangle(cr, left, top, plotW, plotH);
+    cairo_clip(cr);
+
+    /* Curve */
+    cairo_set_source_rgb(cr, 0.20, 0.55, 0.95);
+    cairo_set_line_width(cr, 1.5);
+    for (guint i = 0; i < count; ++i)
+    {
+        double px = GRAPH_X(samples[i].freq / 1e6);
+        double py = GRAPH_Y((double)samples[i].amp);
+        if (0u == i)
+            cairo_move_to(cr, px, py);
+        else
+            cairo_line_to(cr, px, py);
+    }
+    cairo_stroke(cr);
+
+    /* Resonance, corner frequencies and -3 dB level */
+    if (state->qmeasResult.valid)
+    {
+        const double dashes[] = { 5.0, 4.0 };
+        cairo_set_line_width(cr, 1.0);
+        cairo_set_dash(cr, dashes, 2, 0.0);
+
+        cairo_set_source_rgb(cr, 0.95, 0.55, 0.10);
+        double py = GRAPH_Y((double)state->qmeasResult.cornerAmp);
+        cairo_move_to(cr, left, py);
+        cairo_line_to(cr, left + plotW, py);
+        double lx = GRAPH_X(state->qmeasResult.lower / 1e6);
+        double ux = GRAPH_X(state->qmeasResult.upper / 1e6);
+        cairo_move_to(cr, lx, top);
+        cairo_line_to(cr, lx, top + plotH);
+        cairo_move_to(cr, ux, top);
+        cairo_line_to(cr, ux, top + plotH);
+        cairo_stroke(cr);
+
+        cairo_set_source_rgb(cr, 0.85, 0.25, 0.25);
+        double rx = GRAPH_X(state->qmeasResult.resonance / 1e6);
+        cairo_move_to(cr, rx, top);
+        cairo_line_to(cr, rx, top + plotH);
+        cairo_stroke(cr);
+        cairo_set_dash(cr, NULL, 0, 0.0);
+
+        cairo_restore(cr);
+        cairo_save(cr);
+        cairo_set_source_rgba(cr, fg.red, fg.green, fg.blue, fg.alpha);
+        snprintf(label, sizeof(label), "Q = %u.%02u", state->qmeasResult.q100 / 100u, state->qmeasResult.q100 % 100u);
+        drawText(cr, label, left + plotW - 40.0, top + 12.0, FALSE);
+    }
+
+    cairo_restore(cr);
+
+#undef GRAPH_X
+#undef GRAPH_Y
+}
+
+/* Builds the CSV text of the last sweep: settings and results as comments, followed by the samples. */
+static GString *buildQMeasCsv(AppState *state)
+{
+    GString *csv = g_string_new(NULL);
+    GDateTime *now = g_date_time_new_now_local();
+    gchar *time = g_date_time_format(now, "%Y-%m-%d %H:%M:%S");
+    const QMeasParams *params = &state->qmeasShownParams;
+    const QMeasResult *result = &state->qmeasResult;
+
+    g_string_append(csv, "# PTX205R NFC Explorer - antenna Q measurement\n");
+    g_string_append_printf(csv, "# date=%s\n", time);
+    g_string_append_printf(csv, "# center_hz=%u\n", QMEAS_CENTER_FREQ_HZ);
+    g_string_append_printf(csv, "# span_hz=%u\n", params->span);
+    g_string_append_printf(csv, "# step_hz=%u\n", params->step);
+    g_string_append_printf(csv, "# averaging_samples=%u\n", 1u << (uint32_t)params->averaging);
+    if (result->valid)
+    {
+        g_string_append_printf(csv, "# q_factor=%u.%02u\n", result->q100 / 100u, result->q100 % 100u);
+        g_string_append_printf(csv, "# resonance_hz=%u\n", result->resonance);
+        g_string_append_printf(csv, "# lower_3db_hz=%u\n", result->lower);
+        g_string_append_printf(csv, "# upper_3db_hz=%u\n", result->upper);
+    }
+    else
+    {
+        g_string_append_printf(csv, "# q_factor=n/a (%s)\n", (result->note != NULL) ? result->note : "no result");
+    }
+    g_string_append_printf(csv, "# amplitude is the raw measurement value (ADC LSB multiplied by %u)\n", QMEAS_AMP_FACTOR);
+    g_string_append(csv, "frequency_hz,amplitude\n");
+
+    const QMeasSample *samples = (const QMeasSample *)(void *)state->qmeasSamples->data;
+    for (guint i = 0; i < state->qmeasSamples->len; ++i)
+    {
+        g_string_append_printf(csv, "%u,%u\n", samples[i].freq, samples[i].amp);
+    }
+
+    g_free(time);
+    g_date_time_unref(now);
+    return csv;
+}
+
+static void onQMeasExportFinished(GObject *source, GAsyncResult *result, gpointer userData)
+{
+    (void)userData;
+    GtkApplication *app = GTK_APPLICATION(g_application_get_default());
+    AppState *state = g_object_get_data(G_OBJECT(app), "app-state");
+    GError *error = NULL;
+    GFile *file = gtk_file_dialog_save_finish(GTK_FILE_DIALOG(source), result, &error);
+
+    if (file == NULL)
+    {
+        /* Cancelling the dialog is not an error */
+        if ((state != NULL) && !g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_DISMISSED)
+            && !g_error_matches(error, GTK_DIALOG_ERROR, GTK_DIALOG_ERROR_CANCELLED))
+        {
+            gtk_label_set_text(state->qmeasStatus, error->message);
+        }
+        g_clear_error(&error);
+        return;
+    }
+
+    if (state != NULL)
+    {
+        GString *csv = buildQMeasCsv(state);
+
+        if (g_file_replace_contents(file, csv->str, csv->len, NULL, FALSE, G_FILE_CREATE_NONE, NULL, NULL, &error))
+        {
+            gchar *name = g_file_get_basename(file);
+            gchar *text = g_strdup_printf("Exported %u points to %s.", state->qmeasSamples->len, name);
+            gtk_label_set_text(state->qmeasStatus, text);
+            g_free(text);
+            g_free(name);
+        }
+        else
+        {
+            gchar *text = g_strdup_printf("Export failed: %s", error->message);
+            gtk_label_set_text(state->qmeasStatus, text);
+            g_free(text);
+            g_clear_error(&error);
+        }
+
+        g_string_free(csv, TRUE);
+    }
+
+    g_object_unref(file);
+}
+
+static void onQMeasExport(GtkWidget *widget, gpointer userData)
+{
+    (void)widget;
+    AppState *state = g_object_get_data(G_OBJECT(userData), "app-state");
+
+    if (0u == state->qmeasSamples->len)
+        return;
+
+    GDateTime *now = g_date_time_new_now_local();
+    gchar *time = g_date_time_format(now, "%Y%m%d_%H%M%S");
+    gchar *name = g_strdup_printf("qmeas_%s.csv", time);
+
+    GtkFileDialog *dialog = gtk_file_dialog_new();
+    gtk_file_dialog_set_title(dialog, "Export Q measurement");
+    gtk_file_dialog_set_initial_name(dialog, name);
+    gtk_file_dialog_save(dialog, gtk_application_get_active_window(GTK_APPLICATION(userData)), NULL,
+                         onQMeasExportFinished, NULL);
+
+    g_object_unref(dialog);
+    g_free(name);
+    g_free(time);
+    g_date_time_unref(now);
+}
+
 static void onCloseRequest(GtkApplication *app, gpointer userData)
 {
     (void)app;
@@ -2344,6 +2954,8 @@ static void freeAppState(AppState *state)
     g_ptr_array_unref(state->ndefEditor.records);
     g_ptr_array_unref(state->hceEditor.fieldWidgets);
     g_ptr_array_unref(state->hceEditor.records);
+    if (state->qmeasSamples != NULL)
+        g_array_unref(state->qmeasSamples);
     g_free(state);
 }
 
@@ -2558,6 +3170,47 @@ static void onActivate(GtkApplication *app, gpointer userData)
     g_signal_connect(state->pollF424, "toggled", G_CALLBACK(onPollingChanged), app);
     g_signal_connect(state->pollLpcdMode, "notify::selected", G_CALLBACK(onPollingLpcdChanged), app);
 
+    /* Q-Measurement tab: sweep settings, START/STOP, results, graph and CSV export */
+    state->qmeasSamples = g_array_new(FALSE, FALSE, sizeof(QMeasSample));
+    const char * const qmeasIds[] = { "qmeasSpan", "qmeasStep", "qmeasAveraging", "qmeasPoints", "qmeasStartStop",
+                                      "qmeasExport", "qmeasRestoreDefaults", "qmeasQ", "qmeasResonance", "qmeasCorners",
+                                      "qmeasBandwidth", "qmeasStatus", "qmeasGraph" };
+    GObject *qmeasObjects[G_N_ELEMENTS(qmeasIds)];
+    for (guint i = 0; i < G_N_ELEMENTS(qmeasIds); ++i)
+    {
+        qmeasObjects[i] = gtk_builder_get_object(windowBuilder, qmeasIds[i]);
+        if(qmeasObjects[i] == NULL) {
+            g_warning("Failed to load '%s' from window.ui - cannot measure the Q factor", qmeasIds[i]);
+            g_object_unref(windowBuilder);
+            return;
+        }
+    }
+    state->qmeasSpan = GTK_SPIN_BUTTON(qmeasObjects[0]);
+    state->qmeasStep = GTK_SPIN_BUTTON(qmeasObjects[1]);
+    state->qmeasAveraging = GTK_DROP_DOWN(qmeasObjects[2]);
+    state->qmeasPoints = GTK_LABEL(qmeasObjects[3]);
+    state->qmeasStartStop = GTK_BUTTON(qmeasObjects[4]);
+    state->qmeasExport = GTK_BUTTON(qmeasObjects[5]);
+    state->qmeasRestoreDefaults = GTK_WIDGET(qmeasObjects[6]);
+    state->qmeasQ = GTK_LABEL(qmeasObjects[7]);
+    state->qmeasResonance = GTK_LABEL(qmeasObjects[8]);
+    state->qmeasCorners = GTK_LABEL(qmeasObjects[9]);
+    state->qmeasBandwidth = GTK_LABEL(qmeasObjects[10]);
+    state->qmeasStatus = GTK_LABEL(qmeasObjects[11]);
+    state->qmeasGraph = GTK_WIDGET(qmeasObjects[12]);
+    g_signal_connect(state->qmeasStartStop, "clicked", G_CALLBACK(onQMeasStartStop), app);
+    g_signal_connect(state->qmeasExport, "clicked", G_CALLBACK(onQMeasExport), app);
+    g_signal_connect(state->qmeasRestoreDefaults, "clicked", G_CALLBACK(onQMeasRestoreDefaults), app);
+    g_signal_connect(state->qmeasSpan, "value-changed", G_CALLBACK(onQMeasParamChanged), app);
+    g_signal_connect(state->qmeasStep, "value-changed", G_CALLBACK(onQMeasParamChanged), app);
+    gtk_spin_button_set_value(state->qmeasSpan, QMEAS_DEFAULT_SPAN_HZ / 1000.0);
+    gtk_spin_button_set_value(state->qmeasStep, QMEAS_DEFAULT_STEP_HZ / 1000.0);
+    gtk_drop_down_set_selected(state->qmeasAveraging, QMEAS_DEFAULT_AVERAGING);
+    gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(state->qmeasGraph), drawQMeasGraph, state, NULL);
+    gtk_label_set_text(state->qmeasStatus, "Press START to measure the Q factor of the antenna.");
+    updateQMeasPoints(state);
+    updateQMeasButtons(state);
+
     PollingValues pollingDefaults;
     getDefaultPollingValues(&pollingDefaults);
     loadPollingUi(state, &pollingDefaults);
@@ -2715,6 +3368,13 @@ static ptx_Status_t runDemo()
             {
                 /* Card emulation runs its own loop until it is stopped, the reader state machine is not used */
                 status = runHceEmulation(&sRul);
+                continue;
+            }
+
+            if(doRun && (DiscoveryMode_QMeas == mode))
+            {
+                /* The Q-measurement sweeps through the frequencies once, the reader state machine is not used */
+                status = runQMeasurement(&sRul);
                 continue;
             }
 
@@ -3552,6 +4212,208 @@ static ptx_Status_t runHceEmulation(ptx_RUL_t *rul)
 
         g_idle_add(onHceStopped, NULL);
     }
+
+    return status;
+}
+
+/*
+ * ####################################################################################################################
+ * Q-MEASUREMENT (worker thread)
+ * ####################################################################################################################
+ */
+
+/*
+ * Calculates the Q factor from the sweep like ptx_PSL_QMeasurement(): the resonance is the maximum of the amplitude
+ * (the middle of it if it is flat), the corners are the frequencies where the amplitude falls to 0.708 of the maximum
+ * (-3 dB) on both sides, and Q = resonance frequency / (upper corner - lower corner).
+ */
+static void calculateQMeasResult(const QMeasSample *samples, uint32_t count, QMeasResult *result)
+{
+    *result = (QMeasResult){0};
+
+    uint32_t maxAmp = 0u;
+    uint32_t maxIdx = 0u;
+    for (uint32_t i = 0u; i < count; ++i)
+    {
+        if (samples[i].amp > maxAmp)
+        {
+            maxAmp = samples[i].amp;
+            maxIdx = i;
+        }
+    }
+
+    if (0u == maxAmp)
+    {
+        result->note = "no signal was measured.";
+        return;
+    }
+
+    /* More than one sample may have the maximum value - take the middle one */
+    uint32_t peakIdx = maxIdx;
+    while (((peakIdx + 1u) < count) && (samples[peakIdx + 1u].amp == maxAmp))
+    {
+        peakIdx++;
+    }
+    peakIdx = maxIdx + ((peakIdx - maxIdx) / 2u);
+
+    uint32_t cornerAmp = (uint32_t)(((uint64_t)maxAmp * QMEAS_CORNER_NUM) / QMEAS_AMP_FACTOR);
+
+    /* Lower corner: the last sample below the corner amplitude, left of the resonance */
+    uint32_t lowerIdx = 0u;
+    for (uint32_t i = 0u; i < peakIdx; ++i)
+    {
+        if (samples[i].amp > cornerAmp)
+            break;
+        lowerIdx = i;
+    }
+
+    /* Upper corner: the last sample above the corner amplitude, right of the resonance */
+    uint32_t upperIdx = peakIdx;
+    for (uint32_t i = peakIdx; i < count; ++i)
+    {
+        if (samples[i].amp < cornerAmp)
+            break;
+        upperIdx = i;
+    }
+
+    if ((samples[0].amp > cornerAmp) || (samples[count - 1u].amp >= cornerAmp))
+    {
+        result->note = "the -3 dB point is outside the sweep range - increase the span.";
+    }
+    else if (samples[upperIdx].freq == samples[lowerIdx].freq)
+    {
+        result->note = "the -3 dB corner frequencies are identical - decrease the step.";
+    }
+    else
+    {
+        result->valid = TRUE;
+        result->resonance = samples[peakIdx].freq;
+        result->lower = samples[lowerIdx].freq;
+        result->upper = samples[upperIdx].freq;
+        result->cornerAmp = cornerAmp;
+        result->q100 = (uint32_t)(((uint64_t)result->resonance * 100u) / (result->upper - result->lower));
+    }
+}
+
+/* Hands samples over to the UI thread. */
+static void postQMeasSamples(const QMeasSample *samples, uint32_t count)
+{
+    QMeasBatch *batch = g_new0(QMeasBatch, 1);
+    batch->count = count;
+    memcpy(batch->samples, samples, count * sizeof(QMeasSample));
+    g_idle_add(onQMeasSamples, batch);
+}
+
+/*
+ * Sweeps through the frequencies of the Q-Measurement tab and measures the RF amplitude at each one. The measurement
+ * ends when the sweep is complete, when the user stops it or if a measurement fails. A clipping ADC is reported to
+ * the user, any other error is returned and ends the application's discovery loop like all other errors.
+ */
+static ptx_Status_t runQMeasurement(ptx_RUL_t *rul)
+{
+    QMeasParams params;
+    lockSharedState();
+    params = sSharedState.qmeasParams;
+    unlockSharedState();
+
+    ptx_Status_t status = PTX_STATUS_SUCCESS;
+    QMeasDone *done = g_new0(QMeasDone, 1);
+    QMeasSample *samples = NULL;
+    uint32_t count = 0u;
+    uint32_t posted = 0u;
+    gboolean attempted = FALSE;
+
+    if ((0u == params.step) || (0u == params.span) || (params.span > QMEAS_MAX_SPAN_HZ)
+        || (params.averaging >= AdcAveraging_Max) || ((params.span / params.step) >= QMEAS_MAX_POINTS))
+    {
+        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    }
+    else
+    {
+        uint32_t points = (params.span / params.step) + 1u;
+        uint32_t startFreq = QMEAS_CENTER_FREQ_HZ - (params.span / 2u);
+        samples = g_new0(QMeasSample, points);
+
+        for (uint32_t i = 0u; i < points; ++i)
+        {
+            lockSharedState();
+            gboolean stop = sSharedState.doStopDiscovery || (0 != sSharedState.gExit);
+            unlockSharedState();
+
+            if (stop)
+            {
+                done->stopped = TRUE;
+                break;
+            }
+
+            uint32_t freq = startFreq + (i * params.step);
+            uint32_t amp = 0u;
+
+            attempted = TRUE;
+            ptx_Status_t measStatus = ptx_RUL_RfFieldMeasurement(rul, freq, params.averaging, &amp);
+
+            if (PTX_STATUS_SUCCESS != measStatus)
+            {
+                done->status = measStatus;
+                done->failFreq = freq;
+                break;
+            }
+
+            samples[count].freq = freq;
+            samples[count].amp = amp;
+            count++;
+
+            if ((count - posted) >= QMEAS_BATCH_SIZE)
+            {
+                postQMeasSamples(&samples[posted], count - posted);
+                posted = count;
+            }
+        }
+
+        if (count > posted)
+        {
+            postQMeasSamples(&samples[posted], count - posted);
+        }
+
+        /* Leave the RF test mode, also after an error or if stopped */
+        if (attempted)
+        {
+            ptx_Status_t stopStatus = ptx_NSC_RfTestStop(&(rul->Nsc));
+
+            if ((PTX_STATUS_SUCCESS == done->status) && (PTX_STATUS_SUCCESS != stopStatus))
+            {
+                done->status = stopStatus;
+            }
+        }
+
+        if ((PTX_STATUS_SUCCESS == done->status) && !done->stopped)
+        {
+            calculateQMeasResult(samples, count, &done->result);
+        }
+
+        /* Only a clipping ADC can be reported to the user and the application continues. */
+        if ((PTX_STATUS_SUCCESS != done->status) && (PTX_STATUS_E_GEN_ADCCLIPPING != done->status))
+        {
+            status = done->status;
+        }
+    }
+
+    if (PTX_STATUS_SUCCESS != status)
+    {
+        ptx_Utils_Print("ERROR [Q-measurement failed]: %s (0x%04X)\n", getErrorDescription(status), status);
+        if (PTX_STATUS_SUCCESS == done->status)
+        {
+            done->status = status;
+        }
+    }
+
+    lockSharedState();
+    sSharedState.doStopDiscovery = false;
+    sSharedState.doRunDiscovery = false;
+    unlockSharedState();
+
+    g_free(samples);
+    g_idle_add(onQMeasDone, done);
 
     return status;
 }

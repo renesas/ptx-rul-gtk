@@ -888,6 +888,269 @@
             </property>
           </object>
         </child>
+        <child>
+          <object class="GtkStackPage">
+            <property name="name">qmeas</property>
+            <property name="title">Q-Measurement</property>
+            <property name="child">
+              <object id="qmeasBox" class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">8</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <property name="margin-start">8</property>
+                <property name="margin-end">8</property>
+                <property name="margin-top">8</property>
+                <property name="margin-bottom">8</property>
+                <child>
+                  <object id="qmeasParamGrid" class="GtkGrid">
+                    <property name="row-spacing">6</property>
+                    <property name="column-spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Frequency span around 13.56 MHz (kHz)</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">0</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasSpan" class="GtkSpinButton">
+                        <property name="numeric">True</property>
+                        <property name="digits">3</property>
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                            <property name="lower">0.001</property>
+                            <property name="upper">5000</property>
+                            <property name="value">3000</property>
+                            <property name="step-increment">100</property>
+                            <property name="page-increment">500</property>
+                          </object>
+                        </property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">0</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Frequency step (kHz)</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">1</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasStep" class="GtkSpinButton">
+                        <property name="numeric">True</property>
+                        <property name="digits">3</property>
+                        <property name="adjustment">
+                          <object class="GtkAdjustment">
+                            <property name="lower">0.001</property>
+                            <property name="upper">5000</property>
+                            <property name="value">5</property>
+                            <property name="step-increment">1</property>
+                            <property name="page-increment">10</property>
+                          </object>
+                        </property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">1</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">ADC averaging (samples)</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">2</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasAveraging" class="GtkDropDown">
+                        <property name="model">
+                          <object class="GtkStringList">
+                            <items>
+                              <item>1</item>
+                              <item>2</item>
+                              <item>4</item>
+                              <item>8</item>
+                              <item>16</item>
+                              <item>32</item>
+                            </items>
+                          </object>
+                        </property>
+                        <property name="selected">3</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">2</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Measurement points</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">3</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasPoints" class="GtkLabel">
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">3</property>
+                        </layout>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="orientation">horizontal</property>
+                    <property name="spacing">8</property>
+                    <child>
+                      <object id="qmeasStartStop" class="GtkButton">
+                        <property name="label">START</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasExport" class="GtkButton">
+                        <property name="label">EXPORT CSV</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasRestoreDefaults" class="GtkButton">
+                        <property name="label">RESTORE DEFAULTS</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object id="qmeasResultGrid" class="GtkGrid">
+                    <property name="row-spacing">4</property>
+                    <property name="column-spacing">12</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Q factor</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">0</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasQ" class="GtkLabel">
+                        <property name="label">-</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">0</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Resonance frequency</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">1</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasResonance" class="GtkLabel">
+                        <property name="label">-</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">1</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">Lower / upper -3 dB frequency</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">2</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasCorners" class="GtkLabel">
+                        <property name="label">-</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">2</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="label">-3 dB bandwidth</property>
+                        <property name="xalign">0</property>
+                        <layout>
+                          <property name="column">0</property>
+                          <property name="row">3</property>
+                        </layout>
+                      </object>
+                    </child>
+                    <child>
+                      <object id="qmeasBandwidth" class="GtkLabel">
+                        <property name="label">-</property>
+                        <property name="xalign">0</property>
+                        <property name="selectable">True</property>
+                        <layout>
+                          <property name="column">1</property>
+                          <property name="row">3</property>
+                        </layout>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object id="qmeasStatus" class="GtkLabel">
+                    <property name="xalign">0</property>
+                    <property name="wrap">True</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkFrame">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <child>
+                      <object id="qmeasGraph" class="GtkDrawingArea">
+                        <property name="hexpand">True</property>
+                        <property name="vexpand">True</property>
+                        <property name="content-height">250</property>
+                        <property name="content-width">400</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </property>
+          </object>
+        </child>
       </object>
     </child>
   </object>
