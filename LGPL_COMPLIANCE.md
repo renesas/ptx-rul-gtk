@@ -2,7 +2,7 @@
 
 ## Overview
 
-The PTX GTK4 Discovery Application is a GTK4-based graphical application that links against GTK4, GLib, and Gio libraries, which are licensed under the LGPL v2.1 or later. This document outlines the compliance measures taken to meet LGPL licensing requirements.
+The PTX NFC Explorer is a GTK4-based graphical application that links against GTK4, GLib, and Gio libraries, which are licensed under the LGPL v2.1 or later. This document outlines the compliance measures taken to meet LGPL licensing requirements.
 
 ## LGPL Compliance Measures
 

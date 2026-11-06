@@ -1,10 +1,11 @@
 # Project Dependencies and Licenses
 
-This document provides a comprehensive list of all dependencies used by the PTX GTK4 Discovery Application, their sources, and their respective licenses.
+This document provides a comprehensive list of all dependencies used by the PTX NFC Explorer, their sources, and their respective licenses.
 
 ## Runtime Dependencies (Dynamically Linked)
 
 ### GTK4
+- **Version**: 4.12 or later
 - **Source**: https://gitlab.gnome.org/GNOME/gtk
 - **License**: LGPL v2.1 or later
 - **Purpose**: GUI toolkit and application interface

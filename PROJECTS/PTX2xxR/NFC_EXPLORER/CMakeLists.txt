@@ -38,7 +38,7 @@ project("PTX205R_NFC_EXPLORER")
 
 # Use pkg-config to locate GTK 4
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4)
+pkg_check_modules(GTK4 REQUIRED IMPORTED_TARGET gtk4>=4.12)
 
 # NOTE: GTK4 is LGPL v2.1 or later
 # This dynamically-linked dependency requires LGPL compliance:

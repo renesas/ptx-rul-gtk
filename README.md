@@ -33,9 +33,20 @@ Connect the PTX board via USB-C for power.
 
 ## Software requirements
 
-- RUL SDK 1.2.1
-- GTK4 - install the `libgtk-4-dev` package
-- cmake
+- RUL SDK 1.2.1 (the SDK sources are included in this repository under `SRC`)
+- GTK4 development files (`libgtk-4-dev`); version 4.12 or later (`gtk_list_box_remove_all`), built and tested with GTK 4.18; Raspberry Pi OS Trixie is sufficient, Bookworm (GTK 4.8) is not
+- cmake 3.15 or later
+- pkg-config
+- A C compiler with `-std=gnu99` support (e.g. gcc) and make
+- `glib-compile-resources` and `glib-compile-schemas` (package `libglib2.0-dev-bin`, normally installed with `libgtk-4-dev`)
+
+On Raspberry Pi OS / Debian:
+
+```
+sudo apt install build-essential cmake pkg-config libgtk-4-dev libglib2.0-dev-bin
+```
+
+Additionally, to build the AppImage: `curl` and internet access (linuxdeploy and its GTK plugin are downloaded on first use).
 
 ## Project layout
 
@@ -287,7 +298,7 @@ The version is displayed in the title of the *About* window, e.g. "PTX205R NFC E
 ## Licensing and Compliance
 
 ### Application License
-The PTX GTK4 Discovery Application is licensed under the **BSD-3-Clause License**.
+The PTX NFC Explorer is licensed under the **BSD-3-Clause License**.
 
 ### Third-Party Dependencies
 This application links against **GTK4** and related libraries (**GLib**, **Gio**), which are licensed under the **LGPL v2.1 or later**.
