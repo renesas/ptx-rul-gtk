@@ -53,7 +53,7 @@ extern "C" {
  * Semantic versioning: MAJOR.MINOR.PATCH
  * Update these values to change the application version.
  */
-#define PTX_VERSION_MAJOR 0
+#define PTX_VERSION_MAJOR 1
 #define PTX_VERSION_MINOR 0
 #define PTX_VERSION_PATCH 0
 

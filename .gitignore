@@ -80,3 +80,16 @@ tools/appimage/.cache/
 tools/appimage/build/
 *.AppImage
 /LogOutput.txt
+
+# local environment / tool files
+/.bash_profile
+/.bashrc
+/.profile
+/.zprofile
+/.zshrc
+/.gitconfig
+/.gitmodules
+/.idea
+/.mcp.json
+/.ripgreprc
+/.claude/
