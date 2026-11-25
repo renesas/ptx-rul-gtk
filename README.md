@@ -2,15 +2,6 @@
 
 GTK4 application (NFC discovery, NDEF read/write and card emulation) using the PTX205R and the RUL SDK 1.3.0 reference implementation for the Raspberry Pi and SPI.
 
-## Modifications made to the SDK example
-
-The project is based on the SDK's `NFC_FORUM_BASIC_DISCOVERY` example. The project directory (`PROJECTS/PTX2xxR/NFC_EXPLORER`), the source directory (`SRC/EXAMPLES/ptx_NFCExplorer`) and the executable (`ptx205r-nfc-explorer`) were renamed, as the application differs a lot from the example.
-`CMakeLists.txt` under `PROJECTS/PTX2xxR/NFC_EXPLORER` was modified to work with GTK and NDEF reading/writing. In addition to the NDEF component of the SDK, it also builds the SDK's NDEF record sources (`SRC/API/NDEF/RECORDS`) and, for the *HCE* tab, the RUL HCE component (`SRC/API/RUL_HCE`, `ptx_RUL_HCE.c`) and the Type 4 Tag emulation add-on `ptx_HCET4T.c` (copied unchanged from the SDK's `ptx_Example_HCET4T` example to `SRC/EXAMPLES/ptx_NFCExplorer/HCE_T4T`).
-The source and header files under `SRC/EXAMPLES/ptx_NFCExplorer` were modified and unnecessary pieces of application code were removed.
-`ptx_ExampleNdefRecords.c` and `ptx_ExampleNdefRecords.h` were added there, they contain the definitions of the standard NDEF record types that can be written.
-The basic structure of the SDK deliverable was kept, only unnecessary project and example files and directories were removed.
-The SDK sources themselves are not modified.
-
 ## Hardware requirements
 Raspberry Pi 5 with SPI enabled.
 
@@ -35,10 +26,8 @@ Connect the PTX board via USB-C for power.
 
 - RUL SDK 1.3.0 (the SDK sources are included in this repository under `SRC`)
 - GTK4 development files (`libgtk-4-dev`); version 4.12 or later (`gtk_list_box_remove_all`), built and tested with GTK 4.18; Raspberry Pi OS Trixie is sufficient, Bookworm (GTK 4.8) is not
-- cmake 3.15 or later
-- pkg-config
-- A C compiler with `-std=gnu99` support (e.g. gcc) and make
-- `glib-compile-resources` and `glib-compile-schemas` (package `libglib2.0-dev-bin`, normally installed with `libgtk-4-dev`)
+- cmake 3.15 or later, pkg-config, make and a C compiler with `-std=gnu99` support (e.g. gcc)
+- `glib-compile-resources` and `glib-compile-schemas` (package `libglib2.0-dev-bin`)
 
 On Raspberry Pi OS / Debian:
 
@@ -92,17 +81,7 @@ The application can also be launched by double-clicking the executable.
 If the application is run from the command line, information will be printed there.
 The UI files are embedded at build time, so after editing one of them the application must be rebuilt.
 
-## Necessary files for running the application
-
-The `BUILD` directory contains everything that is needed.
-The following files must be inside the same directory as the executable:
-- `libRUL.so` - RUL shared library - for running from another directory, `LD_LIBRARY_PATH` must contain its directory, e.g. `export LD_LIBRARY_PATH=$(pwd):$LD_LIBRARY_PATH` from `BUILD`
-- `schemas/gschemas.compiled` - the compiled settings schema
-
-When distributing the application, the following license files must also be included alongside the executable (they are copied to the `BUILD` directory by cmake):
-- `COPYING` - LGPL v2.1 full text
-- `COPYING.LESSER` - LGPL v2.1 clarification
-- `DEPENDENCIES.md` - list of dependencies and their licenses
+To run the executable from another location, copy it together with `libRUL.so` and `schemas/gschemas.compiled` (or add the directory with `libRUL.so` to `LD_LIBRARY_PATH`). When distributing it, include the files listed under *License Files*.
 
 ## AppImage
 
@@ -120,26 +99,25 @@ Notes:
 - `LogOutput.txt` is written to the current working directory.
 - The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files are in `usr/share/doc/ptx205r-nfc-explorer`.
 
-## Under the hood
+## Usage
 
-When the application is launched, UI files and settings are loaded, and the PTX is initialized in a separate thread.
-If initialization was successful, discovery can be started from the *Discovery* tab, and NDEF messages can be read and written on the *NDEF* tab. The discovery settings are configured on the *Polling* tab. On the *HCE* tab, the PTX emulates a Type 4 Tag. The *Q-Measurement* tab measures the Q factor of the antenna.
-Discovery and the NDEF operations share one discovery loop, which runs in a separate thread and polls for RF-technologies A, B, F, V.
-The *Discovery* tab supports multiple cards in the field, the *NDEF* tab supports only one single card.
-The card emulation of the *HCE* tab and the sweep of the *Q-Measurement* tab run in the same thread, instead of the discovery loop.
+When the application is launched, the PTX is initialized in the background. Once initialization has finished, the tabs can be used:
+- *Discovery* - detects cards (multiple cards in the field are supported)
+- *NDEF* - reads and writes NDEF messages (one card at a time)
+- *Polling* - configures the discovery settings
+- *HCE* - the PTX emulates a Type 4 Tag
+- *Q-Measurement* - measures the Q factor of the antenna
+
 While discovery, the emulation or a measurement is running, the tabs cannot be switched.
-
-If the initialization fails, an error message will be displayed and the application must be closed.
-If discovery fails to start or the discovery loop ends with an error, an error message will be displayed and the application must be closed.
-Some menu items are disabled until the initialization is successfully finished.
-If the application is closed, the PTX is de-initialized - if discovery was running, it will stop.
+The menu button offers *Preferences* (Ctrl+P), *About* and *Quit* (Ctrl+Q); some menu items are disabled until the initialization has finished.
+If the initialization fails, or discovery fails to start or ends with an error, an error message is displayed and the application must be closed.
+When the application is closed, the PTX is de-initialized and a running discovery stops.
 
 ### Discovery
 
 Discovery is started by clicking the START button on the *Discovery* tab.
 When discovery is started, the START button becomes the STOP button, and vice versa.
 Multiple cards in the field are supported: up to 5 cards per RF-technology (A, B, F, V) and discovery cycle, 20 cards in total, as in the SDK's example application. The limit per technology can be lowered on the *Polling* tab.
-The SDK's card registry holds up to 32 cards (`PTX_RUL_MAX_SUPPORTED_DEVICES`), the per-technology limit is set by `PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH`.
 
 When cards are found, the UI thread is updated and the cards are displayed in a table, one row per card:
 
@@ -171,8 +149,7 @@ Card: RF-Tech <technology>, Protocol <protocol>, ID <hex>
 The ID is NFCID1 for Type-A, NFCID0 for Type-B, NFCID2 for Type-F and the UID for Type-V (shown most significant byte first).
 The card summary is followed by the NDEF records and the raw bytes of the message, displayed as continuous hex digits.
 
-The message is parsed into its records by a bounds-checked parser in the application.
-The SDK's own message parser is not used, because it decodes the payload length of long records in host byte order and does not check records against the end of the buffer.
+The message is parsed into its records by a bounds-checked parser in the application (the SDK's own parser is not used).
 The following record types are decoded:
 - URI - the URI identifier code is expanded to the full URI
 - Text - language code and text (UTF-8 or UTF-16)
@@ -197,15 +174,11 @@ The message cannot be larger than 256 bytes. A record that would exceed this lim
 
 Clicking WRITE starts discovery and writes the message to the first activated card, then stops discovery.
 If no card is activated within 10 polling cycles, discovery stops and a message is displayed.
-The RUL does not report polling cycles, so the limit is a time budget of 10 times the polling-loop cycle time: the idle time set on the *Polling* tab plus an estimated 50 ms of polling (about 1.5 s with the default idle time of 100 ms).
+The limit is a time budget of about 1.5 s with the default idle time of 100 ms (10 times the idle time set on the *Polling* tab plus an estimated 50 ms of polling).
 The status label below displays the result: success, no card found, card is not NDEF-formatted, or the error code of a failed write.
 The card has to be NDEF-formatted, formatting cards is not supported.
 
-While discovery is running, the READ button is disabled; while no discovery is running, the STOP button is disabled.
-After STOP is clicked, READ is enabled again once the reader has been switched off.
-CLEAR is only enabled while no NDEF read or write is running.
-While a write is in progress, the record editor and the READ, STOP and CLEAR buttons are disabled.
-While an NDEF read is running, the WRITE button is disabled.
+While a write is in progress, the record editor and the READ, STOP and CLEAR buttons are disabled; while an NDEF read is running, the WRITE button is disabled.
 
 The following record types are available:
 
@@ -225,8 +198,7 @@ The following record types are available:
 
 Input is validated before a record is added, and problems are reported in the status label.
 
-The SDK's helpers for creating URI and Text records are not used, because they do not check the size of the input before copying it.
-The application assembles the payloads itself and uses the SDK to create the records and the message.
+The application assembles the payloads itself (the SDK's URI and Text helpers are not used) and uses the SDK to create the records and the message.
 
 #### Adding a record type
 
@@ -249,7 +221,7 @@ The message is detected when a reader has written a valid NLEN (the NFC Forum pr
 A written message is served until STOP, the next START resets the tag to the message of the editor.
 The *Emulation log* lists the events: field on/off, activation and deactivation by the reader, the C-APDUs (SELECT, READ BINARY, UPDATE BINARY) with their status words, and RF errors.
 
-The tag uses the NFCID1 `08 01 02 03`, SENS_RES `01 00` and ATS `05 78 00 71 02` of the SDK example; the PTX is in listen mode only (no polling).
+The PTX is in listen mode only (no polling); the tag identity (NFCID1, SENS_RES, ATS) is taken from the SDK example.
 The Polling tab settings and the RESET menu item do not apply to the emulation and the Q-measurement.
 
 ### Polling
@@ -271,7 +243,7 @@ At least one technology has to stay enabled, and LPCD requires an idle time of a
 RESTORE DEFAULTS resets all settings.
 
 The settings are used when discovery is started the next time (START, READ or WRITE); they cannot be changed while discovery is running, as the tabs are locked.
-The settings are not stored, the defaults are used whenever the application is launched.
+The Polling and Q-Measurement settings are not stored, the defaults are used whenever the application is launched.
 
 ### Q-Measurement
 
@@ -290,30 +262,13 @@ If a corner is outside the sweep range (or both are identical), there's no resul
 If the ADC clips at a frequency (the signal is too strong), the sweep is stopped and the frequency is displayed.
 
 EXPORT CSV saves the last sweep. The file starts with the settings and the result as `#` comment lines, followed by the header `frequency_hz,amplitude` and one line per point. The amplitude is the raw value, which is the ADC LSB multiplied by 1000.
-The settings are not stored, the defaults are used whenever the application is launched.
-
-## The UI
-
-The main window has five tabs, *Polling*, *Discovery*, *NDEF*, *HCE* and *Q-Measurement* (in this order), and a menu button. The *Discovery* tab is shown when the application is launched.
-The *Polling* tab has the general discovery settings (idle time, LPCD), a table with the settings per RF-technology and the RESTORE DEFAULTS button.
-The *Discovery* tab has the START/STOP and RESET buttons, the number of detected cards and a table with the information of all detected cards.
-The *NDEF* tab has a read section with the READ, STOP and CLEAR buttons on top and a text box for the NDEF message, and a write section with the WRITE button, the record type picker and the ADD, REMOVE and CLEAR buttons on top.
-The write section also has the input fields of the selected record type, the list of records, the raw bytes of the message and a status label.
-The *HCE* tab has a frame with the START/STOP button, the record type picker and the ADD, REMOVE and CLEAR buttons on top, the input fields, the list of records, the raw bytes of the message and a status label, followed by the *Message written by reader* box and the *Emulation log*.
-The *Q-Measurement* tab has the span, step and averaging settings with the number of points, the START/STOP, EXPORT CSV and RESTORE DEFAULTS buttons, the Q factor, the resonance frequency, the corner frequencies and the bandwidth, a status label and the graph.
-There's also a window for the preferences and the about information, which can be opened from the menu.
-
-Menu items:
-- Preferences (Ctrl+P) - access the settings.
-- About - show information about the application.
-- Quit (Ctrl+Q) - close the application.
-
 ## Versioning
 
-The application uses semantic versioning (MAJOR.MINOR.PATCH): MAJOR for incompatible changes, MINOR for new features, PATCH for fixes.
-The version is defined in `SRC/EXAMPLES/ptx_NFCExplorer/ptx_Version.h` by `PTX_VERSION_MAJOR`, `PTX_VERSION_MINOR` and `PTX_VERSION_PATCH`, `PTX_VERSION_STRING` holds the full version string (e.g. `0.0.0`).
-To change the version, update these three values and rebuild the application.
-The version is displayed in the title of the *About* window, e.g. "PTX205R NFC Explorer (0.0.0)".
+The application uses semantic versioning (MAJOR.MINOR.PATCH), defined in `SRC/EXAMPLES/ptx_NFCExplorer/ptx_Version.h` (`PTX_VERSION_MAJOR`, `PTX_VERSION_MINOR`, `PTX_VERSION_PATCH`). Update these and rebuild to change the version, which is shown in the title of the *About* window.
+
+## Origin
+
+The application is based on the `NFC_FORUM_BASIC_DISCOVERY` example of the RUL SDK 1.3.0. The SDK sources under `SRC` are not modified; the application code is in `SRC/EXAMPLES/ptx_NFCExplorer`, and `HCE_T4T/ptx_HCET4T.c` is copied unchanged from the SDK's `ptx_Example_HCET4T` example.
 
 ## Licensing and Compliance
 
@@ -325,10 +280,10 @@ This application links against **GTK4** and related libraries (**GLib**, **Gio**
 The NDEF reading and writing features do not introduce additional third-party dependencies.
 
 ### License Files
-- **`COPYING`**: Contains the full LGPL v2.1 license text
-- **`COPYING.LESSER`**: Clarifies the use of the LESSER GPL variant
-- **`DEPENDENCIES.md`**: Complete list of all dependencies and their licenses
-- **`LGPL_COMPLIANCE.md`**: Detailed compliance statement
+- `COPYING`: full LGPL v2.1 license text
+- `COPYING.LESSER`: LGPL v2.1 clarification
+- `DEPENDENCIES.md`: list of all dependencies and their licenses
+- `LGPL_COMPLIANCE.md`: detailed compliance statement
 
 ### Source Code Availability
 The source code for this application is available at:
@@ -341,6 +296,6 @@ For source code of LGPL dependencies:
 ### Licensing Questions
 For licensing inquiries or questions about proprietary components:
 - **Renesas NFC Components**: marketing_nfc_reader@lm.renesas.com
-- **LGPL Compliance**: See `LGPL_COMPLIANCE.md` for detailed information
+- **LGPL Compliance**: see `LGPL_COMPLIANCE.md`
 
-See `license.txt` for a complete summary of all licenses.
+See `license.txt` for a summary of all licenses.
