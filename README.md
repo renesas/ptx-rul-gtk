@@ -247,7 +247,7 @@ The Polling and Q-Measurement settings are not stored, the defaults are used whe
 
 ### Q-Measurement
 
-The *Q-Measurement* tab measures the Q factor of the antenna. The PTX sweeps through a frequency range centered on 13.56 MHz and the RF amplitude is measured at every frequency (`ptx_RUL_RfFieldMeasurement`), the same way as the SDK's `ptx_PSL_QMeasurement` does. The application runs the sweep itself, so that the measured amplitudes can be shown in the graph.
+The *Q-Measurement* tab measures the Q factor of the antenna. It is used to check an antenna design and its matching: the resonance frequency should be close to 13.56 MHz, and the Q factor sets the trade-off between range (higher Q) and bandwidth (lower Q, needed for fast modulation). The PTX sweeps through a frequency range centered on 13.56 MHz and the RF amplitude is measured at every frequency (`ptx_RUL_RfFieldMeasurement`), the same way as the SDK's `ptx_PSL_QMeasurement` does. The application runs the sweep itself, so that the measured amplitudes can be shown in the graph.
 
 | Setting | Range | Meaning |
 | ------- | ----- | ------- |

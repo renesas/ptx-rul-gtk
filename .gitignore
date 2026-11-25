@@ -79,7 +79,7 @@ CMakeUserPresets.json
 tools/appimage/.cache/
 tools/appimage/build/
 *.AppImage
-/LogOutput.txt
+LogOutput.txt
 
 # local environment / tool files
 /.bash_profile

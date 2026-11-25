@@ -18,6 +18,8 @@ NDEF tab: only one single card in the field is supported. READ starts discovery 
 
 HCE tab: host card emulation - the PTX205R emulates an NFC-A Type 4 Tag carrying an NDEF message, composed with the same editor as on the NDEF tab (default: URI https://www.renesas.com/en/products/ptx205r). The emulation is started and stopped with START/STOP. The tag is writable: an NDEF message written by a reader is displayed, together with an emulation log. Every START resets the tag to the message of the editor.
 
+Q-Measurement tab: measures the Q factor of the antenna. The PTX sweeps through a frequency range centered on 13.56 MHz (settings: frequency span, frequency step and ADC averaging) and the RF amplitude is measured at every frequency and shown in a graph while the sweep is running. START/STOP starts and ends the sweep. When the sweep is complete, the resonance frequency, the -3 dB corner frequencies, the bandwidth and the Q factor are calculated and displayed. EXPORT CSV saves the last sweep. Settings are not stored.
+
 LICENSE INFORMATION
 
 SPDX-License-Identifier: BSD-3-Clause
