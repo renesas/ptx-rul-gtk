@@ -2,6 +2,10 @@
 
 GTK4 application (NFC discovery, NDEF read/write and card emulation) using the PTX205R and the RUL SDK 1.3.0 reference implementation for the Raspberry Pi and SPI.
 
+A walkthrough of the setup and the application is available on [Instructables](https://www.instructables.com/GTK4-NFC-Reader-App-for-the-Raspberry-Pi).
+
+![Discovery tab](docs/images/discovery.png)
+
 ## Hardware requirements
 Raspberry Pi 5 with SPI enabled.
 
@@ -141,6 +145,8 @@ The RESET button clears the displayed card information and restarts discovery.
 
 ### NDEF read
 
+![NDEF tab](docs/images/ndef.png)
+
 NDEF messages are read when discovery is started with the READ button on the *NDEF* tab, and reading is stopped with the STOP button. The CLEAR button clears the output.
 If a card is activated, its NDEF message is read and the output starts with a one-line card summary:
 ```
@@ -208,6 +214,8 @@ The record type picker and the input form of the *NDEF* tab are generated from t
 
 ### HCE
 
+![HCE tab](docs/images/hce.png)
+
 The *HCE* tab (host card emulation) makes the PTX205R emulate an NFC-A Type 4 Tag (NFC Forum T4T) that carries an NDEF message, as in the SDK's `ptx_Example_HCET4T` example.
 The emulation is started and stopped with the START/STOP button.
 The NDEF message is composed with the same editor as the write section of the *NDEF* tab (record type picker, ADD, REMOVE and CLEAR buttons, input fields, record list, raw bytes).
@@ -225,6 +233,8 @@ The PTX is in listen mode only (no polling); the tag identity (NFCID1, SENS_RES,
 The Polling tab settings and the RESET menu item do not apply to the emulation and the Q-measurement.
 
 ### Polling
+
+![Polling tab](docs/images/polling.png)
 
 The *Polling* tab exposes the RF-discovery settings (`ptx_RUL_DiscoverConfig_t`) used by the application:
 
@@ -246,6 +256,8 @@ The settings are used when discovery is started the next time (START, READ or WR
 The Polling and Q-Measurement settings are not stored, the defaults are used whenever the application is launched.
 
 ### Q-Measurement
+
+![Q-Measurement tab](docs/images/q-measurement.png)
 
 The *Q-Measurement* tab measures the Q factor of the antenna. It is used to check an antenna design and its matching: the resonance frequency should be close to 13.56 MHz, and the Q factor sets the trade-off between range (higher Q) and bandwidth (lower Q, needed for fast modulation). The PTX sweeps through a frequency range centered on 13.56 MHz and the RF amplitude is measured at every frequency (`ptx_RUL_RfFieldMeasurement`), the same way as the SDK's `ptx_PSL_QMeasurement` does. The application runs the sweep itself, so that the measured amplitudes can be shown in the graph.
 
