@@ -69,8 +69,8 @@ extern "C" {
  */
 
 /**
- * PTX_LOG_FILE_DIRECT_WRITE_MODE is a compile option which continously writes Log-entries directly into a log-file in write-through mode i.e. no caching used.
- * If it's not set, the log-entries will be writen into an internal cache which gets written at the end when the Log-component gets closed/deinitialized.
+ * PTX_LOG_FILE_BUFFERED_WRITE_MODE is a compile option which disables the continously writing of Log-entries directly into a log-file i.e. caching is used.
+ * If it's set, the log-entries will be written into an internal cache which gets written at the end when the Log-component gets closed/deinitialized.
  */
 
 /**

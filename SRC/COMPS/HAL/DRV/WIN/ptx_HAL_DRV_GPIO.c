@@ -75,11 +75,10 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Init (ptx_HAL_DRV_GPIO_t *ctx, ptx_HAL_DRV_GPIO_In
     
     if ((NULL != ctx)&& (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_GPIO_Init");
-
         ctx->CompId = Comp_HAL;
         ctx->Gpio_only = 0; /* per default GPIO is not used standalone */
         ctx->Log = initParams->Log;
+        ctx->Osal = (ptx_OSAL_t*)initParams->Osal;
         status = PTX_STATUS_SUCCESS;
     }
 
@@ -92,8 +91,6 @@ ptx_Status_t ptx_HAL_DRV_GPIO_DeInit (ptx_HAL_DRV_GPIO_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_GPIO_DeInit");
-
         memset(ctx, 0, sizeof(ptx_HAL_DRV_GPIO_t));
         ctx->CompId = Comp_None;
     }
@@ -110,19 +107,19 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx)
 
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
-        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Open");
-        
-        status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xx_ctx, MODULE_DESCRIPTOR, NULL, gpio->Log);
-
+        ptx_HAL_FTD2XX_InitParams_t initParamsFTD2XX = {0};
+        initParamsFTD2XX.Log = gpio->Log;
+        initParamsFTD2XX.Osal = gpio->Osal;
+        status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xxCtx, MODULE_DESCRIPTOR, NULL, &initParamsFTD2XX);
 
         if (PTX_STATUS_SUCCESS == status)
         {
             /* GPIO usage requires MPSSE engine therefore I2C or SPI interface can be used for opening the device */
-            status = ptx_HAL_FTD2XX_SingleDeviceOpen(gpio->Ftd2xx_ctx, FTDI_DEV_INTF_I2C);
+            status = ptx_HAL_FTD2XX_SingleDeviceOpen(gpio->Ftd2xxCtx, FTDI_DEV_INTF_I2C);
 
             if (PTX_STATUS_SUCCESS == status && gpio->Gpio_only == 1)
             {
-                status = ptx_HAL_FTD2XX_CheckOpening(gpio->Ftd2xx_ctx, FTDI_DEV_INTF_MPSSE_ONLY, 0);
+                status = ptx_HAL_FTD2XX_CheckOpening(gpio->Ftd2xxCtx, FTDI_DEV_INTF_MPSSE_ONLY, 0);
             }
         }
     }
@@ -141,13 +138,16 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Open (void *ctx)
         }
         else
         {
-            status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xx_ctx, MODULE_DESCRIPTOR, NULL, gpio->Log);
+            ptx_HAL_FTD2XX_InitParams_t initParamsFTD2XX = {0};
+            initParamsFTD2XX.Log = gpio->Log;
+            initParamsFTD2XX.Osal = gpio->Osal;
+            status = ptx_HAL_FTD2XX_LibOpen((void**)&gpio->Ftd2xxCtx, MODULE_DESCRIPTOR, NULL, &initParamsFTD2XX);
         }
 
         if (PTX_STATUS_SUCCESS == status)
         {
             /* GPIO usage requires MPSSE engine therefore I2C or SPI interface can be used for opening the device */
-            status = ptx_HAL_FTD2XX_SingleDeviceOpen(gpio->Ftd2xx_ctx, FTDI_DEV_INTF_I2C);
+            status = ptx_HAL_FTD2XX_SingleDeviceOpen(gpio->Ftd2xxCtx, FTDI_DEV_INTF_I2C);
         }
     }
 
@@ -165,11 +165,9 @@ ptx_Status_t ptx_HAL_DRV_GPIO_Close (void *ctx)
 
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
-        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_Close");
-
         if (gpio->Gpio_only)
         {
-            status = ptx_HAL_FTD2XX_LibClose(gpio->Ftd2xx_ctx);
+            status = ptx_HAL_FTD2XX_LibClose(gpio->Ftd2xxCtx);
         }
         else
         {
@@ -196,14 +194,12 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPin (void *ctx, uint16_t pin, uint8_t *level)
 
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
-        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPin");
-
         ptx_HAL_FTD2XX_GPIO_t gpio_pin;
         status = ptx_HAL_MapGPIOPin(pin, &gpio_pin);
         uint16_t lvl = (uint16_t) * level;
         if (PTX_STATUS_SUCCESS == status)
         {
-            status = ptx_HAL_FTD2XX_GetGPIOLevel(gpio->Ftd2xx_ctx, gpio_pin, &lvl);
+            status = ptx_HAL_FTD2XX_GetGPIOLevel(gpio->Ftd2xxCtx, gpio_pin, &lvl);
             *level = (uint8_t) lvl;
         }
     }
@@ -235,7 +231,7 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePin (void *ctx, uint16_t pin, uint8_t level)
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            status = ptx_HAL_FTD2XX_SetGPIOLevel(gpio->Ftd2xx_ctx, gpio_pin, level);
+            status = ptx_HAL_FTD2XX_SetGPIOLevel(gpio->Ftd2xxCtx, gpio_pin, level);
         }
     }
     else
@@ -258,11 +254,11 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePin (void *ctx, uint16_t pin, uint8_t level)
     {
         if (PTX_HAL_DRV_GPIO_RESET_PIN == pin && 0 == level)
         {
-            status = ptx_HAL_FTD2XX_UART_SetRts(gpio->Ftd2xx_ctx);
+            status = ptx_HAL_FTD2XX_UART_SetRts(gpio->Ftd2xxCtx);
         }
         else if (PTX_HAL_DRV_GPIO_RESET_PIN == pin && 1 == level)
         {
-            status = ptx_HAL_FTD2XX_UART_ClrRts(gpio->Ftd2xx_ctx);
+            status = ptx_HAL_FTD2XX_UART_ClrRts(gpio->Ftd2xxCtx);
         }
         else
         {
@@ -283,10 +279,8 @@ ptx_Status_t ptx_HAL_DRV_GPIO_ReadPort (void *ctx, uint32_t port, uint16_t *data
     ptx_HAL_DRV_GPIO_t *gpio = (ptx_HAL_DRV_GPIO_t*)ctx;
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
-        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPort");
-
         uint8_t data8 = 0x00;
-        status = ptx_HAL_FTD2XX_GetHighPinsState(gpio->Ftd2xx_ctx, &data8);
+        status = ptx_HAL_FTD2XX_GetHighPinsState(gpio->Ftd2xxCtx, &data8);
         *data = (uint16_t) data8;
     }
 #endif
@@ -311,9 +305,7 @@ ptx_Status_t ptx_HAL_DRV_GPIO_WritePort (void *ctx, uint32_t port, uint16_t data
 
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
-        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_ReadPort");
-
-        status = ptx_HAL_FTD2XX_SetHighPinsState(gpio->Ftd2xx_ctx, data, mask);
+        status = ptx_HAL_FTD2XX_SetHighPinsState(gpio->Ftd2xxCtx, data, mask);
     }
 #endif
 
@@ -338,8 +330,6 @@ ptx_Status_t ptx_HAL_DRV_GPIO_SetCfgPin (void *ctx, ptx_HAL_DRV_GPIO_Cfg_t cfg[]
 
     if (PTX_COMP_CHECK(gpio, Comp_HAL))
     {
-        PTX_LOG_V(gpio->Log, "ptx_HAL_DRV_GPIO_SetCfgPin");
-
         /* Not used. Just return status. */
         status = PTX_STATUS_E_GEN_NOT_AVAILABLE;
     }
@@ -397,13 +387,9 @@ static ptx_Status_t ptx_HAL_MapGPIOPin(uint16_t pinNr, ptx_HAL_FTD2XX_GPIO_t *gp
         {
             *gpio_pin = GPIOH6;
         }
-        else if (7 == pinNr)
-        {
-            *gpio_pin = GPIOH7;
-        }
         else
         {
-            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+            *gpio_pin = GPIOH7;
         }
     }
 

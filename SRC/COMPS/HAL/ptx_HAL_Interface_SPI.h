@@ -70,7 +70,7 @@ extern "C" {
 /**
  * \brief HAL GPIO Forward declaration.
  */
-typedef struct ptx_HAL_GPIO ptx_HAL_GPIO_t;
+struct ptx_HAL_GPIO;
 
 /*
  * ####################################################################################################################
@@ -101,9 +101,9 @@ typedef struct ptx_HAL_Interface_SPI_InitParams
 
     uint32_t                            Speed;              /**< Communication interface speed. */
     ptx_Log_t                           *Log;               /**< Initialised Log Context. */
-    ptx_HAL_GPIO_t                      *Gpio;              /**< Initialized GPIO Context. */
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-    void                                *OS;                /**< Pointer to initialized Osal context. */
+    struct ptx_HAL_GPIO                 *Gpio;              /**< Initialized GPIO Context. */
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+    void                                *Osal;              /**< Pointer to initialized Osal context. */
 #endif
 } ptx_HAL_Interface_SPI_InitParams_t;
 

@@ -1,6 +1,6 @@
 # PTX205R NFC Explorer
 
-GTK4 application (NFC discovery, NDEF read/write and card emulation) using the PTX205R and the RUL SDK 1.2.1 reference implementation for the Raspberry Pi and SPI.
+GTK4 application (NFC discovery, NDEF read/write and card emulation) using the PTX205R and the RUL SDK 1.3.0 reference implementation for the Raspberry Pi and SPI.
 
 ## Modifications made to the SDK example
 
@@ -33,7 +33,7 @@ Connect the PTX board via USB-C for power.
 
 ## Software requirements
 
-- RUL SDK 1.2.1 (the SDK sources are included in this repository under `SRC`)
+- RUL SDK 1.3.0 (the SDK sources are included in this repository under `SRC`)
 - GTK4 development files (`libgtk-4-dev`); version 4.12 or later (`gtk_list_box_remove_all`), built and tested with GTK 4.18; Raspberry Pi OS Trixie is sufficient, Bookworm (GTK 4.8) is not
 - cmake 3.15 or later
 - pkg-config

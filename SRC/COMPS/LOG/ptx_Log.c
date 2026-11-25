@@ -50,7 +50,9 @@
  */
 #include <string.h>
 #include "ptx_Log.h"
-#include "ptx_Log_Interface.h"
+#if !defined(PTX_LOG_DISABLED)
+    #include "ptx_Log_Interface.h"
+#endif
 
 /*
  * ####################################################################################################################
@@ -100,7 +102,7 @@ ptx_Status_t ptx_Log_Init (ptx_Log_t *log, ptx_Log_InitParams_t *params)
         /* If the caller provided valid log init parameters, use those. Otherwise, initialize the interface.  */
         status = ptx_Log_Interface_Open(log, &init_params);
 
-        if ((PTX_STATUS_SUCCESS == status) && (ptx_Log_Type_None != init_params.LogType))
+        if (PTX_STATUS_SUCCESS == status)
         {
             log->CompId = Comp_LOG;
             log->LogType = init_params.LogType;
@@ -108,7 +110,6 @@ ptx_Status_t ptx_Log_Init (ptx_Log_t *log, ptx_Log_InitParams_t *params)
 
             /* Default formatter is ZF log. Set the callback which logs the messages formatted by ZF. */
             zf_log_set_output_v(LOG_PUT_MASK, log, ptx_Log_MsgTrx);
-
         }
 #else
         /* In case we disabled logging, just check if context was set correctly. */
@@ -190,15 +191,27 @@ static void ptx_Log_MsgTrx(const zf_log_message *msg, void *arg)
             msg->buf[len - 2] = 0x0D;
             msg->buf[len - 1] = 0x0A;
             msg->buf[len] = 0;
-            total_len = len;
         }
         else
         {
             /* Leave it be. */
         }
 
+        /* Derive level char from msg->lvl to be thread-safe per-message.
+         * log_ctx->LogLevel is racy under concurrent logging. */
+        char lvlChar;
+        switch (msg->lvl)
+        {
+            case ZF_LOG_VERBOSE: lvlChar = 'V'; break;
+            case ZF_LOG_DEBUG:   lvlChar = 'D'; break;
+            case ZF_LOG_WARN:    lvlChar = 'W'; break;
+            case ZF_LOG_ERROR:   lvlChar = 'E'; break;
+            case ZF_LOG_FATAL:   lvlChar = 'F'; break;
+            default:             lvlChar = 'I'; break;
+        }
+
         /* Write actual Log-Entry */
-        ptx_Log_Interface_WriteCB(log_ctx, log_ctx->LogLevel, msg->buf, total_len);
+        ptx_Log_Interface_WriteCB(log_ctx, lvlChar, msg->buf, total_len);
     }
 }
 #endif

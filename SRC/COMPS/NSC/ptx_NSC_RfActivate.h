@@ -103,6 +103,7 @@ ptx_Status_t ptx_NSC_RfActivate(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, pt
 /**
  * \brief This function parses the NSC_RF_ACTIVATE_NTF and stores it in the corresponding structure.
  *
+ * \param[in]   nsc         Pointer to the component structure.
  * \param[in]   buffer      Pointer to buffer, containing the data to be interpreted.
  * \param[in]   bufferLen   Length of the data to be interpreted.
  * \param[in]   ntf         Pointer to structure for storing the interpreted notification data.
@@ -110,7 +111,7 @@ ptx_Status_t ptx_NSC_RfActivate(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, pt
  * \return Status, indicating whether the operation was successful. See ptx_Status_t.
  *
  */
-ptx_Status_t ptx_NSC_ProcessRfActivateNtf(uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfActivate_Ntf_t *ntf);
+ptx_Status_t ptx_NSC_ProcessRfActivateNtf(ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfActivate_Ntf_t *ntf);
 
 #if defined(__cplusplus)
 }

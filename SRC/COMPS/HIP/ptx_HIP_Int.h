@@ -117,7 +117,10 @@ typedef enum ptx_HIP_Cmd
     HIP_Cmd_RdML     = 0x09, /**< Command Read Message Length */
     HIP_Cmd_WrDMem   = 0x0A, /**< Command Write Data Message */
     HIP_Cmd_RdDMem   = 0x0B, /**< Command Read Data Message*/
-
+    HIP_Cmd_WrDbg    = 0x0C, /**< Command Write Debug Interface */
+    HIP_Cmd_RdDbg    = 0x0D, /**< Command Read Debug Interface */
+    HIP_Cmd_WrDft    = 0x0E, /**< Command Write Dft Interface */
+    HIP_Cmd_RdDft    = 0x0F, /**< Command Read Dft Interface */
     HIP_Cmd_MAX      = 0x10, /**< Max Command, used for comparison only */
 } ptx_HIP_Cmd_t;
 

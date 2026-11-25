@@ -73,8 +73,6 @@ ptx_Status_t ptx_HAL_GPIO_Init(ptx_HAL_GPIO_t *ctx, ptx_HAL_GPIO_InitParams_t *i
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_GPIO_Init");
-
         memset(ctx, 0, sizeof(ptx_HAL_GPIO_t));
 
         /* Currently, only one GPIO type supported. */
@@ -82,6 +80,9 @@ ptx_Status_t ptx_HAL_GPIO_Init(ptx_HAL_GPIO_t *ctx, ptx_HAL_GPIO_InitParams_t *i
         memset(&init_params, 0, sizeof(ptx_HAL_DRV_GPIO_InitParams_t));
 
         init_params.Log = initParams->Log;
+#if defined(PTX_APP_DIVERSITY_WINDOWS)
+        init_params.Osal  = initParams->Osal; /* only required for windows driver */
+#endif
 
         /* Allocate GPIO Driver context. */
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_GPIO_t));
@@ -113,8 +114,6 @@ ptx_Status_t ptx_HAL_GPIO_DeInit(ptx_HAL_GPIO_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Drv.Log, "ptx_HAL_GPIO_DeInit");
-
         memset(ctx, 0, sizeof(ptx_HAL_GPIO_t));
         ctx->CompId = Comp_None;
         status = PTX_STATUS_SUCCESS;

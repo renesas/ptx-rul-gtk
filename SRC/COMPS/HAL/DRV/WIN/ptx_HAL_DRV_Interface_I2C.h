@@ -99,7 +99,7 @@ extern "C" {
 /**
  * \brief HAL GPIO Forward declaration.
  */
-typedef struct ptx_HAL_GPIO ptx_HAL_GPIO_t;
+struct ptx_HAL_GPIO;
 
 /**
  * \brief Port Configuration
@@ -137,10 +137,10 @@ typedef struct ptx_HAL_DRV_Interface_I2C
 {
     ptx_Comps_t                            CompId;              /**< Component ID. */
 
-    ptx_HAL_FTD2XXCtx_t                    *Ftd2xx_ctx;         /**< FTDI context. */
+    ptx_HAL_FTD2XXCtx_t                    *Ftd2xxCtx;          /**< FTDI context. */
     ptx_HAL_DRV_Interface_I2C_PortConfig_t *Port;               /**< Pointer to Port config. */
     ptx_Log_t                              *Log;                /**< Pointer to an initialized logger. */
-    ptx_OSAL_t                             *OS;                 /**< Pointer to an initialized Osal. */
+    ptx_OSAL_t                             *Osal;               /**< Pointer to an initialized Osal. */
     uint32_t                               Speed;               /**< I2C Communication Speed. */
     uint8_t                                BusAddr;             /**< Bus Address. */
     ptx_HAL_Interrupt_Flag_t               WaitForInterrupt;    /**< Wait for interrupt flag, can be set interrupt is expected to wait for it. */
@@ -157,8 +157,8 @@ typedef struct ptx_HAL_DRV_Interface_I2C_InitParams
     uint32_t                            Speed;              /**< I2C Communication Speed. */
     uint8_t                             Address;            /**< Bus Address. */
     ptx_Log_t                           *Log;               /**< Pointer to an initialized logger. */
-    void                                *OS;                /**< Pointer to initialized Osal context. */
-    ptx_HAL_GPIO_t                      *Gpio;              /**< Initialized GPIO Context. */
+    void                                *Osal;              /**< Pointer to initialized Osal context. */
+    struct ptx_HAL_GPIO                 *Gpio;              /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_I2C_InitParams_t;
 
 /*
@@ -193,7 +193,7 @@ typedef struct ptx_HAL_DRV_Interface_I2C_InitParams
  *   - Speed: I2C bus speed in Hz (0 => default).
  *   - Address: 7-bit I2C slave address (0 => default 0x4C).
  *   - Log: must be non-NULL (used for diagnostics).
- *   - OS: stored as OSAL context pointer.
+ *   - Osal: stored as OSAL context pointer.
  *   - Gpio: not used by this implementation.
  *
  * @return

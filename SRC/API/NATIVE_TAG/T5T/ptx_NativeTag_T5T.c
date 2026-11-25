@@ -171,40 +171,47 @@ ptx_Status_t ptx_NativeTag_T5T_Open (ptx_NativeTag_T5T_t *t5t, ptx_NativeTag_T5T
 
     if ((NULL != t5t) && (NULL != initParams))
     {
-        if ((NULL != initParams->rul) && (NULL != initParams->TxBuffer) && (PTX_T5T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
+        if ((NULL != initParams->Rul) && (NULL != initParams->TxBuffer) && (PTX_T5T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
         {
-            /* clear component */
-            (void)memset(t5t, 0, sizeof(ptx_NativeTag_T5T_t));
-
-            /* set members */
-            t5t->rul = initParams->rul;
-            t5t->TxBuffer = initParams->TxBuffer;
-
-            if (0 != initParams->UIDLen)
+            if(ptx_RUL_CardProtocolType_T5T == initParams->Rul->CardRegistry.ActiveProtocol)
             {
-                if ((PTX_T5T_UID_SIZE == initParams->UIDLen) && (NULL != initParams->UID))
+                /* clear component */
+                (void)memset(t5t, 0, sizeof(ptx_NativeTag_T5T_t));
+
+                /* set members */
+                t5t->Rul = initParams->Rul;
+                t5t->TxBuffer = initParams->TxBuffer;
+
+                if (0 != initParams->UIDLen)
                 {
-                    t5t->UID = initParams->UID;
-                    t5t->UIDLen = initParams->UIDLen;
-                    t5t->isSelected = initParams->isSelected;
-                    status = PTX_STATUS_SUCCESS;
+                    if ((PTX_T5T_UID_SIZE == initParams->UIDLen) && (NULL != initParams->UID))
+                    {
+                        t5t->UID = initParams->UID;
+                        t5t->UIDLen = initParams->UIDLen;
+                        t5t->isSelected = initParams->isSelected;
+                        status = PTX_STATUS_SUCCESS;
+                    }
+                    else
+                    {
+                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    }
                 }
                 else
                 {
-                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    t5t->UID = NULL;
+                    t5t->UIDLen = 0;
+                    status = PTX_STATUS_SUCCESS;
+                }
+
+                /* set Component-ID at the end to prevent further calls in case of an error */
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    t5t->CompId = Comp_NativeTag_T5T;
                 }
             }
             else
             {
-                t5t->UID = NULL;
-                t5t->UIDLen = 0;
-                status = PTX_STATUS_SUCCESS;
-            }
-
-            /* set Component-ID at the end to prevent further calls in case of an error */
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                t5t->CompId = Comp_NativeTag_T5T;
+                status = PTX_STATUS_E_GEN_NOT_PERMITTED;
             }
         }
         else
@@ -228,20 +235,27 @@ ptx_Status_t ptx_NativeTag_T5T_ReadSingleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_READ_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = blockNr;
-            tx_index++;
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_READ_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
+
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = blockNr;
+                tx_index++;
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            }
         }
-
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
 
     }
@@ -264,25 +278,31 @@ ptx_Status_t ptx_NativeTag_T5T_WriteSingleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen) && (NULL != blockData) && (PTX_T5T_MIN_TX_BUFFER_SIZE >= blockDataLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_WRITE_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = blockNr;
-            tx_index++;
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_WRITE_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
 
-            (void)memcpy(&t5t->TxBuffer[tx_index], blockData, blockDataLen);
-            tx_index = (uint32_t)(tx_index + blockDataLen);
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = blockNr;
+                tx_index++;
+
+                (void)memcpy(&t5t->TxBuffer[tx_index], blockData, blockDataLen);
+                tx_index = (uint32_t)(tx_index + blockDataLen);
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            }
         }
-
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -301,22 +321,28 @@ ptx_Status_t ptx_NativeTag_T5T_LockSingleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_LOCK_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = blockNr;
-            tx_index++;
-        }
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_LOCK_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
 
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = blockNr;
+                tx_index++;
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            }
+        }
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -335,25 +361,31 @@ ptx_Status_t ptx_NativeTag_T5T_ReadMultipleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_READ_MULTIPLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = blockNr;
-            tx_index++;
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_READ_MULTIPLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
 
-            t5t->TxBuffer[tx_index] = nrBlocks;
-            tx_index++;
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = blockNr;
+                tx_index++;
+
+                t5t->TxBuffer[tx_index] = nrBlocks;
+                tx_index++;
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            }
         }
-
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -371,25 +403,31 @@ ptx_Status_t ptx_NativeTag_T5T_ExtReadSingleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_READ_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
-            tx_index++;
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_READ_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
 
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
-            tx_index++;
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
+                tx_index++;
+
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
+                tx_index++;
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            }
         }
-
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -410,28 +448,34 @@ ptx_Status_t ptx_NativeTag_T5T_ExtWriteSingleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen) && (NULL != blockData) && (PTX_T5T_MIN_TX_BUFFER_SIZE >= blockDataLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_WRITE_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
-            tx_index++;
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_WRITE_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
 
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
-            tx_index++;
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
+                tx_index++;
 
-            (void)memcpy(&t5t->TxBuffer[tx_index], blockData, blockDataLen);
-            tx_index = (uint32_t)(tx_index + blockDataLen);
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
+                tx_index++;
+
+                (void)memcpy(&t5t->TxBuffer[tx_index], blockData, blockDataLen);
+                tx_index = (uint32_t)(tx_index + blockDataLen);
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            }
         }
-
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -450,25 +494,31 @@ ptx_Status_t ptx_NativeTag_T5T_ExtLockSingleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_LOCK_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
-            tx_index++;
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_LOCK_SINGLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
 
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
-            tx_index++;
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
+                tx_index++;
+
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
+                tx_index++;
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            }
         }
-
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, frame_type, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -487,33 +537,38 @@ ptx_Status_t ptx_NativeTag_T5T_ExtReadMultipleBlock (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_READ_MULTIPLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
-            tx_index++;
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_EXT_READ_MULTIPLE_BLOCK_REQ_CODE, optionFlag, &tx_index);
 
-            t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
-            tx_index++;
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
+                tx_index++;
 
-            t5t->TxBuffer[tx_index] = (uint8_t)((nrBlocks & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
-            tx_index++;
+                t5t->TxBuffer[tx_index] = (uint8_t)((blockNr & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
+                tx_index++;
 
-            t5t->TxBuffer[tx_index] = (uint8_t)((nrBlocks & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
-            tx_index++;
+                t5t->TxBuffer[tx_index] = (uint8_t)((nrBlocks & PTX_T5T_UINT16_LOWER_BYTE_MASK) >> 0);
+                tx_index++;
+
+                t5t->TxBuffer[tx_index] = (uint8_t)((nrBlocks & PTX_T5T_UINT16_UPPER_BYTE_MASK) >> PTX_T5T_1_BYTE_SHIFT_MASK);
+                tx_index++;
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            }
         }
-
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
-
     return status;
 }
 
@@ -530,32 +585,38 @@ ptx_Status_t ptx_NativeTag_T5T_Select (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen)  && (NULL != uid) && (PTX_T5T_UID_SIZE == uidLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_SELECT_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            (void)memcpy(&t5t->TxBuffer[tx_index], uid, uidLen);
-            tx_index = (uint32_t)(tx_index + uidLen);
-        }
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_SELECT_REQ_CODE, optionFlag, &tx_index);
 
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
-        }
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                (void)memcpy(&t5t->TxBuffer[tx_index], uid, uidLen);
+                tx_index = (uint32_t)(tx_index + uidLen);
+            }
 
-        /* check RES_FLAG */
-        if (0x00 == rx[0] && (PTX_STATUS_SUCCESS == status))
-        {
-            t5t->isSelected = PTX_T5T_SELECTED_TRUE;
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+            }
+
+            /* check RES_FLAG */
+            if (0x00 == rx[0] && (PTX_STATUS_SUCCESS == status))
+            {
+                t5t->isSelected = PTX_T5T_SELECTED_TRUE;
+            }
+            else
+            {
+                t5t->isSelected = PTX_T5T_SELECTED_FALSE;
+            }
         }
         else
         {
-            t5t->isSelected = PTX_T5T_SELECTED_FALSE;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -574,33 +635,39 @@ ptx_Status_t ptx_NativeTag_T5T_Sleep (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rx) && (NULL != rxLen) && (NULL != uid) && (PTX_T5T_UID_SIZE == uidLen))
     {
-        /* set T5T command-header */
-        status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_SLPV_REQ_CODE, optionFlag, &tx_index);
-
-        /* set command specific parameters */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            (void)memcpy(&t5t->TxBuffer[tx_index], uid, uidLen);
-            tx_index = (uint32_t)(tx_index + uidLen);
-        }
+            /* set T5T command-header */
+            status = ptx_NativeTag_T5T_SetCommandHeader(t5t, PTX_T5T_SLPV_REQ_CODE, optionFlag, &tx_index);
 
-        /* everything OK so far ? - send data */
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
-
-            /* Attention: A successful SLEEP-command doesn't send a response - therefore overwrite the status for the caller */
-            if (((PTX_STATUS_E_GEN_TIMEOUT == status) || (PTX_STATUS_E_NSC_RFERROR == status)) && (0 == *rxLen))
+            /* set command specific parameters */
+            if (PTX_STATUS_SUCCESS == status)
             {
-                status = PTX_STATUS_SUCCESS;
+                (void)memcpy(&t5t->TxBuffer[tx_index], uid, uidLen);
+                tx_index = (uint32_t)(tx_index + uidLen);
+            }
+
+            /* everything OK so far ? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T5T_Transceive(t5t, T5T_FrameType_Standard, tx_index, rx, rxLen, msTimeout);
+
+                /* Attention: A successful SLEEP-command doesn't send a response - therefore overwrite the status for the caller */
+                if (((PTX_STATUS_E_GEN_TIMEOUT == status) || (PTX_STATUS_E_NSC_RFERROR == status)) && (0 == *rxLen))
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+
+            if ((PTX_STATUS_SUCCESS == status) && (NULL != t5t->UID) && (0 == memcmp(&t5t->UID[0], &uid[0], PTX_T5T_UID_SIZE)))
+            {
+                t5t->isSelected = PTX_T5T_SELECTED_FALSE;
             }
         }
-
-        if ((PTX_STATUS_SUCCESS == status) && (NULL != t5t->UID) && (0 == memcmp(&t5t->UID[0], &uid[0], PTX_T5T_UID_SIZE)))
+        else
         {
-            t5t->isSelected = PTX_T5T_SELECTED_FALSE;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
@@ -614,33 +681,40 @@ ptx_Status_t ptx_NativeTag_T5T_SetUID (ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T))
     {
-        if (0 != uidLen)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            /* check if new UID is being set if in SELECTED mode, if yes exit SELECTED mode */
-            if ((NULL != t5t->UID) && (PTX_T5T_SELECTED_TRUE == t5t->isSelected))
+            if (0 != uidLen)
             {
-                memcmp(t5t->UID, uid, PTX_T5T_UID_SIZE) ? (t5t->isSelected = PTX_T5T_SELECTED_FALSE) : (t5t->isSelected = PTX_T5T_SELECTED_TRUE);
-            }
+                /* check if new UID is being set if in SELECTED mode, if yes exit SELECTED mode */
+                if ((NULL != t5t->UID) && (PTX_T5T_SELECTED_TRUE == t5t->isSelected))
+                {
+                    memcmp(t5t->UID, uid, PTX_T5T_UID_SIZE) ? (t5t->isSelected = PTX_T5T_SELECTED_FALSE) : (t5t->isSelected = PTX_T5T_SELECTED_TRUE);
+                }
 
-            if ((PTX_T5T_UID_SIZE == uidLen) && (NULL != uid))
-            {
-                t5t->UID = uid;
-                t5t->UIDLen = uidLen;
+                if ((PTX_T5T_UID_SIZE == uidLen) && (NULL != uid))
+                {
+                    t5t->UID = uid;
+                    t5t->UIDLen = uidLen;
 
-                status = PTX_STATUS_SUCCESS;
+                    status = PTX_STATUS_SUCCESS;
+                }
+                else
+                {
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                }
             }
             else
             {
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                t5t->UID = NULL;
+                t5t->UIDLen = 0;
+                t5t->isSelected = PTX_T5T_SELECTED_FALSE;
+
+                status = PTX_STATUS_SUCCESS;
             }
         }
         else
         {
-            t5t->UID = NULL;
-            t5t->UIDLen = 0;
-            t5t->isSelected = PTX_T5T_SELECTED_FALSE;
-
-            status = PTX_STATUS_SUCCESS;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -654,9 +728,16 @@ ptx_Status_t ptx_NativeTag_T5T_Close (ptx_NativeTag_T5T_t *t5t)
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T))
     {
-        memset(t5t, 0, sizeof(ptx_NativeTag_T5T_t));
-        t5t->CompId = Comp_None;
-        status = PTX_STATUS_SUCCESS;
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
+        {
+            memset(t5t, 0, sizeof(ptx_NativeTag_T5T_t));
+            t5t->CompId = Comp_None;
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -675,52 +756,59 @@ static ptx_Status_t ptx_NativeTag_T5T_SetCommandHeader(ptx_NativeTag_T5T_t *t5t,
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != bytesWritten))
     {
-        /* set Option-Flag ? */
-        if (0 != optionFlag)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            req_flag = (uint8_t)(req_flag | PTX_T5T_REQ_FLAG_OPTION_BIT_SET_MASK);
-        }
+            /* set Option-Flag ? */
+            if (0 != optionFlag)
+            {
+                req_flag = (uint8_t)(req_flag | PTX_T5T_REQ_FLAG_OPTION_BIT_SET_MASK);
+            }
 
-        /* use Addressed-Mode ? */
-        if ((NULL != t5t->UID) || ((PTX_T5T_SELECT_REQ_CODE == commandCode) || (PTX_T5T_SLPV_REQ_CODE == commandCode)))
+            /* use Addressed-Mode ? */
+            if ((NULL != t5t->UID) || ((PTX_T5T_SELECT_REQ_CODE == commandCode) || (PTX_T5T_SLPV_REQ_CODE == commandCode)))
+            {
+                req_flag = (uint8_t)(req_flag | PTX_T5T_REQ_FLAG_AMS_SET_MASK);
+            }
+
+            /* SELECTED mode? */
+            if ((PTX_T5T_SELECTED_FALSE != t5t->isSelected) && (PTX_T5T_SELECT_REQ_CODE != commandCode) && (PTX_T5T_SLPV_REQ_CODE != commandCode))
+            {
+                req_flag = (uint8_t)(req_flag | PTX_T5T_REQ_FLAG_SELECT_FLAG_SET_MASK);
+                req_flag = (uint8_t)(req_flag & ~PTX_T5T_REQ_FLAG_AMS_SET_MASK);
+            }
+
+            /* set REQ_FLAG-byte */
+            t5t->TxBuffer[index] = req_flag;
+            index++;
+
+            /* set command-code */
+            t5t->TxBuffer[index] = commandCode;
+            index++;
+
+            switch (commandCode)
+            {
+                case PTX_T5T_SELECT_REQ_CODE:
+                /* Fall through. */
+                case PTX_T5T_SLPV_REQ_CODE:
+                    /* don't insert UID here - done by caller because the UID is treated as payload in this case */
+                    break;
+
+                default:
+                    /* set UID (optional) */
+                    if ((0 != (req_flag & PTX_T5T_REQ_FLAG_AMS_SET_MASK)) && (NULL != t5t->UID))
+                    {
+                        (void)memcpy(&t5t->TxBuffer[index], &t5t->UID[0], t5t->UIDLen);
+                        index = (uint32_t)(index + t5t->UIDLen);
+                    }
+                    break;
+            }
+            *bytesWritten = index;
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
         {
-            req_flag = (uint8_t)(req_flag | PTX_T5T_REQ_FLAG_AMS_SET_MASK);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
-        /* SELECTED mode? */
-        if ((PTX_T5T_SELECTED_FALSE != t5t->isSelected) && (PTX_T5T_SELECT_REQ_CODE != commandCode) && (PTX_T5T_SLPV_REQ_CODE != commandCode))
-        {
-            req_flag = (uint8_t)(req_flag | PTX_T5T_REQ_FLAG_SELECT_FLAG_SET_MASK);
-            req_flag = (uint8_t)(req_flag & ~PTX_T5T_REQ_FLAG_AMS_SET_MASK);
-        }
-
-        /* set REQ_FLAG-byte */
-        t5t->TxBuffer[index] = req_flag;
-        index++;
-
-        /* set command-code */
-        t5t->TxBuffer[index] = commandCode;
-        index++;
-
-        switch (commandCode)
-        {
-            case PTX_T5T_SELECT_REQ_CODE:
-            /* Fall through. */
-            case PTX_T5T_SLPV_REQ_CODE:
-                /* don't insert UID here - done by caller because the UID is treated as payload in this case */
-                break;
-
-            default:
-                /* set UID (optional) */
-                if ((0 != (req_flag & PTX_T5T_REQ_FLAG_AMS_SET_MASK)) && (NULL != t5t->UID))
-                {
-                    (void)memcpy(&t5t->TxBuffer[index], &t5t->UID[0], t5t->UIDLen);
-                    index = (uint32_t)(index + t5t->UIDLen);
-                }
-                break;
-        }
-        *bytesWritten = index;
-        status = PTX_STATUS_SUCCESS;
     }
 
     return status;
@@ -732,7 +820,14 @@ static ptx_Status_t ptx_NativeTag_T5T_IsolatedEoF(ptx_NativeTag_T5T_t *t5t, uint
 
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rxLen) && (NULL != rx))
     {
-        status = ptx_RUL_T5T_Isolated_EoF(t5t->rul, rx, rxLen, msTimeout);
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
+        {
+            status = ptx_RUL_T5T_Isolated_EoF(t5t->Rul, rx, rxLen, msTimeout);
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -748,59 +843,65 @@ static ptx_Status_t ptx_NativeTag_T5T_Transceive(ptx_NativeTag_T5T_t *t5t, ptx_N
     /* Aside from actual Tag-component, remaining parameters are checked within Data-Exchange function */
     if (PTX_COMP_CHECK(t5t, Comp_NativeTag_T5T) && (NULL != rxLen))
     {
-        timeout_value = (T5T_FrameType_Special == frameType) ? 1 : msTimeout;
-
-        while (PTX_T5T_MAX_NR_RETRIES >= retry_cnt)
+        if(ptx_RUL_CardProtocolType_T5T == t5t->Rul->CardRegistry.ActiveProtocol)
         {
-            /* send command */
-            rx_len = *rxLen;
-            status = ptx_RUL_Exchange (t5t->rul, &t5t->TxBuffer[0], txLen, rx, &rx_len, timeout_value);
+            timeout_value = (T5T_FrameType_Special == frameType) ? 1 : msTimeout;
 
-            if ((T5T_FrameType_Special != frameType) &&
-                ((PTX_STATUS_E_GEN_TIMEOUT == status) || (PTX_STATUS_E_NSC_RFERROR == status)) &&
-                (PTX_T5T_SLPV_REQ_CODE != t5t->TxBuffer[PTX_T5T_COMMAND_CODE_FRAME_OFFSET]) &&
-                (0 == t5t->isSelected))
+            while (PTX_T5T_MAX_NR_RETRIES >= retry_cnt)
             {
-                /* Retry possibly needed. */
-                retry_cnt++;
-                status = PTX_STATUS_E_NSC_RFERROR;
+                /* send command */
+                rx_len = *rxLen;
+                status = ptx_RUL_Exchange (t5t->Rul, &t5t->TxBuffer[0], txLen, rx, &rx_len, timeout_value);
+
+                if ((T5T_FrameType_Special != frameType) &&
+                    ((PTX_STATUS_E_GEN_TIMEOUT == status) || (PTX_STATUS_E_NSC_RFERROR == status)) &&
+                    (PTX_T5T_SLPV_REQ_CODE != t5t->TxBuffer[PTX_T5T_COMMAND_CODE_FRAME_OFFSET]) &&
+                    (0 == t5t->isSelected))
+                {
+                    /* Retry possibly needed. */
+                    retry_cnt++;
+                    status = PTX_STATUS_E_NSC_RFERROR;
+                }
+                else
+                {
+                    /* No retry needed. */
+                    retry_cnt = PTX_T5T_MAX_NR_RETRIES + 1u;
+                }
+
+                /* Special-Frame format is supposed to return a timeout-error after the first RF-exchange -> reset the status */
+                if ((T5T_FrameType_Special == frameType) && (PTX_STATUS_E_GEN_TIMEOUT == status))
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    /* special-frame format i.e. isolated EoF required ? */
+                    if (T5T_FrameType_Special == frameType)
+                    {
+                        (void)ptx_RUL_Sleep(t5t->Rul, PTX_T5T_FDT_V_EOF);
+
+                        rx_len = *rxLen;
+                        status = ptx_NativeTag_T5T_IsolatedEoF (t5t, rx, &rx_len, msTimeout);
+                    }
+                }
+            }
+
+            if (PTX_STATUS_SUCCESS != status)
+            {
+                *rxLen = 0;
             }
             else
             {
-                /* No retry needed. */
-                retry_cnt = PTX_T5T_MAX_NR_RETRIES + 1u;
+                *rxLen = rx_len;
             }
-
-            /* Special-Frame format is supposed to return a timeout-error after the first RF-exchange -> reset the status */
-            if ((T5T_FrameType_Special == frameType) && (PTX_STATUS_E_GEN_TIMEOUT == status))
-            {
-                status = PTX_STATUS_SUCCESS;
-            }
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* special-frame format i.e. isolated EoF required ? */
-                if (T5T_FrameType_Special == frameType)
-                {
-                    (void)ptx_RUL_Sleep(t5t->rul, PTX_T5T_FDT_V_EOF);
-
-                    rx_len = *rxLen;
-                    status = ptx_NativeTag_T5T_IsolatedEoF (t5t, rx, &rx_len, msTimeout);
-                }
-            }
-        }
-
-        if (PTX_STATUS_SUCCESS != status)
-        {
-            *rxLen = 0;
         }
         else
         {
-            *rxLen = rx_len;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
-
 

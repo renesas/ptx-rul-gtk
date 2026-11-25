@@ -102,7 +102,7 @@ extern "C" {
 /**
  * \brief HAL GPIO Forward declaration.
  */
-typedef struct ptx_HAL_GPIO ptx_HAL_GPIO_t;
+struct ptx_HAL_GPIO;
 
 /**
  * \brief Port Configuration
@@ -137,7 +137,7 @@ typedef struct ptx_HAL_DRV_Interface_I2C
 
     ptx_HAL_DRV_Interface_I2C_PortConfig_t  *Port;          /**< I2C Default internal parameters. */
     ptx_Log_t                               *Log;           /**< Pointer to an initialized logger. */
-    ptx_OSAL_t                              *OS;            /**< Pointer to an initialized Osal. */
+    ptx_OSAL_t                              *Osal;          /**< Pointer to an initialized Osal. */
     ptx_Mutex_t                             Mutex;          /**< Mutex for receiving function. */
     uint32_t                                Speed;          /**< I2C Communication Speed. */
     uint8_t                                 BusAddr;        /**< Bus Address. */
@@ -148,15 +148,15 @@ typedef struct ptx_HAL_DRV_Interface_I2C
  */
 typedef struct ptx_HAL_DRV_Interface_I2C_InitParams
 {
-    ptx_HAL_DRV_Interface_Port_Type_t   PortType;           /**< Implementation Type of the hardware interface port. */
-    uint8_t                             PortID;             /**< ID of the hardware interface port implementation. */
+    ptx_HAL_DRV_Interface_Port_Type_t   PortType;       /**< Implementation Type of the hardware interface port. */
+    uint8_t                             PortID;         /**< ID of the hardware interface port implementation. */
 
     uint32_t                            Speed;          /**< I2C Communication Speed */
     uint32_t                            PortNr;         /**< I2C Port Number */
     uint8_t                             Address;        /**< Bus Address */
     ptx_Log_t                           *Log;           /**< Pointer to an initialized logger. */
-    void                                *OS;            /**< Osal component */
-    ptx_HAL_GPIO_t                      *Gpio;          /**< Initialized GPIO Context. */
+    void                                *Osal;          /**< Osal component */
+    struct ptx_HAL_GPIO                 *Gpio;          /**< Initialized GPIO Context. */
 
 
 } ptx_HAL_DRV_Interface_I2C_InitParams_t;
@@ -186,7 +186,7 @@ typedef struct ptx_HAL_DRV_Interface_I2C_InitParams
  *
  * @param[in] initParams
  *   Pointer to the initialization parameter structure containing
- *   port selection, bus speed, slave address, logger, and OS context.
+ *   port selection, bus speed, slave address, logger, and Osal context.
  *
  * @return
  *   Status, indicating whether the operation was successful.

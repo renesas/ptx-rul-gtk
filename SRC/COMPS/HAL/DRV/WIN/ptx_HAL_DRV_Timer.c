@@ -74,8 +74,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Init (ptx_HAL_DRV_Tmr_t *ctx, ptx_HAL_DRV_Tmr_InitP
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Tmr_Init");
-
         (void)memset(ctx, 0, sizeof(ptx_HAL_DRV_Tmr_t));
 
         ptx_OSAL_t *osal = NULL;
@@ -101,8 +99,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_DeInit (ptx_HAL_DRV_Tmr_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Tmr_DeInit");
-
         ptx_OSAL_t *osal = (ptx_OSAL_t *)ctx->Osal;
 
         (void)ptx_OSAL_TimerClose(osal, &ctx->Timer);
@@ -119,8 +115,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Open (void *ctx)
     ptx_HAL_DRV_Tmr_t *tmr = (ptx_HAL_DRV_Tmr_t*)ctx;
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Open");
-
         ptx_OSAL_t *osal = (ptx_OSAL_t *)tmr->Osal;
         status = ptx_OSAL_TimerCreate(osal, &tmr->Timer, &ptx_HAL_DRV_Tmr_ThdProc, tmr);
     }
@@ -135,8 +129,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Close (void *ctx)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Close");
-
         ptx_OSAL_t *osal = (ptx_OSAL_t *)tmr->Osal;
         status = ptx_OSAL_TimerClose(osal, &tmr->Timer);
     }
@@ -151,8 +143,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Start (void *ctx)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Start");
-
         ptx_OSAL_t *osal = (ptx_OSAL_t *)tmr->Osal;
 
         tmr->IsElapsed = PTX_HAL_DRV_TMR_IS_ELAPSED_FALSE;
@@ -169,8 +159,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Stop (void *ctx)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Stop");
-
         ptx_OSAL_t *osal = (ptx_OSAL_t *)tmr->Osal;
 
         if (0 != tmr->Timer.Running)
@@ -193,8 +181,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_IsElapsed (void *ctx, uint8_t *isElapsed)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != isElapsed))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_IsElapsed");
-
         *isElapsed = tmr->IsElapsed;
 
         status = PTX_STATUS_SUCCESS;
@@ -211,8 +197,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_RegExecCb (void *ctx, ptx_HAL_DRV_Tmr_ExecCb_t cb, 
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cb) && (NULL != cbCtx))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_RegExecCb");
-
         tmr->ExecCb    = cb;
         tmr->ExecCbCtx = cbCtx;
 
@@ -230,8 +214,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Cfg (void *ctx, ptx_HAL_DRV_Tmr_Cfg_t cfg[], uint32
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cfg) && (0 < len))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Cfg");
-
         for (uint8_t i = 0; i < (uint8_t)len; i++)
         {
             switch (cfg[i].CfgType)
@@ -263,8 +245,6 @@ ptx_Status_t ptx_HAL_DRV_Tmr_Sleep (void *ctx, uint32_t timeout)
 
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Sleep");
-
         if (0 != timeout)
         {
             ptx_OSAL_t *osal = (ptx_OSAL_t *)tmr->Osal;
@@ -289,8 +269,6 @@ static void ptx_HAL_DRV_Tmr_ThdProc (void *timerThdParam)
     ptx_HAL_DRV_Tmr_t *tmr = (ptx_HAL_DRV_Tmr_t*)timerThdParam;
     if (PTX_COMP_CHECK(tmr, Comp_HAL))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_Sleep");
-
         tmr->IsElapsed = PTX_HAL_DRV_TMR_IS_ELAPSED_TRUE;
 
         if ((NULL != tmr->ExecCb) && (NULL != tmr->ExecCbCtx))
@@ -305,8 +283,6 @@ static ptx_Status_t ptx_HAL_DRV_Tmr_PeriodSet (ptx_HAL_DRV_Tmr_t *tmr, ptx_HAL_D
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cfg))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_PeriodSet");
-
         if (0 != cfg->Period)
         {
             switch (cfg->TimeUnit)
@@ -337,8 +313,6 @@ static ptx_Status_t ptx_HAL_DRV_Tmr_ModeSet (ptx_HAL_DRV_Tmr_t *tmr, ptx_HAL_DRV
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     if (PTX_COMP_CHECK(tmr, Comp_HAL) && (NULL != cfg))
     {
-        PTX_LOG_V(tmr->Log, "ptx_HAL_DRV_Tmr_ModeSet");
-
         switch (cfg->Mode)
         {
             case HAL_DRV_Tmr_Mode_Periodic:
@@ -355,7 +329,7 @@ static ptx_Status_t ptx_HAL_DRV_Tmr_ModeSet (ptx_HAL_DRV_Tmr_t *tmr, ptx_HAL_DRV
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            tmr->Timer.Mode = tmr->Mode;
+            tmr->Timer.Mode = (uint8_t)tmr->Mode;
         }
     }
 

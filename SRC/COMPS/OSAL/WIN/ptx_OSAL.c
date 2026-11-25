@@ -53,6 +53,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 /*
 #if !defined(UNICODE)
@@ -447,16 +448,16 @@ ptx_Status_t ptx_OSAL_MutexUnlock(ptx_OSAL_t *osalCtx, ptx_Mutex_t *hMutex)
 
 ptx_Status_t ptx_OSAL_ThreadCreate(ptx_OSAL_t *osalCtx, ptx_Thread_t *hThd, pptx_OSAL_ThreadProc_t thdFn, void *thdParam)
 {
-    const uint32_t default_thd_size = 0;
-    const uint32_t thd_run_immediately = 0;
     ptx_Status_t ret = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    int error = 0;
 
     /*
      * thdParam may be NULL
      */
     if (PTX_COMP_CHECK(osalCtx, Comp_OSAL) && (NULL != hThd) && (NULL != thdFn) && (hThd->ThdState == ptx_Thread_State_INITIAL))
     {
+        const uint32_t default_thd_size = 0;
+        const uint32_t thd_run_immediately = 0;
+
         hThd->ThdState = ptx_Thread_State_CREATING;
         hThd->ThdFn = thdFn;
         hThd->ThdParam = thdParam;
@@ -468,16 +469,18 @@ ptx_Status_t ptx_OSAL_ThreadCreate(ptx_OSAL_t *osalCtx, ptx_Thread_t *hThd, pptx
                            (void*)hThd,            /* Param */
                            thd_run_immediately,    /* Mode */
                            NULL);                  /* ID */
-        error = (NULL == hThd->Thread) ? 1 : 0;
+        int error = (NULL == hThd->Thread) ? 1 : 0;
 
         if (0 == error)
         {
-            (void)ptx_OSAL_MutexLock(osalCtx, &osalCtx->Mutex);
-            osalCtx->ThreadUsage++;
-            osalCtx->PeakThreadUsage = (osalCtx->ThreadUsage > osalCtx->PeakThreadUsage) ?
-                                       osalCtx->ThreadUsage : osalCtx->PeakThreadUsage;
-            (void)ptx_OSAL_MutexUnlock(osalCtx, &osalCtx->Mutex);
-            ret = PTX_STATUS_SUCCESS;
+            ret = ptx_OSAL_MutexLock(osalCtx, &osalCtx->Mutex);
+            if (PTX_STATUS_SUCCESS == ret)
+            {
+                osalCtx->ThreadUsage++;
+                osalCtx->PeakThreadUsage = (osalCtx->ThreadUsage > osalCtx->PeakThreadUsage) ?
+                                           osalCtx->ThreadUsage : osalCtx->PeakThreadUsage;
+                (void)ptx_OSAL_MutexUnlock(osalCtx, &osalCtx->Mutex);
+            }
         }
         else
         {
@@ -540,7 +543,6 @@ ptx_Status_t ptx_OSAL_ThreadJoin(ptx_OSAL_t *osalCtx, ptx_Thread_t *hThd)
 ptx_Status_t ptx_OSAL_ThreadClose(ptx_OSAL_t *osalCtx, ptx_Thread_t *hThd)
 {
     ptx_Status_t ret = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    int error = 0;
 
     if (PTX_COMP_CHECK(osalCtx, Comp_OSAL) && (NULL != hThd))
     {
@@ -548,7 +550,7 @@ ptx_Status_t ptx_OSAL_ThreadClose(ptx_OSAL_t *osalCtx, ptx_Thread_t *hThd)
         {
             /* Thread is in correct state to be closed */
             BOOL win_ret = CloseHandle(hThd->Thread);
-            error = (win_ret == 0) ? 1 : 0;
+            int error = (win_ret == 0) ? 1 : 0;
 
             if (0 == error)
             {
@@ -615,7 +617,6 @@ ptx_Status_t ptx_OSAL_StopwatchStart(ptx_OSAL_t *osalCtx, ptx_TimeDiff_t *startV
 ptx_Status_t ptx_OSAL_StopwatchStop(ptx_OSAL_t *osalCtx, ptx_TimeDiff_t *startStopVal)
 {
     ptx_Status_t ret = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    const uint32_t usec_ticks_per_second = 1000000UL;
 
     if (PTX_COMP_CHECK(osalCtx, Comp_OSAL) && (NULL != startStopVal))
     {
@@ -623,13 +624,15 @@ ptx_Status_t ptx_OSAL_StopwatchStop(ptx_OSAL_t *osalCtx, ptx_TimeDiff_t *startSt
 
         LARGE_INTEGER pc = {0};
         LARGE_INTEGER pf = {0};
-        LARGE_INTEGER delta;
 
         QueryPerformanceCounter(&pc);
         QueryPerformanceFrequency(&pf);
 
         if (0 != pf.QuadPart)
         {
+            const uint32_t usec_ticks_per_second = 1000000UL;
+            LARGE_INTEGER delta;
+
             delta.QuadPart = (LONGLONG)(pc.QuadPart - (LONGLONG) * startStopVal);
             /*
              * Convert to micros before dividing by ticks per second.
@@ -675,7 +678,7 @@ ptx_Status_t ptx_OSAL_TimerCreate(ptx_OSAL_t *osalCtx, ptx_Timer_t *hTimer, pptx
             ret = ptx_OSAL_SemInit(osalCtx, &hTimer->WaitCancelSem, 0, max_count);
             if (PTX_STATUS_SUCCESS == ret)
             {
-                hTimer->OS = osalCtx;
+                hTimer->Osal = osalCtx;
                 hTimer->Param = timerParam;
                 hTimer->Proc = timerProc;
                 hTimer->Running = 0;
@@ -920,18 +923,17 @@ void *ptx_OSAL_GetSysCtx(ptx_OSAL_t *osalCtx)
  */
 static void ptx_OSAL_TimerThdProc(void *timerThdParam)
 {
-    ptx_Status_t st;
     ptx_Timer_t *tim = (ptx_Timer_t*)timerThdParam;
 
     do
     {
         /* Wait for the timer to get started by another thread. */
-        (void)ptx_OSAL_SemWait(tim->OS, &tim->StartSem);
+        (void)ptx_OSAL_SemWait(tim->Osal, &tim->StartSem);
 
         do
         {
             /* Timer is started. Wait for the interval to elapse. */
-            st = ptx_OSAL_SemTimedWait(tim->OS, &tim->WaitCancelSem, tim->Interval);
+            ptx_Status_t st = ptx_OSAL_SemTimedWait(tim->Osal, &tim->WaitCancelSem, tim->Interval);
 
             switch (st)
             {
@@ -1127,7 +1129,7 @@ static ptx_Status_t ptx_OSAL_FileHandleClose(ptx_OSAL_t *osalCtx, ptx_File_Handl
     if (PTX_COMP_CHECK(osalCtx, Comp_OSAL) && (NULL != fileHandle) && (NULL != fileHandle->Handle))
     {
         int rv = fclose((FILE*)fileHandle->Handle);
-        fileHandle = NULL;
+        fileHandle->Handle = NULL;
 
         if (EOF == rv)
         {

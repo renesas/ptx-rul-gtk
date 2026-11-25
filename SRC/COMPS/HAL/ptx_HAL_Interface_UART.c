@@ -82,21 +82,17 @@ ptx_Status_t ptx_HAL_Interface_UART_Init(ptx_HAL_Interface_UART_t *ctx, ptx_HAL_
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {       
-        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_UART_Init");
-
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Interface_UART_t));
 
         ptx_HAL_DRV_Interface_UART_InitParams_t    drv_init_params;
         memset(&drv_init_params, 0, sizeof(ptx_HAL_DRV_Interface_UART_InitParams_t));
-        drv_init_params.InterfaceName = initParams->InterfaceName;
-        drv_init_params.InterfaceNameLen = initParams->InterfaceNameLen;
         drv_init_params.PortType = initParams->PortType;
         drv_init_params.PortID = initParams->PortID;
         drv_init_params.Speed = initParams->Speed;
         drv_init_params.Log = initParams->Log;
         drv_init_params.Gpio = initParams->Gpio;
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-        drv_init_params.OS = initParams->OS;
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+        drv_init_params.Osal = initParams->Osal;
 #endif
 
         status = ptx_HAL_DRV_Interface_UART_Init(&ctx->Drv, &drv_init_params);
@@ -117,8 +113,6 @@ ptx_Status_t ptx_HAL_Interface_UART_DeInit(ptx_HAL_Interface_UART_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Drv.Log, "ptx_HAL_Interface_UART_DeInit");
-
         status = ptx_HAL_DRV_Interface_UART_DeInit(&ctx->Drv);
     }
 
@@ -133,8 +127,6 @@ ptx_Status_t ptx_HAL_Interface_UART_Open(void *ctx)
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Open");
-
         status = ptx_HAL_DRV_Interface_UART_Open(&uartInterface->Drv);
     }
 
@@ -149,8 +141,6 @@ ptx_Status_t ptx_HAL_Interface_UART_Close(void *ctx)
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Close");
-
         status = ptx_HAL_DRV_Interface_UART_Close(&uartInterface->Drv);
     }
 
@@ -166,8 +156,6 @@ ptx_Status_t ptx_HAL_Interface_UART_TRx(void *ctx, uint8_t *txBuf[], uint32_t tx
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_TRx");
-
         status = PTX_STATUS_SUCCESS;
 
         if ((NULL != txBuf) && (NULL != txLen) && (0 != txBufferCnt))
@@ -229,8 +217,6 @@ ptx_Status_t ptx_HAL_Interface_UART_Tx(void *ctx, uint8_t *txBuf, uint32_t txLen
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL) && (NULL != txBuf))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Tx");
-
         status = ptx_HAL_DRV_Interface_UART_Tx(&uartInterface->Drv, txBuf, txLen);
     }
 
@@ -245,8 +231,6 @@ ptx_Status_t ptx_HAL_Interface_UART_Rx(void *ctx, uint8_t *rxBuf, uint32_t rxLen
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL) && (NULL != rxBuf))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_Rx");
-
         status = ptx_HAL_DRV_Interface_UART_Rx(&uartInterface->Drv, &rxBuf[0], rxLen);
     }
 
@@ -261,8 +245,6 @@ ptx_Status_t ptx_HAL_Interface_UART_RxPending(void* ctx, uint8_t *rxPending)
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL) && (NULL != rxPending))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_RxPending");
-
         status = ptx_HAL_DRV_Interface_UART_RxIrqLevel(&uartInterface->Drv, rxPending);
     }
 
@@ -277,8 +259,6 @@ ptx_Status_t ptx_HAL_Interface_UART_SetParameter(void *ctx, ptx_HAL_DRV_Interfac
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_SetParameter");
-
         status = ptx_HAL_DRV_Interface_UART_SetParameter(&uartInterface->Drv, parameter);
     }
 
@@ -293,8 +273,6 @@ ptx_Status_t ptx_HAL_Interface_UART_GetParameter(void *ctx, ptx_HAL_DRV_Interfac
 
     if (PTX_COMP_CHECK(uartInterface, Comp_HAL))
     {
-        PTX_LOG_V(uartInterface->Drv.Log, "ptx_HAL_Interface_UART_GetParameter");
-
         status = ptx_HAL_DRV_Interface_UART_GetParameter(&uartInterface->Drv, parameter);
     }
 

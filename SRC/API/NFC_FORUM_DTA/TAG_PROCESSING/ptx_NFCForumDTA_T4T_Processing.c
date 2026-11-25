@@ -147,7 +147,7 @@ static ptx_Status_t ptx_NFCForumDTA_ISODEP_Loopback(ptx_NFCForumDTA_t *dta)
             switch (loopbackState)
             {
                 case ptx_NFCForumDTA_ISODEP_LB_State_SEND_SOT:
-                    status = ptx_RUL_Exchange(dta->rul, SOT_CMD, SOT_CMD_LEN, rx, &rxLen, PTX_NFCFORUMDTA_T4T_LOOPBACK_TIMEOUT);
+                    status = ptx_RUL_Exchange(dta->Rul, SOT_CMD, SOT_CMD_LEN, rx, &rxLen, PTX_NFCFORUMDTA_T4T_LOOPBACK_TIMEOUT);
                     if (PTX_STATUS_SUCCESS == status)
                     {
                         loopbackState = ptx_NFCForumDTA_ISODEP_LB_State_CHECK_RX_DATA;
@@ -165,7 +165,7 @@ static ptx_Status_t ptx_NFCForumDTA_ISODEP_Loopback(ptx_NFCForumDTA_t *dta)
                         uint32_t txLen = rxLen - 2u;
 
                         rxLen = dta->NDEFMessageBufferSize;
-                        status = ptx_RUL_Exchange(dta->rul, tx, txLen, rx, &rxLen, PTX_NFCFORUMDTA_T4T_LOOPBACK_TIMEOUT);
+                        status = ptx_RUL_Exchange(dta->Rul, tx, txLen, rx, &rxLen, PTX_NFCFORUMDTA_T4T_LOOPBACK_TIMEOUT);
                         if (PTX_STATUS_SUCCESS == status)
                         {
                             loopbackState = ptx_NFCForumDTA_ISODEP_LB_State_CHECK_RX_DATA;

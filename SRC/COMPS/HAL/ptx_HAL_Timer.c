@@ -74,8 +74,6 @@ ptx_Status_t ptx_HAL_Tmr_Init (ptx_HAL_Tmr_t *ctx, ptx_HAL_Tmr_InitParams_t *ini
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_Tmr_Init");
-
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Tmr_t));
 
         ptx_HAL_DRV_Tmr_InitParams_t tmr_init_params;
@@ -84,7 +82,7 @@ ptx_Status_t ptx_HAL_Tmr_Init (ptx_HAL_Tmr_t *ctx, ptx_HAL_Tmr_InitParams_t *ini
         ctx->Log = initParams->Log;
         tmr_init_params.Log = initParams->Log;
 
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
         /* ExtCtx only available for Win / Lin Tmr InitParams*/
         tmr_init_params.Osal = initParams->Osal;
 #endif
@@ -115,8 +113,6 @@ ptx_Status_t ptx_HAL_Tmr_DeInit (ptx_HAL_Tmr_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_DeInit");
-
         status = ptx_HAL_DRV_Tmr_DeInit(&ctx->Drv);
 
         if (PTX_STATUS_SUCCESS == status)

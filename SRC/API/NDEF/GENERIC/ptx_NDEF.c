@@ -72,43 +72,41 @@ ptx_Status_t ptx_NDEF_Open (ptx_NDEF_t *ndef, ptx_NDEF_InitParams_t *initParams)
 
     if ((NULL != ndef) && (NULL != initParams))
     {
-        if ((NULL != initParams->tx) && (0 != initParams->txLen) &&
-            (NULL != initParams->rx) && (0 != initParams->rxLen) &&
-            (NULL != initParams->workBuffer) && (0 != initParams->workBufferLen))
+        if ((NULL != initParams->Tx) && (0 != initParams->TxLen) &&
+            (NULL != initParams->Rx) && (0 != initParams->RxLen) &&
+            (NULL != initParams->WorkBuffer) && (0 != initParams->WorkBufferLen))
         {
 
-            ndef->txLen = initParams->txLen;
-            ndef->txBuffer = initParams->tx;
-            ndef->rxLen = initParams->rxLen;
-            ndef->rxBuffer = initParams->rx;
-            ndef->rxSize = initParams->rxLen;
-            ndef->txSize = initParams->txLen;
-            ndef->workBufferLen = initParams->workBufferLen;
-            ndef->workBuffer = initParams->workBuffer;
-            ndef->rul = initParams->rul;
+            ndef->TxLen = initParams->TxLen;
+            ndef->TxBuffer = initParams->Tx;
+            ndef->RxLen = initParams->RxLen;
+            ndef->RxBuffer = initParams->Rx;
+            ndef->RxSize = initParams->RxLen;
+            ndef->TxSize = initParams->TxLen;
+            ndef->WorkBufferLen = initParams->WorkBufferLen;
+            ndef->WorkBuffer = initParams->WorkBuffer;
+            ndef->Rul = initParams->Rul;
 
-            ndef->type = ndef->rul->CardRegistry.ActiveProtocol;
+            ndef->Type = ndef->Rul->CardRegistry.ActiveProtocol;
 
-            switch (ndef->type)
+            switch (ndef->Type)
             {
                 case ptx_RUL_CardProtocolType_T2T:
                 {
 #if !defined(PTX_DISABLE_NDEF_T2T)
-                    (void)memset(&ndef->tagCtx.t2t, 0, sizeof(ptx_NDEF_T2T_t));
+                    (void)memset(&ndef->TagCtx.T2t, 0, sizeof(ptx_NDEF_T2T_t));
 
                     ptx_NDEF_T2T_InitParams_t tagInitParams;
                     (void)memset(&tagInitParams, 0x00, sizeof(ptx_NDEF_T2T_InitParams_t));
 
-                    tagInitParams.RxBufferSize = ndef->rxLen;
-                    tagInitParams.RxBuffer = ndef->rxBuffer;
-                    tagInitParams.WorkBufferSize = ndef->workBufferLen;
-                    tagInitParams.WorkBuffer = ndef->workBuffer;
-                    tagInitParams.TxBufferSize = ndef->txLen;
-                    tagInitParams.TxBuffer = ndef->txBuffer;
-                    tagInitParams.rul = ndef->rul;
+                    tagInitParams.RxBufferSize = ndef->RxLen;
+                    tagInitParams.RxBuffer = ndef->RxBuffer;
+                    tagInitParams.TxBufferSize = ndef->TxLen;
+                    tagInitParams.TxBuffer = ndef->TxBuffer;
+                    tagInitParams.Rul = ndef->Rul;
+                    tagInitParams.ReadCCVariant = ReadCCVariant_Block_3_Default;
 
-
-                    status = ptx_NDEF_T2T_Open(&ndef->tagCtx.t2t, &tagInitParams);
+                    status = ptx_NDEF_T2T_Open(&ndef->TagCtx.T2t, &tagInitParams);
 #else
                     status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 #endif
@@ -117,18 +115,18 @@ ptx_Status_t ptx_NDEF_Open (ptx_NDEF_t *ndef, ptx_NDEF_InitParams_t *initParams)
                 case ptx_RUL_CardProtocolType_T3T:
                 {
 #if !defined(PTX_DISABLE_NDEF_T3T)
-                    (void)memset(&ndef->tagCtx.t3t, 0, sizeof(ptx_NDEF_T3T_t));
+                    (void)memset(&ndef->TagCtx.T3t, 0, sizeof(ptx_NDEF_T3T_t));
 
                     ptx_NDEF_T3T_InitParams_t tagInitParams;
                     (void)memset(&tagInitParams, 0x00, sizeof(ptx_NDEF_T3T_InitParams_t));
 
-                    tagInitParams.RxBufferSize = ndef->rxLen;
-                    tagInitParams.RxBuffer = ndef->rxBuffer;
-                    tagInitParams.TxBufferSize = ndef->txLen;
-                    tagInitParams.TxBuffer = ndef->txBuffer;
-                    tagInitParams.rul = ndef->rul;
+                    tagInitParams.RxBufferSize = ndef->RxLen;
+                    tagInitParams.RxBuffer = ndef->RxBuffer;
+                    tagInitParams.TxBufferSize = ndef->TxLen;
+                    tagInitParams.TxBuffer = ndef->TxBuffer;
+                    tagInitParams.Rul = ndef->Rul;
 
-                    status = ptx_NDEF_T3T_Open(&ndef->tagCtx.t3t, &tagInitParams);
+                    status = ptx_NDEF_T3T_Open(&ndef->TagCtx.T3t, &tagInitParams);
 #else
                     status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 #endif
@@ -137,18 +135,18 @@ ptx_Status_t ptx_NDEF_Open (ptx_NDEF_t *ndef, ptx_NDEF_InitParams_t *initParams)
                 case ptx_RUL_CardProtocolType_T4T:
                 {
 #if !defined(PTX_DISABLE_NDEF_T4T)
-                    (void)memset(&ndef->tagCtx.t4t, 0, sizeof(ptx_NDEF_T4T_t));
+                    (void)memset(&ndef->TagCtx.T4t, 0, sizeof(ptx_NDEF_T4T_t));
 
                     ptx_NDEF_T4T_InitParams_t tagInitParams;
                     (void)memset(&tagInitParams, 0x00, sizeof(ptx_NDEF_T4T_InitParams_t));
 
-                    tagInitParams.RxBufferSize = ndef->rxLen;
-                    tagInitParams.RxBuffer = ndef->rxBuffer;
-                    tagInitParams.TxBufferSize = (uint32_t)(ndef->txLen);
-                    tagInitParams.TxBuffer = ndef->txBuffer;
-                    tagInitParams.rul = ndef->rul;
+                    tagInitParams.RxBufferSize = ndef->RxLen;
+                    tagInitParams.RxBuffer = ndef->RxBuffer;
+                    tagInitParams.TxBufferSize = (uint32_t)(ndef->TxLen);
+                    tagInitParams.TxBuffer = ndef->TxBuffer;
+                    tagInitParams.Rul = ndef->Rul;
 
-                    status = ptx_NDEF_T4T_Open(&ndef->tagCtx.t4t, &tagInitParams);
+                    status = ptx_NDEF_T4T_Open(&ndef->TagCtx.T4t, &tagInitParams);
 #else
                     status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 #endif
@@ -157,22 +155,22 @@ ptx_Status_t ptx_NDEF_Open (ptx_NDEF_t *ndef, ptx_NDEF_InitParams_t *initParams)
                 case ptx_RUL_CardProtocolType_T5T:
                 {
 #if !defined(PTX_DISABLE_NDEF_T5T)
-                    (void)memset(&ndef->tagCtx.t5t, 0, sizeof(ptx_NDEF_T5T_t));
+                    (void)memset(&ndef->TagCtx.T5t, 0, sizeof(ptx_NDEF_T5T_t));
 
                     ptx_NDEF_T5T_InitParams_t tagInitParams;
                     (void)memset(&tagInitParams, 0x00, sizeof(ptx_NDEF_T5T_InitParams_t));
 
-                    tagInitParams.RxBufferSize = (uint32_t)(ndef->rxLen);
-                    tagInitParams.RxBuffer = ndef->rxBuffer;
-                    tagInitParams.WorkBufferSize = (uint32_t)(ndef->workBufferLen);
-                    tagInitParams.WorkBuffer = ndef->workBuffer;
-                    tagInitParams.TxBufferSize = (uint32_t)(ndef->txLen);
-                    tagInitParams.TxBuffer = ndef->txBuffer;
-                    tagInitParams.rul = ndef->rul;
-                    tagInitParams.isSelected = (ptx_NDEF_T5T_Mode_Selected == initParams->t5tMode) ? (1) : (0);
-                    tagInitParams.isAddressed = (ptx_NDEF_T5T_Mode_NonAddressed == initParams->t5tMode) ? (0) : (1);
+                    tagInitParams.RxBufferSize = (uint32_t)(ndef->RxLen);
+                    tagInitParams.RxBuffer = ndef->RxBuffer;
+                    tagInitParams.WorkBufferSize = (uint32_t)(ndef->WorkBufferLen);
+                    tagInitParams.WorkBuffer = ndef->WorkBuffer;
+                    tagInitParams.TxBufferSize = (uint32_t)(ndef->TxLen);
+                    tagInitParams.TxBuffer = ndef->TxBuffer;
+                    tagInitParams.Rul = ndef->Rul;
+                    tagInitParams.isSelected = (ptx_NDEF_T5T_Mode_Selected == initParams->T5tMode) ? (1) : (0);
+                    tagInitParams.isAddressed = (ptx_NDEF_T5T_Mode_NonAddressed == initParams->T5tMode) ? (0) : (1);
 
-                    status = ptx_NDEF_T5T_Open(&ndef->tagCtx.t5t, &tagInitParams);
+                    status = ptx_NDEF_T5T_Open(&ndef->TagCtx.T5t, &tagInitParams);
 #else
                     status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 #endif
@@ -203,26 +201,26 @@ ptx_Status_t ptx_NDEF_Close (ptx_NDEF_t *ndef)
     {
         status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 
-        switch (ndef->type)
+        switch (ndef->Type)
         {
             case ptx_RUL_CardProtocolType_T2T:
 #if !defined(PTX_DISABLE_NDEF_T2T)
-                status = ptx_NDEF_T2T_Close(&ndef->tagCtx.t2t);
+                status = ptx_NDEF_T2T_Close(&ndef->TagCtx.T2t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T3T:
 #if !defined(PTX_DISABLE_NDEF_T3T)
-                status = ptx_NDEF_T3T_Close(&ndef->tagCtx.t3t);
+                status = ptx_NDEF_T3T_Close(&ndef->TagCtx.T3t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T4T:
 #if !defined(PTX_DISABLE_NDEF_T4T)
-                status = ptx_NDEF_T4T_Close(&ndef->tagCtx.t4t);
+                status = ptx_NDEF_T4T_Close(&ndef->TagCtx.T4t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T5T:
 #if !defined(PTX_DISABLE_NDEF_T5T)
-                status = ptx_NDEF_T5T_Close(&ndef->tagCtx.t5t);
+                status = ptx_NDEF_T5T_Close(&ndef->TagCtx.T5t);
 #endif
                 break;
             default:
@@ -242,26 +240,26 @@ ptx_Status_t ptx_NDEF_CheckMessage (ptx_NDEF_t *ndef)
     {
         status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 
-        switch (ndef->type)
+        switch (ndef->Type)
         {
             case ptx_RUL_CardProtocolType_T2T:
 #if !defined(PTX_DISABLE_NDEF_T2T)
-                status = ptx_NDEF_T2T_CheckMessage(&ndef->tagCtx.t2t);
+                status = ptx_NDEF_T2T_CheckMessage(&ndef->TagCtx.T2t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T3T:
 #if !defined(PTX_DISABLE_NDEF_T3T)
-                status = ptx_NDEF_T3T_CheckMessage(&ndef->tagCtx.t3t);
+                status = ptx_NDEF_T3T_CheckMessage(&ndef->TagCtx.T3t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T4T:
 #if !defined(PTX_DISABLE_NDEF_T4T)
-                status = ptx_NDEF_T4T_CheckMessage(&ndef->tagCtx.t4t);
+                status = ptx_NDEF_T4T_CheckMessage(&ndef->TagCtx.T4t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T5T:
 #if !defined(PTX_DISABLE_NDEF_T5T)
-                status = ptx_NDEF_T5T_CheckMessage(&ndef->tagCtx.t5t);
+                status = ptx_NDEF_T5T_CheckMessage(&ndef->TagCtx.T5t);
 #endif
                 break;
             default:
@@ -281,26 +279,26 @@ ptx_Status_t ptx_NDEF_ReadMessage (ptx_NDEF_t *ndef, uint8_t *msgBuffer, uint32_
     {
         status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 
-        switch (ndef->type)
+        switch (ndef->Type)
         {
             case ptx_RUL_CardProtocolType_T2T:
 #if !defined(PTX_DISABLE_NDEF_T2T)
-                status = ptx_NDEF_T2T_ReadMessage(&ndef->tagCtx.t2t, msgBuffer, msgLen);
+                status = ptx_NDEF_T2T_ReadMessage(&ndef->TagCtx.T2t, msgBuffer, msgLen);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T3T:
 #if !defined(PTX_DISABLE_NDEF_T3T)
-                status = ptx_NDEF_T3T_ReadMessage(&ndef->tagCtx.t3t, msgBuffer, msgLen);
+                status = ptx_NDEF_T3T_ReadMessage(&ndef->TagCtx.T3t, msgBuffer, msgLen);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T4T:
 #if !defined(PTX_DISABLE_NDEF_T4T)
-                status = ptx_NDEF_T4T_ReadMessage(&ndef->tagCtx.t4t, msgBuffer, msgLen);
+                status = ptx_NDEF_T4T_ReadMessage(&ndef->TagCtx.T4t, msgBuffer, msgLen);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T5T:
 #if !defined(PTX_DISABLE_NDEF_T5T)
-                status = ptx_NDEF_T5T_ReadMessage(&ndef->tagCtx.t5t, msgBuffer, msgLen);
+                status = ptx_NDEF_T5T_ReadMessage(&ndef->TagCtx.T5t, msgBuffer, msgLen);
 #endif
                 break;
             default:
@@ -320,26 +318,26 @@ ptx_Status_t ptx_NDEF_WriteMessage (ptx_NDEF_t *ndef, uint8_t *msgBuffer, uint32
     {
         status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 
-        switch (ndef->type)
+        switch (ndef->Type)
         {
             case ptx_RUL_CardProtocolType_T2T:
 #if !defined(PTX_DISABLE_NDEF_T2T)
-                status = ptx_NDEF_T2T_WriteMessage(&ndef->tagCtx.t2t, msgBuffer, msgLen);
+                status = ptx_NDEF_T2T_WriteMessage(&ndef->TagCtx.T2t, msgBuffer, msgLen);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T3T:
 #if !defined(PTX_DISABLE_NDEF_T3T)
-                status = ptx_NDEF_T3T_WriteMessage(&ndef->tagCtx.t3t, msgBuffer, msgLen);
+                status = ptx_NDEF_T3T_WriteMessage(&ndef->TagCtx.T3t, msgBuffer, msgLen);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T4T:
 #if !defined(PTX_DISABLE_NDEF_T4T)
-                status = ptx_NDEF_T4T_WriteMessage(&ndef->tagCtx.t4t, msgBuffer, msgLen);
+                status = ptx_NDEF_T4T_WriteMessage(&ndef->TagCtx.T4t, msgBuffer, msgLen);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T5T:
 #if !defined(PTX_DISABLE_NDEF_T5T)
-                status = ptx_NDEF_T5T_WriteMessage(&ndef->tagCtx.t5t, msgBuffer, msgLen);
+                status = ptx_NDEF_T5T_WriteMessage(&ndef->TagCtx.T5t, msgBuffer, msgLen);
 #endif
                 break;
             default:
@@ -359,26 +357,26 @@ ptx_Status_t ptx_NDEF_FormatTag (ptx_NDEF_t *ndef)
     {
         status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 
-        switch (ndef->type)
+        switch (ndef->Type)
         {
             case ptx_RUL_CardProtocolType_T2T:
 #if !defined(PTX_DISABLE_NDEF_T2T)
-                status = ptx_NDEF_T2T_FormatTag(&ndef->tagCtx.t2t);
+                status = ptx_NDEF_T2T_FormatTag(&ndef->TagCtx.T2t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T3T:
 #if !defined(PTX_DISABLE_NDEF_T3T)
-                status = ptx_NDEF_T3T_FormatTag(&ndef->tagCtx.t3t);
+                status = ptx_NDEF_T3T_FormatTag(&ndef->TagCtx.T3t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T4T:
 #if !defined(PTX_DISABLE_NDEF_T4T)
-                status = ptx_NDEF_T4T_FormatTag(&ndef->tagCtx.t4t);
+                status = ptx_NDEF_T4T_FormatTag(&ndef->TagCtx.T4t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T5T:
 #if !defined(PTX_DISABLE_NDEF_T5T)
-                status = ptx_NDEF_T5T_FormatTag(&ndef->tagCtx.t5t);
+                status = ptx_NDEF_T5T_FormatTag(&ndef->TagCtx.T5t);
 #endif
                 break;
             default:
@@ -398,26 +396,26 @@ ptx_Status_t ptx_NDEF_LockTag (ptx_NDEF_t *ndef)
     {
         status = PTX_STATUS_E_GEN_FEATURE_DISABLED;
 
-        switch (ndef->type)
+        switch (ndef->Type)
         {
             case ptx_RUL_CardProtocolType_T2T:
 #if !defined(PTX_DISABLE_NDEF_T2T)
-                status = ptx_NDEF_T2T_LockTag(&ndef->tagCtx.t2t);
+                status = ptx_NDEF_T2T_LockTag(&ndef->TagCtx.T2t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T3T:
 #if !defined(PTX_DISABLE_NDEF_T3T)
-                status = ptx_NDEF_T3T_LockTag(&ndef->tagCtx.t3t);
+                status = ptx_NDEF_T3T_LockTag(&ndef->TagCtx.T3t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T4T:
 #if !defined(PTX_DISABLE_NDEF_T4T)
-                status = ptx_NDEF_T4T_LockTag(&ndef->tagCtx.t4t);
+                status = ptx_NDEF_T4T_LockTag(&ndef->TagCtx.T4t);
 #endif
                 break;
             case ptx_RUL_CardProtocolType_T5T:
 #if !defined(PTX_DISABLE_NDEF_T5T)
-                status = ptx_NDEF_T5T_LockTag(&ndef->tagCtx.t5t);
+                status = ptx_NDEF_T5T_LockTag(&ndef->TagCtx.T5t);
 #endif
                 break;
             default:

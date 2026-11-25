@@ -51,7 +51,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "ftd2xx.h"
-#include "ptx_HAL_WinUtils.h"
+#include "ptx_OSAL.h"
+#include "ptx_OSAL_Ext_Lib.h"
 #include "ptx_Status.h"
 #include "ptx_Log.h"
 
@@ -169,16 +170,26 @@ typedef FT_STATUS (*pCpD2xx_SetDataCharacteristics_t)(FT_HANDLE ftHandle, UCHAR 
 typedef FT_STATUS (*pCpD2xx_SetEventNotification_t)(FT_HANDLE ftHandle, DWORD dwEventMask, PVOID pvArg);
 typedef FT_STATUS (*pCpD2xx_CreateDeviceInfoList_t)(LPDWORD lpdwNumDevs);
 
+typedef struct ptx_HAL_FTD2XX_InitParams
+{
+    ptx_Log_t                       *Log;
+    ptx_OSAL_t                      *Osal;
+    ptx_HAL_FTD2XX_GPIO_t           IRQPin_Low;
+    ptx_HAL_FTD2XX_GPIO_t           IRQPin_High;
+} ptx_HAL_FTD2XX_InitParams_t;
+
 /**
  * Component FTDI D2XX structure.
  */
 typedef struct ptx_HAL_FTD2XXCtx
 {
     /* Component administrative. */
-    ptx_Log_t       *Log;
-    ptx_Win_Lib_t   *LH;                            /**< DLL handle. */
+    ptx_Comps_t                     CompId;         /**< Component identifier for PTX_COMP_CHECK. */
+    ptx_Log_t                       *Log;
+    ptx_OSAL_t                      *Osal;
+    ptx_OSAL_Lib_t                  LH;             /**< DLL handle. */
     void *H;
-    ptx_Win_Mutex_t                 Mutex;          /** Mutex for TRx and IRQ read methods */
+    ptx_Mutex_t                     Mutex;          /** Mutex for TRx and IRQ read methods */
     ptx_Status_t                    StatusCmd;
     FT_STATUS                       FtStatus;
     ptx_HAL_FTD2XX_GPIO_t           IRQPin_Low;     /**< IRQ GPIO Pin low byte*/
@@ -284,7 +295,7 @@ extern const char InterfaceNameAppendSoftI2c[3];
 * FUNCTIONS LIBRARY.
 * ####################################################################################################################
 */
-ptx_Status_t ptx_HAL_FTD2XX_LibOpen(void **ftd2xxCtx, char *InterfaceName, char *devSerialNumber, ptx_Log_t *log);
+ptx_Status_t ptx_HAL_FTD2XX_LibOpen(void **ftd2xxCtx, char *InterfaceName, char *devSerialNumber, ptx_HAL_FTD2XX_InitParams_t *initParams);
 ptx_Status_t ptx_HAL_FTD2XX_LibClose(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx);
 ptx_Status_t ptx_HAL_FTD2XX_SingleDeviceOpen(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL_FTD2XX_Device_Interface_t deviceChannel);
 ptx_Status_t ptx_HAL_FTD2XX_CheckOpening(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL_FTD2XX_Device_Interface_t intfType, uint32_t busSpeed);
@@ -359,3 +370,5 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_SetTimeout(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint
 #endif
 
 #endif /* IO_ptx_HAL_FTD2XX_H_ */
+
+

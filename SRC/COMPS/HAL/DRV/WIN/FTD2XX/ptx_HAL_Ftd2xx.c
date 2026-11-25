@@ -158,41 +158,65 @@ static ptx_Status_t ptx_HAL_FTD2XX_SetLibCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        ptx_Win_Lib_t *lh = NULL;
+        ptx_OSAL_Lib_t lh;
 
         /* Open dynamic library and load the function pointers to the Context.*/
-        st = ptx_LibOpen(PTX_FTDD2XX_LIB, &lh);
+        st = ptx_OSAL_LibOpen(ftd2xxCtx->Osal, &lh, PTX_FTDD2XX_LIB);
 
         if (PTX_STATUS_SUCCESS == st)
         {
             ftd2xxCtx->LH = lh;
 
-            st += ptx_LibFn(lh, "FT_Open", (void **)&ftd2xxCtx->FT_Open);                           // Not used
-            st += ptx_LibFn(lh, "FT_OpenEx", (void **)&ftd2xxCtx->FT_OpenEx);                       // Done Room for improvement
-            st += ptx_LibFn(lh, "FT_ListDevices", (void **)&ftd2xxCtx->FT_ListDevices);             // Done
-            st += ptx_LibFn(lh, "FT_Close", (void **)&ftd2xxCtx->FT_Close);                         // Done
-            st += ptx_LibFn(lh, "FT_GetStatus", (void **)&ftd2xxCtx->FT_GetStatus);                 // Done
-            st += ptx_LibFn(lh, "FT_GetQueueStatus", (void **)&ftd2xxCtx->FT_GetQueueStatus);       // Done
-            st += ptx_LibFn(lh, "FT_Write", (void **)&ftd2xxCtx->FT_Write);                         // Done
-            st += ptx_LibFn(lh, "FT_Read", (void **)&ftd2xxCtx->FT_Read);                           // Done
-            st += ptx_LibFn(lh, "FT_Purge", (void **)&ftd2xxCtx->FT_Purge);                         // Done
-            st += ptx_LibFn(lh, "FT_SetBitMode", (void **)&ftd2xxCtx->FT_SetBitMode);               // Done
-            st += ptx_LibFn(lh, "FT_GetBitMode", (void **)&ftd2xxCtx->FT_GetBitMode);               // Not used
-            st += ptx_LibFn(lh, "FT_SetFlowControl", (void **)&ftd2xxCtx->FT_SetFlowControl);       // Done
-            st += ptx_LibFn(lh, "FT_SetLatencyTimer", (void **)&ftd2xxCtx->FT_SetLatencyTimer);     // Done
-            st += ptx_LibFn(lh, "FT_SetUSBParameters", (void **)&ftd2xxCtx->FT_SetUSBParameters);   // Done
-            st += ptx_LibFn(lh, "FT_SetChars", (void **)&ftd2xxCtx->FT_SetChars);                   // Done
-            st += ptx_LibFn(lh, "FT_SetTimeouts", (void **)&ftd2xxCtx->FT_SetTimeouts);             // Done
-            st += ptx_LibFn(lh, "FT_ResetDevice", (void **)&ftd2xxCtx->FT_ResetDevice);             // Done
-            st += ptx_LibFn(lh, "FT_SetBaudRate", (void **)&ftd2xxCtx->FT_SetBaudRate);             // Not used
-            st += ptx_LibFn(lh, "FT_SetRts", (void **)&ftd2xxCtx->FT_SetRts);                       // Not used
-            st += ptx_LibFn(lh, "FT_ClrRts", (void **)&ftd2xxCtx->FT_ClrRts);                       // Not used
-            st += ptx_LibFn(lh, "FT_GetModemStatus", (void **)&ftd2xxCtx->FT_GetModemStatus);       // Not used
-            st += ptx_LibFn(lh, "FT_SetDataCharacteristics", (void **)&ftd2xxCtx->FT_SetDataCharacteristics);   // Not used
-            st += ptx_LibFn(lh, "FT_SetEventNotification", (void **)&ftd2xxCtx->FT_SetEventNotification);       // Not used
-            st += ptx_LibFn(lh, "FT_CreateDeviceInfoList", (void **)&ftd2xxCtx->FT_CreateDeviceInfoList);       // Not used
+            ftd2xxCtx->FT_Open = (pCpD2xx_Open_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_Open");
+            if (ftd2xxCtx->FT_Open == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                           // Not used
+            ftd2xxCtx->FT_OpenEx = (pCpD2xx_OpenEX_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_OpenEx");
+            if (ftd2xxCtx->FT_OpenEx == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                       // Done Room for improvement
+            ftd2xxCtx->FT_ListDevices = (pCpD2xx_FT_ListDevices_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_ListDevices");
+            if (ftd2xxCtx->FT_ListDevices == NULL) st = PTX_STATUS_E_GEN_INTERNAL;             // Done
+            ftd2xxCtx->FT_Close = (pCpD2xx_Close_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_Close");
+            if (ftd2xxCtx->FT_Close == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                         // Done
+            ftd2xxCtx->FT_GetStatus = (pCpD2xx_GetStatus_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_GetStatus");
+            if (ftd2xxCtx->FT_GetStatus == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                 // Done
+            ftd2xxCtx->FT_GetQueueStatus = (pCpD2xx_QueueStatus_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_GetQueueStatus");
+            if (ftd2xxCtx->FT_GetQueueStatus == NULL) st = PTX_STATUS_E_GEN_INTERNAL;       // Done
+            ftd2xxCtx->FT_Write = (pCpD2xx_Write_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_Write");
+            if (ftd2xxCtx->FT_Write == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                         // Done
+            ftd2xxCtx->FT_Read = (pCpD2xx_Read_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_Read");
+            if (ftd2xxCtx->FT_Read == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                           // Done
+            ftd2xxCtx->FT_Purge = (pCpD2xx_Purge_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_Purge");
+            if (ftd2xxCtx->FT_Purge == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                         // Done
+            ftd2xxCtx->FT_SetBitMode = (pCpD2xx_SetBitMode_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetBitMode");
+            if (ftd2xxCtx->FT_SetBitMode == NULL) st = PTX_STATUS_E_GEN_INTERNAL;               // Done
+            ftd2xxCtx->FT_GetBitMode = (pCpD2xx_GetBitMode_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_GetBitMode");
+            if (ftd2xxCtx->FT_GetBitMode == NULL) st = PTX_STATUS_E_GEN_INTERNAL;               // Not used
+            ftd2xxCtx->FT_SetFlowControl = (pCpD2xx_SetFlowControl_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetFlowControl");
+            if (ftd2xxCtx->FT_SetFlowControl == NULL) st = PTX_STATUS_E_GEN_INTERNAL;       // Done
+            ftd2xxCtx->FT_SetLatencyTimer = (pCpD2xx_SetLatencyTimer_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetLatencyTimer");
+            if (ftd2xxCtx->FT_SetLatencyTimer == NULL) st = PTX_STATUS_E_GEN_INTERNAL;     // Done
+            ftd2xxCtx->FT_SetUSBParameters = (pCpD2xx_SetUSBParameters_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetUSBParameters");
+            if (ftd2xxCtx->FT_SetUSBParameters == NULL) st = PTX_STATUS_E_GEN_INTERNAL;   // Done
+            ftd2xxCtx->FT_SetChars = (pCpD2xx_SetChars_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetChars");
+            if (ftd2xxCtx->FT_SetChars == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                   // Done
+            ftd2xxCtx->FT_SetTimeouts = (pCpD2xx_SetTimeouts_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetTimeouts");
+            if (ftd2xxCtx->FT_SetTimeouts == NULL) st = PTX_STATUS_E_GEN_INTERNAL;             // Done
+            ftd2xxCtx->FT_ResetDevice = (pCpD2xx_ResetDevice_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_ResetDevice");
+            if (ftd2xxCtx->FT_ResetDevice == NULL) st = PTX_STATUS_E_GEN_INTERNAL;             // Done
+            ftd2xxCtx->FT_SetBaudRate = (pCpD2xx_SetBaudRate_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetBaudRate");
+            if (ftd2xxCtx->FT_SetBaudRate == NULL) st = PTX_STATUS_E_GEN_INTERNAL;             // Not used
+            ftd2xxCtx->FT_SetRts = (pCpD2xx_SetRts_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetRts");
+            if (ftd2xxCtx->FT_SetRts == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                       // Not used
+            ftd2xxCtx->FT_ClrRts = (pCpD2xx_ClrRts_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_ClrRts");
+            if (ftd2xxCtx->FT_ClrRts == NULL) st = PTX_STATUS_E_GEN_INTERNAL;                       // Not used
+            ftd2xxCtx->FT_GetModemStatus = (pCpD2xx_GetModemStatus_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_GetModemStatus");
+            if (ftd2xxCtx->FT_GetModemStatus == NULL) st = PTX_STATUS_E_GEN_INTERNAL;       // Not used
+            ftd2xxCtx->FT_SetDataCharacteristics = (pCpD2xx_SetDataCharacteristics_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetDataCharacteristics");
+            if (ftd2xxCtx->FT_SetDataCharacteristics == NULL) st = PTX_STATUS_E_GEN_INTERNAL;   // Not used
+            ftd2xxCtx->FT_SetEventNotification = (pCpD2xx_SetEventNotification_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_SetEventNotification");
+            if (ftd2xxCtx->FT_SetEventNotification == NULL) st = PTX_STATUS_E_GEN_INTERNAL;       // Not used
+            ftd2xxCtx->FT_CreateDeviceInfoList = (pCpD2xx_CreateDeviceInfoList_t)ptx_OSAL_GetLibFn(ftd2xxCtx->Osal, &lh, "FT_CreateDeviceInfoList");
+            if (ftd2xxCtx->FT_CreateDeviceInfoList == NULL) st = PTX_STATUS_E_GEN_INTERNAL;       // Not used
         }
     }
 
@@ -203,10 +227,8 @@ static FT_STATUS ptx_HAL_FTD2XX_WriteCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx,  LPVOID
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_WriteCmd");
-
         ft_status = ftd2xxCtx->FT_Write(ftd2xxCtx->H, lpBuffer, dwBytesToWrite, lpBytesWritten);
     }
 
@@ -217,10 +239,8 @@ static FT_STATUS ptx_HAL_FTD2XX_ReadCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx,  LPVOID 
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_ReadCmd");
-
         ft_status = ftd2xxCtx->FT_Read(ftd2xxCtx->H, lpBuffer, dwBytesToRead, lpBytesRead);
     }
 
@@ -231,10 +251,8 @@ static FT_STATUS ptx_HAL_FTD2XX_GetQueueStatusCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_GetQueueStatusCmd");
-
         ft_status =  ftd2xxCtx->FT_GetQueueStatus(ftd2xxCtx->H, lpdwAmountInRxQueue);
     }
 
@@ -245,10 +263,8 @@ static FT_STATUS ptx_HAL_FTD2XX_PurgeCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, DWORD d
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_PurgeCmd");
-
         ft_status = ftd2xxCtx->FT_Purge(ftd2xxCtx->H, dwMask);
     }
 
@@ -259,10 +275,8 @@ static FT_STATUS ptx_HAL_FTD2XX_SetBitModeCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, UC
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetBitModeCmd");
-
         ft_status = ftd2xxCtx->FT_SetBitMode(ftd2xxCtx->H, ucMask, ucEnable);
     }
 
@@ -273,10 +287,8 @@ static FT_STATUS ptx_HAL_FTD2XX_SetLatencyTimerCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCt
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetLatencyTimerCmd");
-
         ft_status = ftd2xxCtx->FT_SetLatencyTimer(ftd2xxCtx->H, ucLatency);
     }
 
@@ -287,10 +299,8 @@ static FT_STATUS ptx_HAL_FTD2XX_ResetDeviceCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_ResetDeviceCmd");
-
         ft_status = ftd2xxCtx->FT_ResetDevice(ftd2xxCtx->H);
     }
 
@@ -301,10 +311,8 @@ static FT_STATUS ptx_HAL_FTD2XX_SetTimeoutsCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, D
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetTimeoutsCmd");
-
         ft_status = ftd2xxCtx->FT_SetTimeouts(ftd2xxCtx->H, dwReadTimeout, dwWriteTimeout);
     }
 
@@ -315,10 +323,8 @@ static FT_STATUS ptx_HAL_FTD2XX_SetCharsCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, UCHA
 {
     FT_STATUS  ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetCharsCmd");
-
         ft_status = ftd2xxCtx->FT_SetChars(ftd2xxCtx->H, uEventCh, uEventChEn, uErrorCh, uErrorChEn);
     }
 
@@ -329,10 +335,8 @@ static FT_STATUS ptx_HAL_FTD2XX_SetUSBParametersCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxC
 {
     FT_STATUS ft_status = FT_INVALID_ARGS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetUSBParametersCmd");
-
         ft_status = ftd2xxCtx->FT_SetUSBParameters(ftd2xxCtx->H, ulInTransferSize, ulOutTransferSize);
     }
 
@@ -343,13 +347,11 @@ static FT_STATUS ptx_HAL_FTD2XX_SingleDeviceOpenCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxC
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
         uint8_t serial_check = FTDI_STRING_INVALID;
         uint8_t dev_name_check = FTDI_STRING_INVALID;
         uint8_t channel_check = FTDI_DEV_INTF_NONE;
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SingleDeviceOpenCmd");
-
         if (NULL != ftd2xxCtx->DevSerialNumber)
         {
 
@@ -429,10 +431,11 @@ static FT_STATUS ptx_HAL_FTD2XX_SingleDeviceOpenCmd(ptx_HAL_FTD2XXCtx_t *ftd2xxC
             (void)memset(ftdi_device_serial_no, 0, PTX_MAX_DEVICE_NAME_LEN + 1);
             (void)memset(ftdi_descriptor_name, 0, PTX_MAX_DEVICE_NAME_LEN + 1);
 
-            uint32_t string_size;
-            uint32_t append_size;
             if (FTDI_SERIAL_VALID == serial_check)
             {
+                uint32_t string_size;
+                uint32_t append_size;
+
                 /* Serial Number size has already been checked. We don´t do it again. */
                 string_size = (uint32_t)strlen(ftd2xxCtx->DevSerialNumber);
                 /* SonarQube:: vulnerability fix
@@ -566,16 +569,18 @@ static FT_STATUS ptx_HAL_FTD2XX_CloseCmd(void *ftd2xxCtx)
 * FUNCTIONS LIBRARY.
 * ####################################################################################################################
 */
-ptx_Status_t ptx_HAL_FTD2XX_LibOpen(void **ftd2xxCtx, char *InterfaceName, char *devSerialNumber, ptx_Log_t *log)
+ptx_Status_t ptx_HAL_FTD2XX_LibOpen(void **ftd2xxCtx, char *InterfaceName, char *devSerialNumber, ptx_HAL_FTD2XX_InitParams_t *initParams)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     /* Set init values */
     sFtCtx.InterfaceName = InterfaceName;
     sFtCtx.DevSerialNumber = devSerialNumber;
-    sFtCtx.Log = log;
-
-
+    sFtCtx.Log = initParams->Log;
+    sFtCtx.Osal = initParams->Osal;
+    sFtCtx.IRQPin_Low = initParams->IRQPin_Low;
+    sFtCtx.IRQPin_High = initParams->IRQPin_High; 
+    sFtCtx.CompId = Comp_IO_FTDXX;
 
     /**
      * Let's execute SetLib command.
@@ -585,6 +590,7 @@ ptx_Status_t ptx_HAL_FTD2XX_LibOpen(void **ftd2xxCtx, char *InterfaceName, char 
     if (PTX_STATUS_SUCCESS != st)
     {
         st = PTX_STATUS_E_GEN_NOT_FOUND;
+        sFtCtx.CompId = Comp_None;
     }
     else
     {
@@ -598,13 +604,11 @@ ptx_Status_t ptx_HAL_FTD2XX_LibClose(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_LibClose");
+        (void) ptx_OSAL_LibClose(sFtCtx.Osal, &sFtCtx.LH);
 
-        (void) ptx_LibClose(&sFtCtx.LH);
-
-        ftd2xxCtx = NULL;
+        sFtCtx.CompId = Comp_None;
 
         st = PTX_STATUS_SUCCESS;
     }
@@ -615,13 +619,11 @@ ptx_Status_t ptx_HAL_FTD2XX_SingleDeviceOpen(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        FT_STATUS ft_st = ptx_HAL_FTD2XX_SingleDeviceOpenCmd(ftd2xxCtx, devIntf);
+        FT_STATUS ft_st = ptx_HAL_FTD2XX_SingleDeviceOpenCmd(ftd2xxCtx, (uint8_t)devIntf);
         if (FT_OK == ft_st)
         {
-            PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SingleDeviceOpen");
-
             status = PTX_STATUS_SUCCESS;
         }
     }
@@ -638,36 +640,37 @@ ptx_Status_t ptx_HAL_FTD2XX_GetGPIOLevel(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_GetGPIOLevel");
-
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
-
-        uint32_t index = 0;
-        uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
-        uint8_t bytes_rx[1u];
-        uint32_t bytes_to_read = 1u;
-
-        /* Read current pin state. */
-        index = 0;
-        bytes_tx[index++] = FTD2XX_READ_DATA_BITS_HIGH_BYTE;
-        st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
-
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
         if (PTX_STATUS_SUCCESS == st)
         {
+            uint32_t index = 0;
+            uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
 
-            bytes_rx[0] = 0;
-            st = ptx_HAL_FTD2XX_Read(ftd2xxCtx, &bytes_rx[0], &bytes_to_read);
+            /* Read current pin state. */
+            index = 0;
+            bytes_tx[index++] = FTD2XX_READ_DATA_BITS_HIGH_BYTE;
+            st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+
             if (PTX_STATUS_SUCCESS == st)
             {
-                int n = 0;
-                st = ptx_HAL_FTD2XX_GPIOBitPos(gpio, &n);
-                *level = ((uint16_t) bytes_rx[0] & (1 << n)) > 0;
-            }
-        }
 
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
+                uint8_t bytes_rx[1u];
+                uint32_t bytes_to_read = 1u;
+
+                bytes_rx[0] = 0;
+                st = ptx_HAL_FTD2XX_Read(ftd2xxCtx, &bytes_rx[0], &bytes_to_read);
+                if (PTX_STATUS_SUCCESS == st)
+                {
+                    int n = 0;
+                    st = ptx_HAL_FTD2XX_GPIOBitPos(gpio, &n);
+                    *level = ((uint16_t) bytes_rx[0] & (1 << n)) > 0;
+                }
+            }
+
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        }
     }
     return st;
 }
@@ -676,31 +679,35 @@ ptx_Status_t ptx_HAL_FTD2XX_SetGPIOLevel(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
         
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetGPIOLevel");
-
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
-
-        uint8_t current_state = 0;
-        st = ptx_HAL_FTD2XX_GetHighPinsState(ftd2xxCtx, &current_state);
-
-        uint32_t index = 0;
-        uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
-
-        bytes_tx[index++] = FTD2XX_SET_BITS_HIGH_BYTE;
-        if (level)
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
         {
-            bytes_tx[index++] = (uint8_t)(current_state | gpio);
-        }
-        else
-        {
-            bytes_tx[index++] = (uint8_t)(current_state & ~gpio);
-        }
-        bytes_tx[index++] = FT_DIRECTION_CONFIG_HIGH_PINS_DEFAULT;
-        st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+            uint8_t current_state = 0;
+            st = ptx_HAL_FTD2XX_GetHighPinsState(ftd2xxCtx, &current_state);
 
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
+            uint32_t index = 0;
+            uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
+
+            bytes_tx[index++] = FTD2XX_SET_BITS_HIGH_BYTE;
+            if (level)
+            {
+                bytes_tx[index++] = (uint8_t)(current_state | gpio);
+            }
+            else
+            {
+                bytes_tx[index++] = (uint8_t)(current_state & ~gpio);
+            }
+            bytes_tx[index++] = FT_DIRECTION_CONFIG_HIGH_PINS_DEFAULT;
+
+            if(PTX_STATUS_SUCCESS == st)
+            {
+                st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+            }
+
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        }
     }
     return st;
 
@@ -710,29 +717,30 @@ ptx_Status_t ptx_HAL_FTD2XX_GetHighPinsState(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uin
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_GetHighPinsState");
-
-        /* Read current pin state. */
-        uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
-        uint8_t bytes_rx[1u];
-
-        uint32_t index = 0;
-        uint32_t bytes_to_read = 1u;
-
-        bytes_tx[index++] = FTD2XX_READ_DATA_BITS_HIGH_BYTE;
-        st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
-
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
         if (PTX_STATUS_SUCCESS == st)
         {
-            bytes_rx[0] = 0;
-            st = ptx_HAL_FTD2XX_Read(ftd2xxCtx, &bytes_rx[0], &bytes_to_read);
-            *current_state = bytes_rx[0];
-        }
+            /* Read current pin state. */
+            uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
+            uint8_t bytes_rx[1u];
 
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
+            uint32_t index = 0;
+            uint32_t bytes_to_read = 1u;
+
+            bytes_tx[index++] = FTD2XX_READ_DATA_BITS_HIGH_BYTE;
+            st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+
+            if (PTX_STATUS_SUCCESS == st)
+            {
+                bytes_rx[0] = 0;
+                st = ptx_HAL_FTD2XX_Read(ftd2xxCtx, &bytes_rx[0], &bytes_to_read);
+                *current_state = bytes_rx[0];
+            }
+
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        }
     }
     return st;
 }
@@ -741,32 +749,36 @@ ptx_Status_t ptx_HAL_FTD2XX_SetHighPinsState(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uin
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetHighPinsState");
-        
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
-
-        uint8_t current_state = 0;
-        st = ptx_HAL_FTD2XX_GetHighPinsState(ftd2xxCtx, &current_state);
-
-        uint32_t index = 0;
-        uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
-
-
-        bytes_tx[index++] = FTD2XX_SET_BITS_HIGH_BYTE;
-        if (level)
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
         {
-            bytes_tx[index++] = current_state | (uint8_t) (level & mask);
-        }
-        else
-        {
-            bytes_tx[index++] = current_state & (uint8_t) ~mask;
-        }
-        bytes_tx[index++] = FT_DIRECTION_CONFIG_HIGH_PINS_DEFAULT;
-        st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+            uint8_t current_state = 0;
+            st = ptx_HAL_FTD2XX_GetHighPinsState(ftd2xxCtx, &current_state);
 
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
+            uint32_t index = 0;
+            uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
+
+
+            bytes_tx[index++] = FTD2XX_SET_BITS_HIGH_BYTE;
+            if (level)
+            {
+                bytes_tx[index++] = current_state | (uint8_t) (level & mask);
+            }
+            else
+            {
+                bytes_tx[index++] = current_state & (uint8_t) ~mask;
+            }
+            bytes_tx[index++] = FT_DIRECTION_CONFIG_HIGH_PINS_DEFAULT;
+
+            if(PTX_STATUS_SUCCESS == st)
+            {
+                st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+            }
+
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        }
     }
     return st;
 }
@@ -791,13 +803,11 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_Open(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_t bu
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    FT_STATUS ft_status = FT_INSUFFICIENT_RESOURCES;
-    
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2C_Open");
+        FT_STATUS ft_status = FT_INSUFFICIENT_RESOURCES;
 
-        if (ftd2xxCtx == &sFtCtx && sFtCtx.H == NULL)
+        if (sFtCtx.H == NULL)
         {
             /* If device handle is NULL open device */
             ft_status = ptx_HAL_FTD2XX_SingleDeviceOpenCmd(ftd2xxCtx, FTDI_DEV_INTF_I2C);
@@ -817,7 +827,7 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_Open(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_t bu
             ftd2xxCtx->WaitForIrqFlag = 0;
 
             /* Init mutex object for Trx and IRQ read */
-            st = ptx_MutexInit(&ftd2xxCtx->Mutex);
+            st = ptx_OSAL_MutexInit(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
         }
 
         if (PTX_STATUS_SUCCESS == st)
@@ -832,10 +842,8 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_SetSpeed(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2C_SetSpeed");
-
         /*
         * We should not allow setting the speed which is out of the (MIN,MAX) range.
         * For 60MHz clock, data rate range is between 457Hz and 30MHz, because Divisor range is 0 - 65535
@@ -852,48 +860,50 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_SetSpeed(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_
         const uint32_t bus_speed_max = 15000000u; /* Max. speed supported; 15MHz */
         const uint32_t bus_speed_min = 457u;      /* Min. speed supported; 457Hz */
 
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
-
-        if ((busSpeed <= bus_speed_max) && (busSpeed >= bus_speed_min))
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
         {
-            uint32_t bus_speed = busSpeed;
-            /*
-            *  Configure the dividers to set the SCLK frequency which we will use.
-            *  The SCLK clock frequency can be worked out by the algorithm (when divide-by-5 is off):
-            *  SCLK frequency  = 60MHz /( (1 + Divisor)*2 )
-            */
+            if ((busSpeed <= bus_speed_max) && (busSpeed >= bus_speed_min))
+            {
+                uint32_t bus_speed = busSpeed;
+                /*
+                *  Configure the dividers to set the SCLK frequency which we will use.
+                *  The SCLK clock frequency can be worked out by the algorithm (when divide-by-5 is off):
+                *  SCLK frequency  = 60MHz /( (1 + Divisor)*2 )
+                */
 
-            uint32_t index = 0;
-            uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
-            uint32_t clock_divisor;
+                uint32_t index = 0;
+                uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
+                uint32_t clock_divisor;
 
-            const uint32_t mpsse_clk_src = 60000000u; /* 60 MHz. */
+                const uint32_t mpsse_clk_src = 60000000u; /* 60 MHz. */
 
-            index = 0;
+                index = 0;
 
-            /*
-            * frequency = 60MHz/((1 + dwClockDivisor) * 2)
-            */
-            clock_divisor = (mpsse_clk_src / bus_speed);
-            clock_divisor /= 2u;
-            clock_divisor -= 1u;
+                /*
+                * frequency = 60MHz/((1 + dwClockDivisor) * 2)
+                */
+                clock_divisor = (mpsse_clk_src / bus_speed);
+                clock_divisor /= 2u;
+                clock_divisor -= 1u;
 
-            /* Do not divide clock. Use high speed. */
-            bytes_tx[index++] = FTD2XX_DISABLE_CLK_DIV_5;
+                /* Do not divide clock. Use high speed. */
+                bytes_tx[index++] = FTD2XX_DISABLE_CLK_DIV_5;
 
-            /* This will set the clock divisor. */
-            bytes_tx[index++] = FTD2XX_SET_CLK_DIV;
+                /* This will set the clock divisor. */
+                bytes_tx[index++] = FTD2XX_SET_CLK_DIV;
 
-            /* Set 0xValueL of clock divisor. */
-            bytes_tx[index++] = clock_divisor & 0xFF;
+                /* Set 0xValueL of clock divisor. */
+                bytes_tx[index++] = clock_divisor & 0xFF;
 
-            /* Set 0xValueH of clock divisor. */
-            bytes_tx[index++] = (clock_divisor >> 8) & 0xFF;
+                /* Set 0xValueH of clock divisor. */
+                bytes_tx[index++] = (clock_divisor >> 8) & 0xFF;
 
-            st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+                st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+            }
+
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
         }
-
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
     }
 
     return st;
@@ -903,68 +913,68 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_TRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t busA
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2C_TRx");
-
         uint32_t num_bytes_w = (NULL != wrLen) ? (*wrLen) : 0;
         uint32_t num_bytes_r = (NULL != rdLen) ? (*rdLen) : 0;
 
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
-
-        if ((wrBuf != NULL) && (num_bytes_w > 0) && (rdBuf != NULL) && (num_bytes_r > 0))
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
         {
-            /* Write and Read Operation. */
-
-            /* For the Write and Read Operation there is re-start condition. */
-            if (restart)
+            if ((wrBuf != NULL) && (num_bytes_w > 0) && (rdBuf != NULL) && (num_bytes_r > 0))
             {
-                (void)ptx_HAL_FTD2XX_I2C_SetNotStop(ftd2xxCtx);
+                /* Write and Read Operation. */
+
+                /* For the Write and Read Operation there is re-start condition. */
+                if (restart)
+                {
+                    (void)ptx_HAL_FTD2XX_I2C_SetNotStop(ftd2xxCtx);
+                }
+
+                st = ptx_HAL_FTD2XX_I2CTx(ftd2xxCtx, busAddr, wrBuf, num_bytes_w);
+
+                if (PTX_STATUS_SUCCESS == st)
+                {
+                    st = ptx_HAL_FTD2XX_I2CRx(ftd2xxCtx, busAddr, rdBuf, &num_bytes_r);
+                    *rdLen = num_bytes_r;
+                }
+                (void)ptx_HAL_FTD2XX_I2C_ClearNotStop(ftd2xxCtx);
+
             }
-
-            st = ptx_HAL_FTD2XX_I2CTx(ftd2xxCtx, busAddr, wrBuf, num_bytes_w);
-
-            if (PTX_STATUS_SUCCESS == st)
+            else if ((wrBuf != NULL) && (num_bytes_w > 0))
             {
+                if (restart)
+                {
+                    (void)ptx_HAL_FTD2XX_I2C_SetNotStop(ftd2xxCtx);
+                }
+
+                /* Write Operation. */
+                st = ptx_HAL_FTD2XX_I2CTx(ftd2xxCtx, busAddr, wrBuf, num_bytes_w);
+
+                if (restart)
+                {
+                    (void)ptx_HAL_FTD2XX_I2C_ClearNotStop(ftd2xxCtx);
+                }
+            }
+            else if ((rdBuf != NULL) && (num_bytes_r > 0))
+            {
+                if (restart)
+                {
+                    (void)ptx_HAL_FTD2XX_I2C_SetNotStop(ftd2xxCtx);
+                }
+
+                /* Read Operation. */
                 st = ptx_HAL_FTD2XX_I2CRx(ftd2xxCtx, busAddr, rdBuf, &num_bytes_r);
                 *rdLen = num_bytes_r;
-            }
-            (void)ptx_HAL_FTD2XX_I2C_ClearNotStop(ftd2xxCtx);
 
+                if (restart)
+                {
+                    (void)ptx_HAL_FTD2XX_I2C_ClearNotStop(ftd2xxCtx);
+                }
+            }
+
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
         }
-        else if ((wrBuf != NULL) && (num_bytes_w > 0))
-        {
-            if (restart)
-            {
-                (void)ptx_HAL_FTD2XX_I2C_SetNotStop(ftd2xxCtx);
-            }
-
-            /* Write Operation. */
-            st = ptx_HAL_FTD2XX_I2CTx(ftd2xxCtx, busAddr, wrBuf, num_bytes_w);
-
-            if (restart)
-            {
-                (void)ptx_HAL_FTD2XX_I2C_ClearNotStop(ftd2xxCtx);
-            }
-        }
-        else if ((rdBuf != NULL) && (num_bytes_r > 0))
-        {
-            if (restart)
-            {
-                (void)ptx_HAL_FTD2XX_I2C_SetNotStop(ftd2xxCtx);
-            }
-
-            /* Read Operation. */
-            st = ptx_HAL_FTD2XX_I2CRx(ftd2xxCtx, busAddr, rdBuf, &num_bytes_r);
-            *rdLen = num_bytes_r;
-
-            if (restart)
-            {
-                (void)ptx_HAL_FTD2XX_I2C_ClearNotStop(ftd2xxCtx);
-            }
-        }
-
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
     }
     return st;
 }
@@ -973,18 +983,19 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_Close(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2C_Close");
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
+        {
+            (void)ptx_HAL_FTD2XX_CloseCmd(ftd2xxCtx);
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
 
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
-        (void)ptx_HAL_FTD2XX_CloseCmd(ftd2xxCtx);
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
+            /* Destroy mutex object for Trx and IRQ read */
+            (void)ptx_OSAL_MutexDeInit(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
 
-        /* Destroy mutex object for Trx and IRQ read */
-        (void)ptx_MutexDestroy(&ftd2xxCtx->Mutex);
-
-        st = PTX_STATUS_SUCCESS;
+            st = PTX_STATUS_SUCCESS;
+        }
     }
 
     return st;
@@ -994,7 +1005,6 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_SetNotStop(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_SUCCESS;
     ftd2xxCtx->I2C_NoStopFlag = 1u;
-    PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2C_SetNotStop");
 
     return st;
 }
@@ -1003,9 +1013,8 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_ClearNotStop(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {    
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2C_ClearNotStop");
         ftd2xxCtx->I2C_NoStopFlag = 0;
         st = PTX_STATUS_SUCCESS;
     }
@@ -1017,25 +1026,24 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_ScanBus(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint16_t
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2C_ScanBus");
-
         ptx_HAL_FTD2XX_I2C_TypOp_t i2c_type = I2C_Wr;
         uint16_t found_count = 0;
 
         for (uint8_t i = 0; i < 128; ++i)
         {
-            uint8_t i2cSlave = i << 1;
 
             st = ptx_HAL_FTD2XX_I2CStart(ftd2xxCtx);
             if (PTX_STATUS_SUCCESS == st)
             {
+                uint8_t i2cSlave = (uint8_t)(i << 1u);
+
                 st = ptx_HAL_FTD2XX_I2CSendAdd(ftd2xxCtx, i2cSlave, i2c_type);
             }
             if (PTX_STATUS_SUCCESS == st)
             {
-                *(addr_list_buff + found_count) = i << 1;
+                *(addr_list_buff + found_count) = (uint8_t)(i << 1u);
                 found_count ++;
             }
             st = ptx_HAL_FTD2XX_I2CStop(ftd2xxCtx);
@@ -1044,17 +1052,15 @@ ptx_Status_t ptx_HAL_FTD2XX_I2C_ScanBus(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint16_t
 
     }
 
-    return PTX_STATUS_SUCCESS;
+    return st;
 }
 
 static ptx_Status_t ptx_HAL_FTD2XX_I2CTx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t i2cSlave, uint8_t *dataTx, uint32_t dataTxLen)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (dataTx != NULL) && (dataTxLen > 0))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (dataTx != NULL) && (dataTxLen > 0))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CTx");
-
         ptx_HAL_FTD2XX_I2C_TypOp_t i2c_type = I2C_Wr;
 
         st = ptx_HAL_FTD2XX_I2CStart(ftd2xxCtx);
@@ -1093,10 +1099,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (dataRx != NULL) && (dataRxLen != NULL))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (dataRx != NULL) && (dataRxLen != NULL))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CRx");
-
         if (*dataRxLen > 0)
         {
             ptx_HAL_FTD2XX_I2C_TypOp_t i2c_type = I2C_Rd;
@@ -1150,18 +1154,16 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t
 static ptx_Status_t ptx_HAL_FTD2XX_I2CSendAdd(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t i2cSlave, ptx_HAL_FTD2XX_I2C_TypOp_t i2cType)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
         const uint8_t max_add_slave = 0x7F;
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CSendAdd");
-
         /*
         * This function sends the address of the I2C slave + Rd/Wr bit and checks the ACK.
         */
 
         if (((I2C_Wr == i2cType) || (I2C_Rd == i2cType)) && (i2cSlave <= max_add_slave))
         {
-            uint8_t i2c_sl = ((i2cSlave << 1u) | i2cType);
+            uint8_t i2c_sl = (uint8_t)((uint8_t)(i2cSlave << 1u) | i2cType);
             st = ptx_HAL_FTD2XX_I2CSendByte(ftd2xxCtx, i2c_sl);
         }
     }
@@ -1172,10 +1174,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CRdByte(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uin
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (dataRx != NULL) && ((I2C_ACK == ackTp) || (I2C_NACK == ackTp)))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (dataRx != NULL) && ((I2C_ACK == ackTp) || (I2C_NACK == ackTp)))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CRdByte");
-
         /*
          * This function triggers a read byte operation on the I2C slave.
          */
@@ -1251,10 +1251,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CRdByteAndAck(ptx_HAL_FTD2XXCtx_t *ftd2xxCt
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (dataRx != NULL))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (dataRx != NULL))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CRdByteAndAck");
-
         ptx_HAL_FTD2XX_I2C_TypAck_t ack_tp = I2C_ACK;
         st = ptx_HAL_FTD2XX_I2CRdByte(ftd2xxCtx, dataRx, ack_tp);
     }
@@ -1266,10 +1264,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CRdByteAndNack(ptx_HAL_FTD2XXCtx_t *ftd2xxC
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && ( dataRx != NULL))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && ( dataRx != NULL))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CRdByteAndNack");
-
         ptx_HAL_FTD2XX_I2C_TypAck_t ack_tp = I2C_NACK;
         st = ptx_HAL_FTD2XX_I2CRdByte(ftd2xxCtx, dataRx, ack_tp);
     }
@@ -1280,10 +1276,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CRdByteAndNack(ptx_HAL_FTD2XXCtx_t *ftd2xxC
 static ptx_Status_t ptx_HAL_FTD2XX_I2CSendByte(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t dataTx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CSendByte");
-
         /*
         * This function sends the address of the I2C slave and checks the ACK.
         */
@@ -1353,10 +1347,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CSendByte(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, u
 static ptx_Status_t ptx_HAL_FTD2XX_I2CStop(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CStop");
-
         /*
         * This function sets the I2C lines to make the stop condition.
         * It is assumed that the I2C lines are fixed to AD0, AD1 and AD2. If other lines are supposed to be used, the function needs to be adapted!
@@ -1415,10 +1407,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CStop(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 static ptx_Status_t ptx_HAL_FTD2XX_I2CStart(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CStart");
-
         /*
         * This function sets the I2C lines to make the start condition.
         * Lines have to be set to Idle before the Start condition!
@@ -1469,10 +1459,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_I2CIdle(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_I2CIdle");
-
         /*
         * This function sets the lines involved in the I2C communication in
         * idle state.  
@@ -1508,12 +1496,10 @@ ptx_Status_t ptx_HAL_FTD2XX_SPI_Open(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_t bu
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPI_Open");
-
         FT_STATUS ft_status = FT_INSUFFICIENT_RESOURCES;
-        if (ftd2xxCtx == &sFtCtx && sFtCtx.H == NULL)
+        if (sFtCtx.H == NULL)
         {
             /* If device handle is NULL open device */
             ft_status = ptx_HAL_FTD2XX_SingleDeviceOpenCmd(ftd2xxCtx, FTDI_DEV_INTF_SPI);
@@ -1534,7 +1520,7 @@ ptx_Status_t ptx_HAL_FTD2XX_SPI_Open(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_t bu
             ftd2xxCtx->WaitForIrqFlag = 0;
 
             /* Init mutex object for Trx and IRQ read */
-            st = ptx_MutexInit(&ftd2xxCtx->Mutex);
+            st = ptx_OSAL_MutexInit(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
 
             if (PTX_STATUS_SUCCESS == st)
             {
@@ -1549,19 +1535,17 @@ ptx_Status_t ptx_HAL_FTD2XX_SPI_Close(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        if (ftd2xxCtx == &sFtCtx)
+        ptx_HAL_FTD2XXCtx_t *ftd_ctx = (ptx_HAL_FTD2XXCtx_t *)ftd2xxCtx;
+        st = ptx_OSAL_MutexLock(ftd_ctx->Osal, &ftd_ctx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
         {
-            ptx_HAL_FTD2XXCtx_t *ftd_ctx = (ptx_HAL_FTD2XXCtx_t *)ftd2xxCtx;
-            PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPI_Close");
-
-            (void)ptx_MutexLock(&ftd_ctx->Mutex);
             (void)ptx_HAL_FTD2XX_CloseCmd(ftd_ctx);
-            (void)ptx_MutexUnlock(&ftd_ctx->Mutex);
+            (void)ptx_OSAL_MutexUnlock(ftd_ctx->Osal, &ftd_ctx->Mutex);
 
             /* Destroy mutex object for Trx and IRQ read */
-            (void)ptx_MutexDestroy(&ftd_ctx->Mutex);
+            (void)ptx_OSAL_MutexDeInit(ftd_ctx->Osal, &ftd_ctx->Mutex);
 
             st = PTX_STATUS_SUCCESS;
         }
@@ -1574,10 +1558,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_SetClock(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint
     /* For high speed clock up to 30MHz speed */
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SetClock");
-
         /*
         * FTDI supports divisor settings which correspond to speed setting of 457Hz - 30MHz
         * However, PTX supports speed up to 10MHz.
@@ -1653,10 +1635,8 @@ ptx_Status_t ptx_HAL_FTD2XX_SPI_SetKeepNssActive(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_SUCCESS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPI_SetKeepNssActive");
-
         ftd2xxCtx->SPI_KeepNssActiveFlag = 1u;
     }
     return st;
@@ -1666,10 +1646,8 @@ ptx_Status_t ptx_HAL_FTD2XX_SPI_ClearKeepNssActive(ptx_HAL_FTD2XXCtx_t *ftd2xxCt
 {
     ptx_Status_t st = PTX_STATUS_SUCCESS;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPI_ClearKeepNssActive");
-
         ftd2xxCtx->SPI_KeepNssActiveFlag = 0;
     }
     return st;
@@ -1679,26 +1657,26 @@ ptx_Status_t ptx_HAL_FTD2XX_SPICSEnable(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPICSEnable");
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
+        {
+            /*
+            * SPI channel used: A, ADBUS
+            * This function enables SPI slave by setting CS line low.
+            */
+            uint32_t index = 0;
+            uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
 
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
+            bytes_tx[index++] = FTD2XX_SET_BITS_LOW_BYTE;               /* Command to set directions of LOW byte pins (SPI - ADBUS0, ADBUS1, ADBUS2, ADBUS3) */
+            bytes_tx[index++] = FT_MOSI_PIN_VAL_HI;                  /* Low byte Value:      Set MOSI/MISO/CLK/NSS low. */
+            bytes_tx[index++] = FT_DIRECTION_CONFIG_DEFAULT_SPI_PINS;   /* Low byte direction   Set MOSI/CLK/NSS output and MISO input.*/
 
-        /*
-        * SPI channel used: A, ADBUS
-        * This function enables SPI slave by setting CS line low.
-        */
-        uint32_t index = 0;
-        uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
+            st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
 
-        bytes_tx[index++] = FTD2XX_SET_BITS_LOW_BYTE;               /* Command to set directions of LOW byte pins (SPI - ADBUS0, ADBUS1, ADBUS2, ADBUS3) */
-        bytes_tx[index++] = 0x00 | FT_MOSI_PIN_VAL_HI;                  /* Low byte Value:      Set MOSI/MISO/CLK/NSS low. */
-        bytes_tx[index++] = FT_DIRECTION_CONFIG_DEFAULT_SPI_PINS;   /* Low byte direction   Set MOSI/CLK/NSS output and MISO input.*/
-
-        st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
-
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        }
     }
     return st;
 }
@@ -1707,26 +1685,26 @@ ptx_Status_t ptx_HAL_FTD2XX_SPICSDisable(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPICSDisable");
+        st = ptx_OSAL_MutexLock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
+        {
+            /*
+            * SPI channel used: A, ADBUS
+            * This function disables SPI slave by setting CS line high.
+            */
+            uint32_t index = 0;
+            uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
 
-        (void)ptx_MutexLock(&ftd2xxCtx->Mutex);
+            bytes_tx[index++] = FTD2XX_SET_BITS_LOW_BYTE;               /* Command to set directions of LOW byte pins (SPI - ADBUS0, ADBUS1, ADBUS2, ADBUS3) */
+            bytes_tx[index++] = FT_NSS_PIN_VAL_DISABLE_PIN | FT_MOSI_PIN_VAL_HI;             /* Low byte Value:      Set MOSI/MISO/CLK/NSS low. */
+            bytes_tx[index++] = FT_DIRECTION_CONFIG_DEFAULT_SPI_PINS;   /* Low byte direction   Set MOSI/CLK/NSS output and MISO input.*/
 
-        /*
-        * SPI channel used: A, ADBUS
-        * This function disables SPI slave by setting CS line high.
-        */
-        uint32_t index = 0;
-        uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
+            st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
 
-        bytes_tx[index++] = FTD2XX_SET_BITS_LOW_BYTE;               /* Command to set directions of LOW byte pins (SPI - ADBUS0, ADBUS1, ADBUS2, ADBUS3) */
-        bytes_tx[index++] = FT_NSS_PIN_VAL_DISABLE_PIN | FT_MOSI_PIN_VAL_HI;             /* Low byte Value:      Set MOSI/MISO/CLK/NSS low. */
-        bytes_tx[index++] = FT_DIRECTION_CONFIG_DEFAULT_SPI_PINS;   /* Low byte direction   Set MOSI/CLK/NSS output and MISO input.*/
-
-        st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
-
-        (void)ptx_MutexUnlock(&ftd2xxCtx->Mutex);
+            (void)ptx_OSAL_MutexUnlock(ftd2xxCtx->Osal, &ftd2xxCtx->Mutex);
+        }
     }
     return st;
 }
@@ -1734,41 +1712,41 @@ ptx_Status_t ptx_HAL_FTD2XX_SPICSDisable(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 ptx_Status_t ptx_HAL_FTD2XX_SPI_TRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t *wrBuf, uint32_t *wrLen, uint8_t *rdBuf, uint32_t *rdLen)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPI_TRx");
-
         uint32_t num_bytes_w = (NULL != wrLen) ? (*wrLen) : 0;
         uint32_t num_bytes_r = (NULL != rdLen) ? (*rdLen) : 0;
 
 
         ptx_HAL_FTD2XXCtx_t *ftd2xx_ctx = (ptx_HAL_FTD2XXCtx_t *)ftd2xxCtx;
 
-        (void)ptx_MutexLock(&ftd2xx_ctx->Mutex);
-
-        if ((wrBuf != NULL) && (num_bytes_w > 0) && (rdBuf != NULL) && (num_bytes_r > 0))
+        st = ptx_OSAL_MutexLock(ftd2xx_ctx->Osal, &ftd2xx_ctx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
         {
-            /* Write and Read Operation. */
-            /* Send data bytes. SPI is full duplex. */
-            st = ptx_HAL_FTD2XX_SPITxRx(ftd2xx_ctx, wrBuf, num_bytes_w, rdBuf, &num_bytes_r);
-            if (PTX_STATUS_SUCCESS == st)
+            if ((wrBuf != NULL) && (num_bytes_w > 0) && (rdBuf != NULL) && (num_bytes_r > 0))
             {
+                /* Write and Read Operation. */
+                /* Send data bytes. SPI is full duplex. */
+                st = ptx_HAL_FTD2XX_SPITxRx(ftd2xx_ctx, wrBuf, num_bytes_w, rdBuf, &num_bytes_r);
+                if (PTX_STATUS_SUCCESS == st)
+                {
+                    *rdLen = num_bytes_r;
+                }
+            }
+            else if ((wrBuf != NULL) && (num_bytes_w > 0))
+            {
+                /* Write Operation. */
+                st = ptx_HAL_FTD2XX_SPITx(ftd2xx_ctx, wrBuf, num_bytes_w);
+            }
+            else if ((rdBuf != NULL) && (num_bytes_r > 0))
+            {
+                /* Read Operation. */
+                st = ptx_HAL_FTD2XX_SPIRx(ftd2xx_ctx, rdBuf, &num_bytes_r);
                 *rdLen = num_bytes_r;
             }
-        }
-        else if ((wrBuf != NULL) && (num_bytes_w > 0))
-        {
-            /* Write Operation. */
-            st = ptx_HAL_FTD2XX_SPITx(ftd2xx_ctx, wrBuf, num_bytes_w);
-        }
-        else if ((rdBuf != NULL) && (num_bytes_r > 0))
-        {
-            /* Read Operation. */
-            st = ptx_HAL_FTD2XX_SPIRx(ftd2xx_ctx, rdBuf, &num_bytes_r);
-            *rdLen = num_bytes_r;
-        }
 
-        (void)ptx_MutexUnlock(&ftd2xx_ctx->Mutex);
+            (void)ptx_OSAL_MutexUnlock(ftd2xx_ctx->Osal, &ftd2xx_ctx->Mutex);
+        }
     }
     return st;
 }
@@ -1777,16 +1755,15 @@ static ptx_Status_t ptx_HAL_FTD2XX_SPITxRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (NULL != dataRx) && (NULL != dataRxLen))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (dataTx != NULL) && (NULL != dataRx) && (NULL != dataRxLen))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPITxRx");
-
-        uint32_t j = 0;
         uint32_t num_to_read = *dataRxLen;
 
         /* Parameter validity is checked in calling routine. Should it be again? */
-        if ((dataTx != NULL) && (dataTxLen > 0) && (dataRx != NULL) && (num_to_read > 0))
+        if ((dataTxLen > 0) && (num_to_read > 0))
         {
+            uint32_t j = 0;
+
             for (uint32_t i = 0; i < dataTxLen; i++)
             {
                 st = ptx_HAL_FTD2XX_SPISendReceiveByte(ftd2xxCtx, dataTx[i], &dataRx[j]);
@@ -1807,10 +1784,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_SPISendReceiveByte(ptx_HAL_FTD2XXCtx_t *ftd2x
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if ((ftd2xxCtx == &sFtCtx) && (NULL != dataRx))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (NULL != dataRx))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPISendReceiveByte");
-
         uint32_t index = 0;
         uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
 
@@ -1855,10 +1830,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_SPITx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (dataTx != NULL) && (dataTxLen > 0))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (dataTx != NULL) && (dataTxLen > 0))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPITx");
-
         uint32_t index = 0;
         uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_LARGE];
 
@@ -1885,10 +1858,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_SPIRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (NULL != dataRx) && (NULL != dataRxLen) && (*dataRxLen > 0))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (NULL != dataRx) && (NULL != dataRxLen) && (*dataRxLen > 0))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SPIRx");
-
         /*
         * This function triggers a read byte operation on the SPI slave.
         */
@@ -1907,7 +1878,7 @@ static ptx_Status_t ptx_HAL_FTD2XX_SPIRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t
 
         if (PTX_STATUS_SUCCESS == st)
         {
-            uint8_t temp[PTX_MAX_FTDI_RX_BUFFER_SIZE_LARGE];
+            uint8_t temp[PTX_MAX_FTDI_RX_BUFFER_SIZE_LARGE] = {0};
             uint32_t tempsize = length;
             st = ptx_HAL_FTD2XX_Read(ftd2xxCtx, temp, &tempsize);
 
@@ -1931,12 +1902,10 @@ static ptx_Status_t ptx_HAL_FTD2XX_SPIRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t
 ptx_Status_t ptx_HAL_FTD2XX_UART_Open(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_t busSpeed)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_Open");
-
         FT_STATUS ft_status = FT_INSUFFICIENT_RESOURCES;
-        if (ftd2xxCtx == &sFtCtx && sFtCtx.H == NULL)
+        if (sFtCtx.H == NULL)
         {
             /* If device handle is NULL open device */
             ft_status = ptx_HAL_FTD2XX_SingleDeviceOpenCmd(ftd2xxCtx, FTDI_DEV_INTF_UART);
@@ -1959,20 +1928,21 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_Close(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_Close");
-
         ptx_HAL_FTD2XXCtx_t *ftd_ctx = (ptx_HAL_FTD2XXCtx_t *)ftd2xxCtx;
 
-        (void)ptx_MutexLock(&ftd_ctx->Mutex);
-        (void)ptx_HAL_FTD2XX_CloseCmd(ftd_ctx);
-        (void)ptx_MutexUnlock(&ftd_ctx->Mutex);
+        st = ptx_OSAL_MutexLock(ftd_ctx->Osal, &ftd_ctx->Mutex);
+        if (PTX_STATUS_SUCCESS == st)
+        {
+            (void)ptx_HAL_FTD2XX_CloseCmd(ftd_ctx);
+            (void)ptx_OSAL_MutexUnlock(ftd_ctx->Osal, &ftd_ctx->Mutex);
 
-        /* Destroy mutex object for Trx and IRQ read */
-        (void)ptx_MutexDestroy(&ftd_ctx->Mutex);
+            /* Destroy mutex object for Trx and IRQ read */
+            (void)ptx_OSAL_MutexDeInit(ftd_ctx->Osal, &ftd_ctx->Mutex);
 
-        st = PTX_STATUS_SUCCESS;
+            st = PTX_STATUS_SUCCESS;
+        }
     }
 
     return st;
@@ -1991,15 +1961,14 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_TRx_StaticCtx(uint8_t *wrBuf, uint32_t *wrLen, 
 ptx_Status_t ptx_HAL_FTD2XX_UART_TRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t *wrBuf, uint32_t *wrLen, uint8_t *rdBuf, uint32_t *rdLen)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    uint32_t num_bytes_w = (NULL != wrLen) ? (*wrLen) : 0;
-    uint32_t num_bytes_r = (NULL != rdLen) ? (*rdLen) : 0;
-    uint8_t valid_parameters = 0;
 
-    if (ftd2xxCtx == &sFtCtx)
+    if (PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        st = PTX_STATUS_SUCCESS;
+        uint32_t num_bytes_w = (NULL != wrLen) ? (*wrLen) : 0;
+        uint32_t num_bytes_r = (NULL != rdLen) ? (*rdLen) : 0;
+        uint8_t valid_parameters = 0;
 
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_TRx");
+        st = PTX_STATUS_SUCCESS;
 
         /* Check if something is to be written */
         if ((wrBuf != NULL) && (0 != num_bytes_w))
@@ -2036,10 +2005,8 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_TRx(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t *wr
 ptx_Status_t ptx_HAL_FTD2XX_UART_SetSpeed(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32_t busSpeed)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_SetSpeed");
-
         /*
         * FT232H datasheet says:
         * Data Transfer Rate. The FT232H supports a data transfer rate up to 12 Mbit/s when configured as an
@@ -2059,40 +2026,37 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_SetSpeed(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint32
 
         const uint32_t list_supported_speed[3] = {6000000u, 8000000u, 12000000u};
 
-        if (ftd2xxCtx == &sFtCtx)
+        if (
+            ( ((busSpeed <= busSpeed_max) && (busSpeed >= busSpeed_min)) || (list_supported_speed[0] == busSpeed)
+            || (list_supported_speed[1] == busSpeed) || (list_supported_speed[2] == busSpeed)  )
+        )
         {
-            if (
-                ( ((busSpeed <= busSpeed_max) && (busSpeed >= busSpeed_min)) || (list_supported_speed[0] == busSpeed)
-                || (list_supported_speed[1] == busSpeed) || (list_supported_speed[2] == busSpeed)  )
-            )
+            FT_STATUS ftStatus;
+
+            /* FTDI workaround NSC Default baudrate is 115200 which is already set in UART_Open
+                (setting the same speed twice caused instabilities on FTDI side in form of framing errors)
+            */
+            if (busSpeed != FT_BAUD_115200)
             {
-                FT_STATUS ftStatus;
-
-                /* FTDI workaround NSC Default baudrate is 115200 which is already set in UART_Open
-                    (setting the same speed twice caused instabilities on FTDI side in form of framing errors)
-                */
-                if (busSpeed != FT_BAUD_115200)
-                {
-                    ftStatus = ftd2xxCtx->FT_SetBaudRate((FT_HANDLE)ftd2xxCtx->H, busSpeed);
-                }
-                else
-                {
-                    ftStatus = FT_OK;
-                }
-
-                if (ftStatus != FT_OK)
-                {
-                    st = PTX_STATUS_E_GEN_INTERNAL;
-                }
-                else
-                {
-                    st = PTX_STATUS_SUCCESS;
-                }
+                ftStatus = ftd2xxCtx->FT_SetBaudRate((FT_HANDLE)ftd2xxCtx->H, busSpeed);
             }
             else
             {
-                st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                ftStatus = FT_OK;
             }
+
+            if (ftStatus != FT_OK)
+            {
+                st = PTX_STATUS_E_GEN_INTERNAL;
+            }
+            else
+            {
+                st = PTX_STATUS_SUCCESS;
+            }
+        }
+        else
+        {
+            st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
         }
     }
     return st;
@@ -2102,10 +2066,8 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_SetTimeout(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_SetTimeout");
-
         FT_STATUS ftStatus;
 
         DWORD write_to = 50;
@@ -2127,10 +2089,8 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_GetModemStatus(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, 
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint32_t modem_status = 0;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_GetModemStatus");
-
         FT_STATUS ftStatus;
 
         ftStatus = ftd2xxCtx->FT_GetModemStatus((FT_HANDLE)ftd2xxCtx->H, (DWORD*)&modem_status);
@@ -2153,10 +2113,8 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_ClrRts(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_ClrRts");
-
         FT_STATUS ftStatus;
 
         ftStatus = ftd2xxCtx->FT_ClrRts((FT_HANDLE)ftd2xxCtx->H);
@@ -2178,10 +2136,8 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_SetRts(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_SetRts");
-
         FT_STATUS ftStatus;
 
         ftStatus = ftd2xxCtx->FT_SetRts((FT_HANDLE)ftd2xxCtx->H);
@@ -2203,10 +2159,8 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_SetFlowControl(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, 
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_SetFlowControl");
-
         FT_STATUS ftStatus;
         uint16_t flow_control = FT_FLOW_NONE;
 
@@ -2230,7 +2184,7 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_SetDataCharacteristics(ptx_HAL_FTD2XXCtx_t *ftd
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
         /* Intentionally not checked other data formats except: 7,8 len,  Even or None, 1 or 2 stop bits
         * Will we even allow different char set for chip communication ?
@@ -2239,18 +2193,13 @@ ptx_Status_t ptx_HAL_FTD2XX_UART_SetDataCharacteristics(ptx_HAL_FTD2XXCtx_t *ftd
         uint8_t stop_bits = (FT_STOP_BITS_2 == StopBits) ? FT_STOP_BITS_2 : FT_STOP_BITS_1;
         uint8_t parity_bit = (FT_PARITY_EVEN == Parity) ? FT_PARITY_EVEN : FT_PARITY_NONE;
 
-        if (ftd2xxCtx == &sFtCtx)
+        FT_STATUS ftStatus;
+
+        ftStatus = ftd2xxCtx->FT_SetDataCharacteristics((FT_HANDLE)ftd2xxCtx->H, word_length, stop_bits, parity_bit);
+
+        if (ftStatus != FT_OK)
         {
-            PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_UART_SetDataCharacteristics");
-
-            FT_STATUS ftStatus;
-
-            ftStatus = ftd2xxCtx->FT_SetDataCharacteristics((FT_HANDLE)ftd2xxCtx->H, word_length, stop_bits, parity_bit);
-
-            if (ftStatus != FT_OK)
-            {
-                st = PTX_STATUS_E_GEN_INTERNAL;
-            }
+            st = PTX_STATUS_E_GEN_INTERNAL;
         }
     }
     return st;
@@ -2311,10 +2260,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_MPSSE_Settings_I2C(ptx_HAL_FTD2XXCtx_t *ftd2x
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_MPSSE_Settings_I2C");
-
 
         uint32_t index = 0;
         uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
@@ -2343,7 +2290,10 @@ static ptx_Status_t ptx_HAL_FTD2XX_MPSSE_Settings_I2C(ptx_HAL_FTD2XXCtx_t *ftd2x
         bytes_tx[index++] = FT_INIT_CONFIG_HIGH_PINS_VALUE;
         bytes_tx[index++] = FT_DIRECTION_CONFIG_HIGH_PINS_DEFAULT; /* 0 = input, 1 = output */
 
-        st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+        if(PTX_STATUS_SUCCESS == st)
+        {
+            st = ptx_HAL_FTD2XX_Write(ftd2xxCtx, &bytes_tx[0], index);
+        }
     }
     return st;
 }
@@ -2351,10 +2301,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_MPSSE_Settings_I2C(ptx_HAL_FTD2XXCtx_t *ftd2x
 static ptx_Status_t ptx_HAL_FTD2XX_MPSSE_Settings_SPI(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_MPSSE_Settings_SPI");
-
 
         uint32_t index = 0;
         uint8_t bytes_tx[PTX_MAX_FTDI_TX_BUFFER_SIZE_MID];
@@ -2378,10 +2326,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_Write(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (dataTx != NULL) && (dataTxLen > 0))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (dataTx != NULL) && (dataTxLen > 0))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_Write");
-
         FT_STATUS ft_status;
         DWORD bytes_sent = 0;
 
@@ -2414,10 +2360,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_Read(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t 
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((ftd2xxCtx == &sFtCtx) && (NULL != dataRx) && (NULL != dataRxLen))
+    if ((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (NULL != dataRx) && (NULL != dataRxLen))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_Read");
-
         FT_STATUS ft_status;
         DWORD bytes_to_read = (DWORD)(*dataRxLen);
         *dataRxLen = 0;
@@ -2450,10 +2394,8 @@ static ptx_Status_t ptx_HAL_FTD2XX_Read(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t 
 ptx_Status_t ptx_HAL_FTD2XX_CheckOpening(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, ptx_HAL_FTD2XX_Device_Interface_t intfType, uint32_t busSpeed)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_CheckOpening");
-
         /*
         * intfType determins which specific interface routines (i.e. specific setup) will be used: i2c or spi.
         */
@@ -2577,15 +2519,12 @@ static FT_STATUS ptx_HAL_FTD2XX_SynchronizeMPSSECMDSequence(ptx_HAL_FTD2XXCtx_t 
 {   
     FT_STATUS ft_status = FT_IO_ERROR;
 
-    if((ftd2xxCtx == &sFtCtx))
+    if(PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX))
     {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SynchronizeMPSSECMDSequence");
-
         DWORD dw_num_bytes_to_send;
         DWORD dw_num_input_buffer = 0;
         DWORD dw_num_bytes_trxd = 0;
         uint8_t output_buffer[10];
-        DWORD index;
         ft_status = FT_OK;
 
         dw_num_bytes_to_send = 0;
@@ -2593,8 +2532,6 @@ static FT_STATUS ptx_HAL_FTD2XX_SynchronizeMPSSECMDSequence(ptx_HAL_FTD2XXCtx_t 
 
         ft_status |= ptx_HAL_FTD2XX_WriteCmd(ftd2xxCtx, output_buffer, dw_num_bytes_to_send, &dw_num_bytes_trxd);
 
-        dw_num_bytes_to_send = 0;
-        dw_num_input_buffer = 0;
         do
         {
             ft_status |= ptx_HAL_FTD2XX_GetQueueStatusCmd(ftd2xxCtx, &dw_num_input_buffer);
@@ -2606,7 +2543,7 @@ static FT_STATUS ptx_HAL_FTD2XX_SynchronizeMPSSECMDSequence(ptx_HAL_FTD2XXCtx_t 
 
         if (dw_num_bytes_trxd > 0)
         {
-            for (index = 0; index < (dw_num_bytes_trxd - 1); index++)
+            for (DWORD index = 0; index < (dw_num_bytes_trxd - 1); index++)
             {
                 if ((0xFA == inputBuffer[index]) && (syncCommand == inputBuffer[index + 1]))
                 {
@@ -2628,10 +2565,8 @@ static FT_STATUS ptx_HAL_FTD2XX_SynchronizeMPSSECMDSequence(ptx_HAL_FTD2XXCtx_t 
 static ptx_Status_t ptx_HAL_FTD2XX_SynchronizeMPSSE(ptx_HAL_FTD2XXCtx_t *ftd2xxCtx, uint8_t *inputBuffer, uint32_t busSpeed)
 {
     ptx_Status_t st = PTX_STATUS_E_GEN_INTERNAL;
-    if((ftd2xxCtx == &sFtCtx) && (NULL != inputBuffer))
+    if((PTX_COMP_CHECK(ftd2xxCtx, Comp_IO_FTDXX)) && (NULL != inputBuffer))
         {
-        PTX_LOG_V(ftd2xxCtx->Log, "ptx_HAL_FTD2XX_SynchronizeMPSSE");
-
         /*
         * The pauses are added after FT_Write according to the provided FTDI documentation.
         * It turned out that if the pauses are not used, synchronization fails.
@@ -2708,3 +2643,13 @@ static ptx_Status_t ptx_HAL_FTD2XX_SynchronizeMPSSE(ptx_HAL_FTD2XXCtx_t *ftd2xxC
     }
     return st;
 }
+
+
+
+
+
+
+
+
+
+

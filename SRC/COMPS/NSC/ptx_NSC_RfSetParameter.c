@@ -187,7 +187,7 @@ static ptx_Status_t ptx_NSC_RfSetParameter_Dispatch(ptx_NSC_t *nscCtx, uint8_t *
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     
-    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != txBuffer) && (0 != txBuffer))
+    if (PTX_COMP_CHECK(nscCtx, Comp_NSC) && (NULL != txBuffer) && (0 != txBufferLen))
     {
         PTX_LOG_V(nscCtx->Log, "ptx_NSC_RfSetParameter_Dispatch");
 
@@ -223,7 +223,7 @@ static ptx_Status_t ptx_NSC_ParamParser_RfTech(uint8_t **bufferPos, uint32_t *av
         (*bufferPos)[cmd_idx] = NSC_RfSetParameter_Param_Type_RfTech;
         cmd_idx++;
 
-        (*bufferPos)[cmd_idx] = param->RfTech;
+        (*bufferPos)[cmd_idx] = (uint8_t) param->RfTech;
         cmd_idx++;
 
         *bufferPos += cmd_idx;

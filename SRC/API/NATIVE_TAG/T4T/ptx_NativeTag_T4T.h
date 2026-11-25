@@ -100,7 +100,7 @@ typedef struct ptx_NativeTag_T4T
 {
     /* Components */
     ptx_Comps_t                             CompId;         /**< Component Id */
-    ptx_RUL_t                               *rul;           /**< RUL provided by upper layer */
+    ptx_RUL_t                               *Rul;           /**< RUL provided by upper layer */
     uint8_t                                 *TxBuffer;      /**< Internal Tx-Buffer provided by upper layer (may be shared with other components) */
     ptx_NativeTag_T4T_CommandAPDUFields_t   Fields;         /**< fields used in command APDU */
 } ptx_NativeTag_T4T_t;
@@ -110,7 +110,7 @@ typedef struct ptx_NativeTag_T4T
  */
 typedef struct ptx_NativeTag_T4T_InitParams
 {
-    ptx_RUL_t           *rul;               /**< Allocated instance of RUL component */
+    ptx_RUL_t           *Rul;               /**< Allocated instance of RUL component */
     uint8_t             *TxBuffer;          /**< Internal Tx-Buffer provided by upper layer */
     uint32_t             TxBufferSize;      /**< Size of TX Buffer */
 } ptx_NativeTag_T4T_InitParams_t;

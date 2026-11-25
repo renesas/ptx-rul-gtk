@@ -320,12 +320,10 @@ ptx_Status_t ptx_NSC_RfSetRoutingTable_GetEntry(ptx_NSC_t *nscCtx, uint8_t entry
     {
         PTX_LOG_I(nscCtx->Log, "ptx_NSC_RfSetRoutingTable_GetEntry");
 
-        uint8_t item_found = 0;
-
         /* Iterate starting from the given index and find the first entry with the provided type. */
         for (uint8_t i = *itemIdx; i < PTX_NSC_RT_USER_ENTRIES_CAPACITY; i++)
         {
-            item_found = 0;
+            uint8_t item_found = 0;
             if (MaxNumOfTypes == nscCtx->RoutingTable.RoutingEntries[i].EntryType)
             {
                 /* Unused entry. Skip. */

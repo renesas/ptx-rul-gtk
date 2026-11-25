@@ -120,6 +120,9 @@ ptx_Status_t ptx_NSC_WLC_WptStart(ptx_NSC_t *nsc, ptx_NSC_WLC_WptOptions_t* opti
         *nsc_buf_pos = options->IcdGt;
         nsc_buf_pos++;
 
+        /* Append information of Sync pulse duration */
+        *nsc_buf_pos = options->RffSyncDuration;
+
         status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, nsc_buf, PTX_NSC_WLC_WPT_START_CMD_LEN);
 
         if (PTX_STATUS_SUCCESS == status)
@@ -165,7 +168,6 @@ ptx_Status_t ptx_NSC_WLC_WptStop(ptx_NSC_t *nsc, uint8_t wptPostPowerLevel)
         nsc_buf_pos++;
 
         *nsc_buf_pos = wptPostPowerLevel;
-        nsc_buf_pos++;
 
         status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, nsc_buf, PTX_NSC_WLC_WPT_STOP_CMD_LEN);
 

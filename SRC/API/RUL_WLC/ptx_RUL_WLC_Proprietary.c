@@ -148,7 +148,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_SetListenerGpios(ptx_RUL_WLC_t *ctx, uint8_
         uint8_t rx_buffer[PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN];
         uint32_t rx_buffer_len = sizeof(rx_buffer);
 
-        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.tagCtx.t2t.t2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.TagCtx.T2t.T2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -162,7 +162,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_SetListenerGpios(ptx_RUL_WLC_t *ctx, uint8_
             memcpy(tx_buffer, rx_buffer, PTX_T2T_BLOCK_SIZE);
             tx_buffer[PTX_WLC_PROPRIETARY_SYSTEM_CTRL_GPIO_0_POS] = ((setGpio0High == 1) ? PTX_WLC_PROPRIETARY_SYSTEM_CTRL_GPIO_HIGH_LEVEL : PTX_WLC_PROPRIETARY_SYSTEM_CTRL_GPIO_LOW_LEVEL);    /* Payload byte 0 controlling GPIO0. */
             tx_buffer[PTX_WLC_PROPRIETARY_SYSTEM_CTRL_GPIO_1_POS] = ((setGpio1High == 1) ? PTX_WLC_PROPRIETARY_SYSTEM_CTRL_GPIO_HIGH_LEVEL : PTX_WLC_PROPRIETARY_SYSTEM_CTRL_GPIO_LOW_LEVEL);    /* Payload byte 1 controlling GPIO1. */
-            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.tagCtx.t2t.t2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, tx_buffer, tx_buffer_len, rx_buffer_write, &rx_buffer_write_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.TagCtx.T2t.T2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, tx_buffer, tx_buffer_len, rx_buffer_write, &rx_buffer_write_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
         }
     }
 
@@ -181,7 +181,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_SetListenerShippingModeEnable(ptx_RUL_WLC_t
         uint8_t rx_buffer[PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN];
         uint32_t rx_buffer_len = sizeof(rx_buffer);
 
-        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.tagCtx.t2t.t2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.TagCtx.T2t.T2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -194,7 +194,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_SetListenerShippingModeEnable(ptx_RUL_WLC_t
             /* Add Block Content from Read and overwrite with new Shipping Mode Enable settings. */
             memcpy(tx_buffer, rx_buffer, PTX_T2T_BLOCK_SIZE);
             tx_buffer[PTX_WLC_PROPRIETARY_SYSTEM_CTRL_SHIPPING_MODE_ENABLE_POS] = 0x01;
-            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.tagCtx.t2t.t2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, tx_buffer, tx_buffer_len, rx_buffer_write, &rx_buffer_write_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.TagCtx.T2t.T2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_CTRL, tx_buffer, tx_buffer_len, rx_buffer_write, &rx_buffer_write_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
         }
     }
 
@@ -212,7 +212,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_GetListenerSystemStatus(ptx_RUL_WLC_t *ctx,
         uint8_t rx_buffer[PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN];
         uint32_t rx_buffer_len = sizeof(rx_buffer);
 
-        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.tagCtx.t2t.t2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_STATUS, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.TagCtx.T2t.T2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_SYSTEM_STATUS, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -251,7 +251,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_Write(ptx_RUL_WLC_t *ctx, uint8_t *txDa
         while ( (PTX_STATUS_SUCCESS == status) &&  (0u < remaining_tdc_message_length) )
         {
             /* Write the data in chunks of 4 bytes (NFC_FORUM compliant). */
-            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.tagCtx.t2t.t2t), block++, &txData[buffer_pos], PTX_T2T_BLOCK_SIZE, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.TagCtx.T2t.T2t), block++, &txData[buffer_pos], PTX_T2T_BLOCK_SIZE, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
             /* Increment block number. */
             buffer_pos += PTX_T2T_BLOCK_SIZE;
             /* Decrement number of remaining bytes of the TDC message. */
@@ -274,7 +274,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_Write(ptx_RUL_WLC_t *ctx, uint8_t *txDa
             /* Copy remaining data into reserved memory. */
             memcpy(&data[PTX_WLC_PROPRIETARY_TDC_PAYLOAD_POS], txData, PTX_T2T_BLOCK_SIZE - 1u);
             /* Write the data in chunks of 4 bytes (NFC_FORUM compliant). */
-            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.tagCtx.t2t.t2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_TDC_POL, &data[0], PTX_T2T_BLOCK_SIZE, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+            status = ptx_NativeTag_T2T_Write(&(ctx->NdefComp.TagCtx.T2t.T2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_TDC_POL, &data[0], PTX_T2T_BLOCK_SIZE, rx_buffer, &rx_buffer_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
         }
 #else
         /* Reserve 64 bytes at once. */
@@ -344,7 +344,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_IsReceived(ptx_RUL_WLC_t *ctx, uint8_t 
         uint32_t read_data_len = sizeof(read_data);
 #if defined(PTX_ENABLE_PROPRIETARY_TDC_NFC_FORUM)
         /* Read the first block of the poller buffer on the Listener device. */
-        status = ptx_NativeTag_T2T_Read (&(ctx->NdefComp.tagCtx.t2t.t2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_TDC_POL, read_data, &read_data_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+        status = ptx_NativeTag_T2T_Read (&(ctx->NdefComp.TagCtx.T2t.T2t), PTX_WLC_PROPRIETARY_T2T_BLOCK_NUM_TDC_POL, read_data, &read_data_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
 #else
         read_data_len = PTX_T2T_BLOCK_SIZE;
         /* Do the proprietary read operation (reads 4 bytes per transaction instead of 16 byte). */
@@ -393,7 +393,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_Read(ptx_RUL_WLC_t *ctx, uint8_t *rxDat
             /* Use the 'standard'T2T read command to retrieve the data (16 bytes per transaction).
              * Read first Block to check First Byte with length information.
              */
-            status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.tagCtx.t2t.t2t), block_num, rx_data, &rx_data_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+            status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.TagCtx.T2t.T2t), block_num, rx_data, &rx_data_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
 
             if (PTX_STATUS_SUCCESS == status)
             {
@@ -411,7 +411,7 @@ ptx_Status_t ptx_RUL_WLC_Proprietary_TDC_Read(ptx_RUL_WLC_t *ctx, uint8_t *rxDat
                     {
                         block_num += (PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN / PTX_T2T_BLOCK_SIZE);
                         rx_data_len = PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN;
-                        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.tagCtx.t2t.t2t), block_num, &rx_data[buffer_pos], &rx_data_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
+                        status = ptx_NativeTag_T2T_Read(&(ctx->NdefComp.TagCtx.T2t.T2t), block_num, &rx_data[buffer_pos], &rx_data_len, PTX_WLC_PROPRIETARY_T2T_COMMUNICATION_TIMEOUT);
 
                         buffer_pos += rx_data_len;
                         if (rx_data_len < remaining_tdc_message_length)

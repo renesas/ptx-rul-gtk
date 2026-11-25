@@ -170,7 +170,7 @@ typedef struct ptx_Thread
     void                   *ThdParam;           /**< Pointer to a parameter passed to \ref ptx_OSAL_ThreadCreate. */
     void                   *Thread;             /**< Platform specific Thread handle, assigned in \ref ptx_OSAL_ThreadCreate. */
     void                   *ThdName;            /**< Thread name. Reserved for future use. */
-    ptx_OSAL_t             *OS;                 /**< Pointer to an initialized OSAL component structure. */
+    ptx_OSAL_t             *Osal;               /**< Pointer to an initialized OSAL component structure. */
     void                   *ThdEventGroup;      /**< Reserved for future use. */
     ptx_Thread_State_t      ThdState;           /**< Track state of thread, see \ref ptx_Thread_State_t */
     uint32_t                ThdPriority;        /**< Reserved for future use. */
@@ -189,7 +189,7 @@ typedef struct ptx_Timer
     ptx_Semaphore_t          WaitCancelSem;      /**< Timer wait semaphore, used to sync timer wait-functionality with timer thread. */
     uint32_t                 Interval;           /**< Interval in ms, defines maximum time to wait for WaitCancelSem to be signaled. */
     uint8_t                  Mode;               /**< Timer mode: single shot or periodic (continuously running). */
-    ptx_OSAL_t              *OS;                 /**< Pointer to an initialized OSAL component structure. */
+    ptx_OSAL_t              *Osal;               /**< Pointer to an initialized OSAL component structure. */
     void                    *Param;              /**< Pointer to a parameter passed to \ref ptx_OSAL_TimerCreate. */
     volatile uint8_t         Running;            /**< Timer has been successfully started with \ref ptx_OSAL_TimerStart (1) or not (0). */
     volatile uint8_t         Run;                /**< Timer has been successfully created with \ref ptx_OSAL_TimerCreate (1), or closed (0) (e.g. with \ref ptx_OSAL_TimerClose). */

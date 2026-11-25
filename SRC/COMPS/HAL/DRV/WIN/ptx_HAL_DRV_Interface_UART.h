@@ -91,7 +91,7 @@ extern "C" {
 /**
  * \brief HAL GPIO Forward declaration.
  */
-typedef struct ptx_HAL_GPIO ptx_HAL_GPIO_t;
+struct ptx_HAL_GPIO;
 
 
 /**
@@ -117,10 +117,10 @@ typedef struct ptx_HAL_DRV_Interface_UART
 {
     ptx_Comps_t                                 CompId;             /**< Component ID. */
 
-    ptx_HAL_FTD2XXCtx_t                         *Ftd2xx_ctx;        /**< FTDI context. */
+    ptx_HAL_FTD2XXCtx_t                         *Ftd2xxCtx;         /**< FTDI context. */
     ptx_HAL_DRV_Interface_UART_PortConfig_t     *Port;              /**< Pointer to Port config. */
     ptx_Log_t                                   *Log;               /**< Pointer to an initialized logger. */
-    ptx_OSAL_t                                  *OS;                /**< Pointer to an initialized Osal. */
+    ptx_OSAL_t                                  *Osal;              /**< Pointer to an initialized Osal. */
     uint32_t                                    Speed;              /**< UART Communication Speed. */
 } ptx_HAL_DRV_Interface_UART_t;
 
@@ -132,12 +132,10 @@ typedef struct ptx_HAL_DRV_Interface_UART_InitParams
     ptx_HAL_DRV_Interface_Port_Type_t           PortType;           /**< Implementation Type of the hardware interface port. */
     uint8_t                                     PortID;             /**< ID of the hardware interface port implementation. */
 
-    uint8_t                                     *InterfaceName;     /**< Pointer to the device name. RFU.*/
-    uint32_t                                    InterfaceNameLen;   /**< Length of the device name. RFU.*/
     uint32_t                                    Speed;              /**< Speed used by peripheral before being configured by application. */
-    void                                        *OS;                /**< Initialized Osal context. */
+    void                                        *Osal;              /**< Initialized Osal context. */
     ptx_Log_t                                   *Log;               /**< Initialized Logger Context. */
-    ptx_HAL_GPIO_t                              *Gpio;              /**< Initialized GPIO Context. */
+    struct ptx_HAL_GPIO                         *Gpio;              /**< Initialized GPIO Context. */
 } ptx_HAL_DRV_Interface_UART_InitParams_t;
 
 /*
@@ -156,7 +154,7 @@ typedef struct ptx_HAL_DRV_Interface_UART_InitParams
  * \param[in]       ctx             Pointer to the component structure to be initialized.
  *                                  Will be populated with driver context and configuration.
  * \param[in]       initParams      Pointer to initialization parameters containing port type,
- *                                  port ID, communication speed, OS context, logger, and GPIO context.
+ *                                  port ID, communication speed, Osal context, logger, and GPIO context.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  *

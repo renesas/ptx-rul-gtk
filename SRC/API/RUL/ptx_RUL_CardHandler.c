@@ -281,7 +281,15 @@ ptx_Status_t ptx_RUL_CheckCardPresence(ptx_RUL_t* rul, ptx_RUL_CheckPresType_t t
             case ptx_RUL_CheckPresType_T2T:
                 if (ptx_RUL_CardProtocolType_T2T == rul->CardRegistry.ActiveProtocol)
                 {
-                    status = ptx_NSC_RfPresenceCheck_FrameRf(&(rul->Nsc), ptx_NSC_PresCheck_FrameRf_T2T_Read, rul->CardRegistry.ActiveCard->TechParam.TypeA.NfcId1);
+                    if ((rul->CardRegistry.ActiveCard->TechParam.TypeA.SelRes & PTX_RUL_MFCC_SAK_RESP_MASK) != 0)
+                    {
+                        /* In case of MFCC presence check is not supported */
+                        status = PTX_STATUS_E_MFCC_NOT_SUPPORTED;
+                    }
+                    else
+                    {
+                        status = ptx_NSC_RfPresenceCheck_FrameRf(&(rul->Nsc), ptx_NSC_PresCheck_FrameRf_T2T_Read, rul->CardRegistry.ActiveCard->TechParam.TypeA.NfcId1);
+                    }
                 }
                 else
                 {

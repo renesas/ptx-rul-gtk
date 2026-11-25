@@ -404,7 +404,15 @@ ptx_Status_t ptx_PSL_WriteRegister(ptx_PSL_t *psl, uint16_t address, uint8_t val
 
     if (PTX_COMP_CHECK(psl, Comp_Support))
     {
-        status = ptx_NSC_Write(&(psl->Rul->Nsc), address, 1u, &value);
+        if ((PAD_DIG6_IO2_REG == address) && (0 != psl->Rul->Nsc.SysCfg.TxOvDEn))
+        {
+            /* DIG6 / GPIO6 is reserved for TX Pin Overvoltage Event detection. */
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
+        else
+        {
+            status = ptx_NSC_Write(&(psl->Rul->Nsc), address, 1u, &value);
+        }
     }
 
     return status;
@@ -416,7 +424,15 @@ ptx_Status_t ptx_PSL_ReadRegister(ptx_PSL_t *psl, uint16_t address, uint8_t *val
 
     if (PTX_COMP_CHECK(psl, Comp_Support) && (NULL != value))
     {
-        status = ptx_NSC_Read(&(psl->Rul->Nsc), address, 1u, value);
+        if ((PAD_DIG6_IO2_REG == address) && (0 != psl->Rul->Nsc.SysCfg.TxOvDEn))
+        {
+            /* DIG6 / GPIO6 is reserved for TX Pin Overvoltage Event detection. */
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
+        else
+        {
+            status = ptx_NSC_Read(&(psl->Rul->Nsc), address, 1u, value);
+        }
     }
 
     return status;
@@ -483,6 +499,11 @@ ptx_Status_t ptx_PSL_ResetAllRegs(ptx_PSL_t *psl)
         if (PTX_STATUS_SUCCESS == status)
         {
             status = ptx_PSL_WriteRegister(psl, PAD_DIG6_IO2_REG, PAD_DIG6_IO2_REG_RST);
+            if (PTX_STATUS_E_GEN_NOT_PERMITTED == status)
+            {
+                /* DIG6 / GPIO6 reserved for TxOvDEn - not a real failure, skip and continue. */
+                status = PTX_STATUS_SUCCESS;
+            }
         }
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -1392,6 +1413,11 @@ static ptx_Status_t ptx_PSL_EnableDigPads8_1(ptx_PSL_t *psl)
         if (PTX_STATUS_SUCCESS == status)
         {
             status = ptx_PSL_ModifyRegister(psl, PAD_DIG6_IO2_REG, 0, PAD_DIGX_IOX_REG_OEN_MASK);
+            if (PTX_STATUS_E_GEN_NOT_PERMITTED == status)
+            {
+                /* DIG6 / GPIO6 reserved for TxOvDEn - not a real failure, skip and continue. */
+                status = PTX_STATUS_SUCCESS;
+            }
         }
 
         if (PTX_STATUS_SUCCESS == status)
@@ -1473,6 +1499,11 @@ static ptx_Status_t ptx_PSL_ResetDigPads8_1(ptx_PSL_t *psl)
         if (PTX_STATUS_SUCCESS == status)
         {
             status = ptx_PSL_WriteRegister(psl, PAD_DIG6_IO2_REG, PAD_DIG6_IO2_REG_RST);
+            if (PTX_STATUS_E_GEN_NOT_PERMITTED == status)
+            {
+                /* DIG6 / GPIO6 reserved for TxOvDEn - not a real failure, skip and continue. */
+                status = PTX_STATUS_SUCCESS;
+            }
         }
 
         if (PTX_STATUS_SUCCESS == status)

@@ -98,7 +98,7 @@ ptx_Status_t ptx_NSC_RUL_RfConfig_LoadParam(ptx_NSC_t *nsc)
 
         /* Check the version */
         uint8_t file_version_major = ptx_NSC_RfConfig_Version_Major;
-        if (PTX_NSC_RFCONFIG_VERSION == file_version_major)
+        if (PTX_NSC_RFCONFIG_MAJOR_VERSION == file_version_major)
         {
             status = PTX_STATUS_SUCCESS;
             (void)memset(&config->RfCfgParam[0], 0, sizeof(ptx_NSC_RfConfig_Param_t) * (PTX_NSC_RFCONFIG_PARAMID_MAX_PARAMID));
@@ -451,26 +451,6 @@ ptx_Status_t ptx_NSC_RfConfig_GetSection(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_
                 config->Value = ptx_NSC_RfConfig_PollA106;
                 break;
 
-            case NSC_RfConfig_ParamId_PollB106:
-                config->Length = ptx_NSC_RfConfig_PollB106_len;
-                config->Value = ptx_NSC_RfConfig_PollB106;
-                break;
-
-            case NSC_RfConfig_ParamId_PollF212:
-                config->Length = ptx_NSC_RfConfig_PollF212_len;
-                config->Value = ptx_NSC_RfConfig_PollF212;
-                break;
-
-            case NSC_RfConfig_ParamId_PollF424:
-                config->Length = ptx_NSC_RfConfig_PollF424_len;
-                config->Value = ptx_NSC_RfConfig_PollF424;
-                break;
-
-            case NSC_RfConfig_ParamId_PollV_26K5:
-                config->Length = ptx_NSC_RfConfig_PollV26_5_len;
-                config->Value = ptx_NSC_RfConfig_PollV26_5;
-                break;
-
             case NSC_RfConfig_ParamId_PollA212:
                 config->Length = ptx_NSC_RfConfig_PollA212_len;
                 config->Value = ptx_NSC_RfConfig_PollA212;
@@ -479,6 +459,16 @@ ptx_Status_t ptx_NSC_RfConfig_GetSection(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_
             case NSC_RfConfig_ParamId_PollA424:
                 config->Length = ptx_NSC_RfConfig_PollA424_len;
                 config->Value = ptx_NSC_RfConfig_PollA424;
+                break;
+
+            case NSC_RfConfig_ParamId_PollA848:
+                config->Length = ptx_NSC_RfConfig_PollA848_len;
+                config->Value = ptx_NSC_RfConfig_PollA848;
+                break;
+
+            case NSC_RfConfig_ParamId_PollB106:
+                config->Length = ptx_NSC_RfConfig_PollB106_len;
+                config->Value = ptx_NSC_RfConfig_PollB106;
                 break;
 
             case NSC_RfConfig_ParamId_PollB212:
@@ -494,6 +484,21 @@ ptx_Status_t ptx_NSC_RfConfig_GetSection(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_
             case NSC_RfConfig_ParamId_PollB848:
                 config->Length = ptx_NSC_RfConfig_PollB848_len;
                 config->Value = ptx_NSC_RfConfig_PollB848;
+                break;
+
+            case NSC_RfConfig_ParamId_PollF212:
+                config->Length = ptx_NSC_RfConfig_PollF212_len;
+                config->Value = ptx_NSC_RfConfig_PollF212;
+                break;
+
+            case NSC_RfConfig_ParamId_PollF424:
+                config->Length = ptx_NSC_RfConfig_PollF424_len;
+                config->Value = ptx_NSC_RfConfig_PollF424;
+                break;
+
+            case NSC_RfConfig_ParamId_PollV_26K5:
+                config->Length = ptx_NSC_RfConfig_PollV26_5_len;
+                config->Value = ptx_NSC_RfConfig_PollV26_5;
                 break;
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)

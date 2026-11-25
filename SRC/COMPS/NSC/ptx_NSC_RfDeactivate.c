@@ -145,10 +145,10 @@ ptx_Status_t ptx_NSC_RfDeactivate(ptx_NSC_t *nsc, ptx_NSC_RfDeact_Param_t *param
         *nsc_buf_pos = PTX_NSC_RF_DEACTIVATE_CMD_OPCODE;
         nsc_buf_pos++;
 
-        *nsc_buf_pos = param->Type;
+        *nsc_buf_pos = (uint8_t) param->Type;
         nsc_buf_pos++;
 
-        *nsc_buf_pos = param->State;
+        *nsc_buf_pos = (uint8_t) param->State;
         nsc_buf_pos++;
 
         status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, nsc_buf, (uint32_t)(nsc_buf_pos - nsc_buf));

@@ -86,7 +86,7 @@ ptx_Status_t ptx_Log_Interface_Open (ptx_Log_t *log, ptx_Log_InitParams_t *param
         gLogFile.IsCacheOverflow = 0;
         gLogFile.LogCacheIndex = 0;
 
-#if defined(PTX_LOG_FILE_DIRECT_WRITE_MODE)
+#if !defined(PTX_LOG_FILE_BUFFERED_WRITE_MODE)
         gLogFile.FileHandle = (void*)fopen(gLogFile.FilePath, "a");
 #else
         gLogFile.FileHandle = (void*)fopen(gLogFile.FilePath, "w");
@@ -115,7 +115,7 @@ ptx_Status_t ptx_Log_Interface_Close (ptx_Log_t *log)
     {
         ptx_Log_File_t *log_ctx = (ptx_Log_File_t *)log->LogCtx;
 
-#if !defined(PTX_LOG_FILE_DIRECT_WRITE_MODE)
+#if defined(PTX_LOG_FILE_BUFFERED_WRITE_MODE)
         /* In case of an overflow of the Log-cache, print the entire cache */
         uint32_t nr_entries_to_write = (0 == log_ctx->IsCacheOverflow) ? log_ctx->LogCacheIndex : PTX_LOG_FILE_NR_LOG_CACHE_ENTRIES;
         for (uint32_t i = 0; i < nr_entries_to_write; i++)
@@ -137,7 +137,7 @@ void ptx_Log_Interface_WriteCB (ptx_Log_t *log, const char lvl, char *msg, uint3
     {
         ptx_Log_File_t *log_ctx = (ptx_Log_File_t *)log->LogCtx;
 
-#if defined(PTX_LOG_FILE_DIRECT_WRITE_MODE)
+#if !defined(PTX_LOG_FILE_BUFFERED_WRITE_MODE)
         fprintf((FILE*)log_ctx->FileHandle, "%06d: %c %s", log_ctx->LogCacheIndex, lvl, msg);
         fflush((FILE*)log_ctx->FileHandle);
         /*Write directly into file - no overflow-protection needed for the index*/

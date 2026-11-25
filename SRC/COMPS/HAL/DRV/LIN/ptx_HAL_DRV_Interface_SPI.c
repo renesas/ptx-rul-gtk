@@ -75,7 +75,7 @@
  * Default SPI device to be used: spiInterface0.0.
  * Default speed: 1Mbps
  */
-#define PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_SPI_DEV(buffer, no)             snprintf(buffer, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_BUFFER_MAX, "/dev/spidev0.%d", no)
+#define PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_SPI_DEV(buffer, no)             snprintf(buffer, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_BUFFER_MAX, "/dev/spidev0.%u", no)
 #define PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_SPI_MODE_0                      (SPI_MODE_0)
 #define PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_BITS_PER_WORD                   (8u)
 #define PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_IOC_WR_MODE32                   (SPI_IOC_WR_MODE32)
@@ -138,8 +138,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Init (ptx_HAL_DRV_Interface_SPI_t *ctx, p
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_SPI_Init");
-
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_SPI_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_SPI_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
@@ -149,7 +147,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Init (ptx_HAL_DRV_Interface_SPI_t *ctx, p
                 ctx->Port = &gDrvSpiConfigs[config];
                 ctx->Speed = (0 == initParams->Speed) ? PTX_HAL_DRV_INTERFACE_SPI_DEFAULT_SPEED : initParams->Speed;
                 ctx->Log = initParams->Log;
-                ctx->OS = (ptx_OSAL_t*)initParams->OS;
+                ctx->Osal = (ptx_OSAL_t*)initParams->Osal;
 
                 status = PTX_STATUS_SUCCESS;
                 ctx->CompId = Comp_HAL;
@@ -166,8 +164,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeInit (ptx_HAL_DRV_Interface_SPI_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_DeInit");
-
         /* First close any opened resources and then clean them up */
         status = ptx_HAL_DRV_Interface_SPI_Close(ctx);
         if (PTX_STATUS_SUCCESS == status)
@@ -184,51 +180,76 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeInit (ptx_HAL_DRV_Interface_SPI_t *ctx)
 ptx_Status_t ptx_HAL_DRV_Interface_SPI_Open(ptx_HAL_DRV_Interface_SPI_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    int fd = -1;
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Open");
-
         char buffer[PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_BUFFER_MAX];
-        memset(buffer, 0, sizeof(char)*PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_BUFFER_MAX);
+
+        memset(buffer, 0, sizeof(buffer));
 
         PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_SPI_DEV(buffer, ctx->Port->PortNr);
-        ctx->Port->PortFd = open(buffer, (int)(((unsigned int) O_RDWR)
-                                               | ((unsigned int) O_NOCTTY)
-                                               | ((unsigned int) O_NDELAY)
-                                               | ((unsigned int) O_NONBLOCK)
-                                              ));
-        if (ctx->Port->PortFd >= 0)
+
+        fd = open(buffer, (int)(((unsigned int)O_RDWR)
+                              | ((unsigned int)O_NOCTTY)
+                              | ((unsigned int)O_NDELAY)
+                              | ((unsigned int)O_NONBLOCK)));
+
+        if (fd < 0)
+        {
+            status = PTX_STATUS_E_GEN_INTERFACE_OPEN;
+        }
+        else
         {
             const uint32_t mode = PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_SPI_MODE_0;
-            int ret = ioctl(ctx->Port->PortFd, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_IOC_WR_MODE32, &mode);
 
-            if (-1 != ret)
+            int ret = ioctl(fd, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_IOC_WR_MODE32, &mode);
+
+            if (ret != -1)
             {
                 const uint32_t bits_per_word = PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_BITS_PER_WORD;
-                ret = ioctl(ctx->Port->PortFd, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_IOC_WR_BITS_PER_WORD, &bits_per_word);
+                ret = ioctl(fd, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_IOC_WR_BITS_PER_WORD, &bits_per_word);
             }
 
-            if (-1 != ret)
+            if (ret != -1)
             {
                 const uint32_t speed_default = PTX_HAL_DRV_INTERFACE_SPI_DEFAULT_SPEED;
+
                 uint32_t speed = (ctx->Speed < speed_default) ? speed_default : ctx->Speed;
-                ret = ioctl(ctx->Port->PortFd, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_IOC_WR_MAX_SPEED_HZ, &speed);
+
+                ret = ioctl(fd, PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_IOC_WR_MAX_SPEED_HZ, &speed);
             }
 
-            if (-1 != ret)
+            if (ret != -1)
             {
-                /* spiInterface opened and configured. Now open and configure IRQ GPIO. */
+                /*
+                 * Temporarily transfer the descriptor because IRQ_Config()
+                 * expects it in the context.
+                 */
+                ctx->Port->PortFd = fd;
+
                 status = ptx_HAL_DRV_Interface_SPI_IRQ_Config(ctx);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    /*
+                     * Ownership remains with ctx and must later be released
+                     * by ptx_HAL_DRV_Interface_SPI_Close().
+                     */
+                    fd = -1;
+                }
             }
             else
             {
                 status = PTX_STATUS_E_GEN_INTERFACE_OPEN;
             }
-        }
-        else
-        {
-            status = PTX_STATUS_E_GEN_INTERFACE_OPEN;
+
+            if (0 <= fd)
+            {
+                (void)close(fd);
+                fd = -1;
+                ctx->Port->PortFd = -1;
+            }
         }
     }
 
@@ -241,13 +262,25 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Close(ptx_HAL_DRV_Interface_SPI_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Close");
+        if (ctx->Port->IrqFd >= 0)
+        {
+            (void)close(ctx->Port->IrqFd);
+            ctx->Port->IrqFd = -1;
+        }
 
-        (void)close(ctx->Port->IrqFd);
-        (void)close(ctx->Port->IrqFdCancel);
-        (void)close(ctx->Port->PortFd);
+        if (ctx->Port->IrqFdCancel >= 0)
+        {
+            (void)close(ctx->Port->IrqFdCancel);
+            ctx->Port->IrqFdCancel = -1;
+        }
+
+        if (ctx->Port->PortFd >= 0)
+        {
+            (void)close(ctx->Port->PortFd);
+            ctx->Port->PortFd = -1;
+        }
+
         status = PTX_STATUS_SUCCESS;
-
     }
 
     return status;
@@ -259,8 +292,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Tx(ptx_HAL_DRV_Interface_SPI_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->PortFd > 0))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Tx");
-
         if (NULL == ctx->Port->TxData)
         {
             if (txLen > 0)
@@ -283,8 +314,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Rx(ptx_HAL_DRV_Interface_SPI_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Rx");
-
         if (rxLen > 0)
         {
             ctx->Port->RxData = rxBuf;
@@ -304,8 +333,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetNss(ptx_HAL_DRV_Interface_SPI_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetNss");
-
         status = PTX_STATUS_SUCCESS;
     }
 
@@ -318,8 +345,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_ResetNss(ptx_HAL_DRV_Interface_SPI_t *ctx
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_ResetNss");
-
         if (NULL != ctx->Port->TxData)
         {
             struct spi_ioc_transfer data[2] =
@@ -385,8 +410,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_RxIrqLevel(ptx_HAL_DRV_Interface_SPI_t *c
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != level))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_RxIrqLevel");
-
         uint8_t gpio_state = 0;
 
         /* Check if the IRQ of the GPIO-pin is already pending i.e. set to 1 */
@@ -406,8 +429,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetParameter(ptx_HAL_DRV_Interface_SPI_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -433,8 +454,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_GetParameter(ptx_HAL_DRV_Interface_SPI_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_GetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -464,8 +483,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetTransmissionSpeed(ptx_HAL_DRV_Interfac
 
     if ((NULL != ctx) && (0 != speed))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetTransmissionSpeed");
-
         uint32_t speed_applied = speed;
 
         int error_code = ioctl(ctx->Port->PortFd, SPI_IOC_WR_MAX_SPEED_HZ, &speed_applied);
@@ -490,8 +507,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_SPI_IRQ_Config (ptx_HAL_DRV_Interface_
     
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_IRQ_Config");
-
         int fd;
 
         char buffer[PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_BUFFER_MAX];
@@ -504,7 +519,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_SPI_IRQ_Config (ptx_HAL_DRV_Interface_
         * fd is then used for further gpio access.
         */
         fd = open(buffer, O_RDWR | O_NONBLOCK);
-        if (fd > 0)
+        if (0 <= fd)
         {
             ctx->Port->IrqFd = fd;
             
@@ -561,8 +576,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_SPI_GpioSetInput (ptx_HAL_DRV_Interfac
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != retFd))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_GpioSetInput");
-
         int fd;
         int rv;
         struct gpiohandle_request req;
@@ -609,8 +622,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_SPI_GpioSetIrqRising (ptx_HAL_DRV_Inte
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != retFd))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_GpioSetIrqRising");
-
         int fd, rv;
         struct gpioevent_request req;
 
@@ -624,7 +635,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_SPI_GpioSetIrqRising (ptx_HAL_DRV_Inte
         }
 
         fd = open(PTX_HAL_DRV_INTERFACE_SPI_WCHARDEV_GPIOCHIP_USED, O_RDWR | O_NONBLOCK);
-        if (0 < fd)
+        if (0 <= fd)
         {
             req.lineoffset = ctx->Port->IrqPin;
             req.handleflags = GPIOHANDLE_REQUEST_INPUT;
@@ -658,8 +669,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_SPI_GpioCheckPendingIRQ (ptx_HAL_DRV_I
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != irqPending))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_GpioCheckPendingIRQ");
-
         int fd;
         int res;
         struct gpiohandle_data data;

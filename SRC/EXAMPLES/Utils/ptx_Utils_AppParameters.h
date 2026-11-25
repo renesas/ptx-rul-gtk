@@ -94,8 +94,7 @@ extern "C" {
  */
 typedef struct ptx_Utils_AppParams
 {
-    char DeviceName[PTX_UTILS_DEVICE_NAME_MAX_LENGTH];          /**< Device name (e.g. "COM4" on Windows, "/dev/spidev0.0" on Linux) */
-    uint16_t DeviceNameLen;                                     /**< Device name length */
+    uint8_t RFU;         /**< RFU */
 } ptx_Utils_AppParams_t;
 
 

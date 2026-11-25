@@ -150,7 +150,8 @@ uint16_t ptx_RingBuffer_Size(ptx_RingBuffer_t *ringBuffer)
     }
     else
     {
-        size = ringBuffer->size;
+        /* Size always one less for sentinel */
+        size = ringBuffer->size - 1;
     }
 
     return (uint16_t) size;

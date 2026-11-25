@@ -72,8 +72,8 @@ static ptx_HAL_DRV_Interface_I2C_PortConfig_t gDrvI2CPortConfigs[PTX_HAL_DRV_INT
     {
         .Type                   = HAL_DRV_Interface_Port_Type_Default,
         .ID                     = 0,
-        .IRQPin_Low             = FT_IRQ_LINE_GPIO_BIT_LO,  /* Default IRQ pin low byte, Pin D4 */
-        .IRQPin_High            = FT_IRQ_LINE_GPIO_BIT,     /* Default IRQ pin high byte, Pin C0 */
+        .IRQPin_Low             = (ptx_HAL_FTD2XX_GPIO_t)FT_IRQ_LINE_GPIO_BIT_LO,  /* Default IRQ pin low byte, Pin D4 */
+        .IRQPin_High            = (ptx_HAL_FTD2XX_GPIO_t)FT_IRQ_LINE_GPIO_BIT,     /* Default IRQ pin high byte, Pin C0 */
         .ModuleDescriptor       = MODULE_DESCRIPTOR,
     }
 };
@@ -93,15 +93,18 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_I2C_Init");
-
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I2C_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_I2C_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
         {
             if ((gDrvI2CPortConfigs[config].Type == initParams->PortType) && (gDrvI2CPortConfigs[config].ID == initParams->PortID))
             {
-                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvI2CPortConfigs[config].ModuleDescriptor, NULL, initParams->Log);
+                ptx_HAL_FTD2XX_InitParams_t initParamsFTD2XX = {0};
+                initParamsFTD2XX.Log = initParams->Log;
+                initParamsFTD2XX.Osal = initParams->Osal;
+                initParamsFTD2XX.IRQPin_Low = gDrvI2CPortConfigs[config].IRQPin_Low;
+                initParamsFTD2XX.IRQPin_High = gDrvI2CPortConfigs[config].IRQPin_High;
+                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xxCtx, gDrvI2CPortConfigs[config].ModuleDescriptor, NULL, &initParamsFTD2XX);
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
@@ -109,12 +112,8 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
                     ctx->Speed = (0 == initParams->Speed) ? PTX_HAL_DRV_INTERFACE_I2C_SPEED_DEFAULT : initParams->Speed;
                     ctx->BusAddr = (0 == initParams->Address) ? PTX_HAL_DRV_INTERFACE_I2C_ADDRESS_4C : initParams->Address;
                     ctx->Log = initParams->Log;
-                    ctx->OS = (ptx_OSAL_t*)initParams->OS;
+                    ctx->Osal = (ptx_OSAL_t*)initParams->Osal;
                     ctx->WaitForInterrupt = INTERRUPT_FALSE;
-
-                    ctx->Ftd2xx_ctx->Log = initParams->Log;
-                    ctx->Ftd2xx_ctx->IRQPin_Low = ctx->Port->IRQPin_Low;
-                    ctx->Ftd2xx_ctx->IRQPin_High = ctx->Port->IRQPin_High;
                     ctx->CompId = Comp_HAL;
                 }
             }
@@ -130,12 +129,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_DeInit");
-
-        status = ptx_HAL_FTD2XX_LibClose(ctx->Ftd2xx_ctx);
+        status = ptx_HAL_FTD2XX_LibClose(ctx->Ftd2xxCtx);
         if (PTX_STATUS_SUCCESS == status)
         {
-            ctx->Ftd2xx_ctx = NULL;
+            ctx->Ftd2xxCtx = NULL;
             memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I2C_t));
             ctx->CompId = Comp_None;
         }
@@ -150,9 +147,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Open");
-
-        status = ptx_HAL_FTD2XX_I2C_Open(ctx->Ftd2xx_ctx, ctx->Speed);
+        status = ptx_HAL_FTD2XX_I2C_Open(ctx->Ftd2xxCtx, ctx->Speed);
 
     }
 
@@ -165,9 +160,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Close(ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Close");
-
-        status = ptx_HAL_FTD2XX_I2C_Close(ctx->Ftd2xx_ctx);
+        status = ptx_HAL_FTD2XX_I2C_Close(ctx->Ftd2xxCtx);
 
     }
 
@@ -180,9 +173,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Tx");
-
-        status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xx_ctx, ctx->BusAddr, txBuf, &txLen, NULL, 0, restart);
+        status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xxCtx, ctx->BusAddr, txBuf, &txLen, NULL, 0, restart);
         
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
@@ -202,9 +193,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Rx");
-
-        status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xx_ctx, ctx->BusAddr, NULL, 0, rxBuf, &rxLen, restart);
+        status = ptx_HAL_FTD2XX_I2C_TRx(ctx->Ftd2xxCtx, ctx->BusAddr, NULL, 0, rxBuf, &rxLen, restart);
 
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
@@ -224,9 +213,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_RxIrqLevel(ptx_HAL_DRV_Interface_I2C_t *c
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_RxIrqLevel");
-
-        status = ptx_HAL_FTD2XX_GetIRQLine(ctx->Ftd2xx_ctx, &level_16);
+        status = ptx_HAL_FTD2XX_GetIRQLine(ctx->Ftd2xxCtx, &level_16);
         *level = (0 == level_16) ? 0 : 1;
     }
 
@@ -239,8 +226,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetParameter(ptx_HAL_DRV_Interface_I2C_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -267,8 +252,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_GetParameter(ptx_HAL_DRV_Interface_I2C_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -300,8 +283,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetSlaveAddress(ptx_HAL_DRV_Interface_I2C
 
     if ((NULL != ctx))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetSlaveAddress");
-
         ctx->BusAddr = address;
         status = PTX_STATUS_SUCCESS;
     }
@@ -315,8 +296,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed(ptx_HAL_DRV_Interfac
 
     if ((NULL != ctx) && (0 != speed))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed");
-
         uint32_t oldSpeed = ctx->Speed;
         ctx->Speed = speed;
 

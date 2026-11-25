@@ -116,7 +116,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessT2T(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_
         uint8_t SLP_REQ[2] = {0x50, 0x00};
         uint8_t res[2] = {0};
         uint32_t resLen = 2;
-        status = ptx_RUL_Exchange(dta->rul, SLP_REQ, 2, res, &resLen, 10);
+        status = ptx_RUL_Exchange(dta->Rul, SLP_REQ, 2, res, &resLen, 10);
     }
 
 

@@ -121,7 +121,7 @@ ptx_Status_t ptx_NSC_RfDiscover(ptx_NSC_t *nsc, ptx_NSC_RfDiscover_Param_t *disc
 
             if ((NULL != nsc->ExtendDiscoveryParametersCb) && (NULL != nsc->ExtendDiscoveryParametersCtx))
             {
-                status = nsc->ExtendDiscoveryParametersCb(nsc->ExtendDiscoveryParametersCtx, &nsc_buf_pos, &nsc_buf_free_len);
+                status = nsc->ExtendDiscoveryParametersCb(nsc->ExtendDiscoveryParametersCtx, discoverParams, paramCnt,  &nsc_buf_pos, &nsc_buf_free_len);
             }
 
             /* Iterate over specified parameters. */

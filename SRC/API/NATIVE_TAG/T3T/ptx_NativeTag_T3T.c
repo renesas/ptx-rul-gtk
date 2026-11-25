@@ -91,7 +91,7 @@ static ptx_Status_t ptx_NativeTag_T3T_Transceive (ptx_NativeTag_T3T_t *t3t,
 /*
  *  Create the T3T Command Header.
  *
- *  t3t                   Pointer to an existing instance of the T2T component.
+ *  t3t                   Pointer to an existing instance of the T3T component.
  *  commandCode           Command Code to be set.
  *  NFCID2                ID to address the T3T tag.
  *  NFCID2Len             Length of ID.
@@ -120,29 +120,36 @@ ptx_Status_t ptx_NativeTag_T3T_Open (ptx_NativeTag_T3T_t *t3t, ptx_NativeTag_T3T
 
     if ((NULL != t3t) && (NULL != initParams))
     {
-        if ((NULL != initParams->rul) && (NULL != initParams->TxBuffer) && (PTX_T3T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
+        if ((NULL != initParams->Rul) && (NULL != initParams->TxBuffer) && (PTX_T3T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
         {
-            /* clear component */
-            (void)memset(t3t, 0, sizeof(ptx_NativeTag_T3T_t));
-
-            /* set members */
-            t3t->CompId = Comp_NativeTag_T3T;
-            t3t->rul = initParams->rul;
-            t3t->TxBuffer = initParams->TxBuffer;
-            t3t->MRTI_Check = initParams->MRTI_Check;
-            t3t->MRTI_Update = initParams->MRTI_Update;
-            if (PTX_T3T_NFCID2_SIZE == initParams->NFCID2Len)
+            if(ptx_RUL_CardProtocolType_T3T == initParams->Rul->CardRegistry.ActiveProtocol)
             {
-                memcpy(t3t->NFCID2, initParams->NFCID2, PTX_T3T_NFCID2_SIZE);
+                /* clear component */
+                (void)memset(t3t, 0, sizeof(ptx_NativeTag_T3T_t));
+
+                /* set members */
+                t3t->CompId = Comp_NativeTag_T3T;
+                t3t->Rul = initParams->Rul;
+                t3t->TxBuffer = initParams->TxBuffer;
+                t3t->MRTI_Check = initParams->MRTI_Check;
+                t3t->MRTI_Update = initParams->MRTI_Update;
+                if (PTX_T3T_NFCID2_SIZE == initParams->NFCID2Len)
+                {
+                    memcpy(t3t->NFCID2, initParams->NFCID2, PTX_T3T_NFCID2_SIZE);
+                }
+                else
+                {
+                    /* ignore, set NFCID2 later */
+                    memset(t3t->NFCID2, 0, PTX_T3T_NFCID2_SIZE);
+                }
+
+                /* Communicate success to upper layers. */
+                status = PTX_STATUS_SUCCESS;
             }
             else
             {
-                /* ignore, set NFCID2 later */
-                memset(t3t->NFCID2, 0, PTX_T3T_NFCID2_SIZE);
+                status = PTX_STATUS_E_GEN_NOT_PERMITTED;
             }
-
-            /* Communicate success to upper layers. */
-            status = PTX_STATUS_SUCCESS;
         }
         else
         {
@@ -174,36 +181,43 @@ ptx_Status_t ptx_NativeTag_T3T_SetTagParams (ptx_NativeTag_T3T_t *t3t,
 
     if (PTX_COMP_CHECK(t3t, Comp_NativeTag_T3T))
     {
-        /* set NFCID2 */
-        if ((PTX_T3T_NFCID2_SIZE == NFCID2Len) && (NULL != NFCID2))
+        if(ptx_RUL_CardProtocolType_T3T == t3t->Rul->CardRegistry.ActiveProtocol)
         {
-            memcpy(t3t->NFCID2, NFCID2, PTX_T3T_NFCID2_SIZE);
+            /* set NFCID2 */
+            if ((PTX_T3T_NFCID2_SIZE == NFCID2Len) && (NULL != NFCID2))
+            {
+                memcpy(t3t->NFCID2, NFCID2, PTX_T3T_NFCID2_SIZE);
+            }
+            else
+            {
+                memset(t3t->NFCID2, 0, PTX_T3T_NFCID2_SIZE);
+            }
+
+            /* 4^n */
+            for (uint8_t i = 0; i < ((mrtiInfo.MRTICheck & mask_e) >> 6u); i++)
+            {
+                last_comp_check = (uint16_t)(last_comp_check * 4u);
+            }
+            for (uint8_t i = 0; i < ((mrtiInfo.MRTIUpdate & mask_e) >> 6u); i++)
+            {
+                last_comp_update = (uint16_t)(last_comp_update * 4u);
+            }
+
+            /* set timeout value */
+            timeout_check = t_t3t * ((((mrtiInfo.MRTICheck & mask_a) +1u) + nbr_check_blocks * (((mrtiInfo.MRTICheck & mask_b) >> 3u) +1u)) * last_comp_check);
+            timeout_update = t_t3t * ((((mrtiInfo.MRTIUpdate & mask_a) +1u) + nbr_update_blocks * (((mrtiInfo.MRTIUpdate & mask_b) >> 3u) +1u)) * last_comp_update);
+
+            timeout_check += (20 * nbr_check_blocks);        /* added to avoid floating point */
+            timeout_update += (20 * nbr_update_blocks);
+
+            t3t->TagTimeoutCheck = timeout_check;
+            t3t->TagTimeoutUpdate = timeout_update;
+            status = PTX_STATUS_SUCCESS;
         }
         else
         {
-            memset(t3t->NFCID2, 0, PTX_T3T_NFCID2_SIZE);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
-        /* 4^n */
-        for (uint8_t i = 0; i < ((mrtiInfo.MRTICheck & mask_e) >> 6u); i++)
-        {
-            last_comp_check = (uint16_t)(last_comp_check * 4u);
-        }
-        for (uint8_t i = 0; i < ((mrtiInfo.MRTIUpdate & mask_e) >> 6u); i++)
-        {
-            last_comp_update = (uint16_t)(last_comp_update * 4u);
-        }
-
-        /* set timeout value */
-        timeout_check = t_t3t * ((((mrtiInfo.MRTICheck & mask_a) +1u) + nbr_check_blocks * (((mrtiInfo.MRTICheck & mask_b) >> 3u) +1u)) * last_comp_check);
-        timeout_update = t_t3t * ((((mrtiInfo.MRTIUpdate & mask_a) +1u) + nbr_update_blocks * (((mrtiInfo.MRTIUpdate & mask_b) >> 3u) +1u)) * last_comp_update);
-
-        timeout_check += (20 * nbr_check_blocks);        /* added to avoid floating point */
-        timeout_update += (20 * nbr_update_blocks);
-
-        t3t->TagTimeoutCheck = timeout_check;
-        t3t->TagTimeoutUpdate = timeout_update;
-        status = PTX_STATUS_SUCCESS;
     }
 
     return status;
@@ -221,7 +235,14 @@ ptx_Status_t ptx_NativeTag_T3T_SENSF_REQ (ptx_NativeTag_T3T_t *t3t,
 
     if (PTX_COMP_CHECK(t3t, Comp_NativeTag_T3T) && (NULL != rx) && (NULL != rxLen))
     {
-        status = ptx_RUL_T3T_SensFReq(t3t->rul, sc, rc, tsn, rx, rxLen);
+        if(ptx_RUL_CardProtocolType_T3T == t3t->Rul->CardRegistry.ActiveProtocol)
+        {
+            status = ptx_RUL_T3T_SensFReq(t3t->Rul, sc, rc, tsn, rx, rxLen);
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -239,12 +260,19 @@ ptx_Status_t ptx_NativeTag_T3T_Check (ptx_NativeTag_T3T_t *t3t,
 
     if (PTX_COMP_CHECK(t3t, Comp_NativeTag_T3T) && (NULL != serviceInfo.ServiceCodeList) && (NULL != blockInfo.BlockList) && (NULL != rx) && (NULL != rxLen))
     {
-        status = ptx_NativeTag_T3T_SetCommandHeader(t3t, PTX_T3T_CHECK_CODE, t3t->NFCID2, PTX_T3T_NFCID2_SIZE, serviceInfo, blockInfo, &tx_index);
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T3T == t3t->Rul->CardRegistry.ActiveProtocol)
         {
-            /* no need to add the block data field, send data */
-            status = ptx_NativeTag_T3T_Transceive(t3t, &t3t->TxBuffer[0], tx_index, rx, rxLen, msTimeout);
+            status = ptx_NativeTag_T3T_SetCommandHeader(t3t, PTX_T3T_CHECK_CODE, t3t->NFCID2, PTX_T3T_NFCID2_SIZE, serviceInfo, blockInfo, &tx_index);
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* no need to add the block data field, send data */
+                status = ptx_NativeTag_T3T_Transceive(t3t, &t3t->TxBuffer[0], tx_index, rx, rxLen, msTimeout);
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -265,16 +293,27 @@ ptx_Status_t ptx_NativeTag_T3T_Update (ptx_NativeTag_T3T_t *t3t,
 
     if (PTX_COMP_CHECK(t3t, Comp_NativeTag_T3T) && (NULL != serviceInfo.ServiceCodeList) && (NULL != blockInfo.BlockList) && (NULL != rx) && (NULL != rxLen) && (NULL != blockData))
     {
-        status = ptx_NativeTag_T3T_SetCommandHeader(t3t, PTX_T3T_UPDATE_CODE, t3t->NFCID2, PTX_T3T_NFCID2_SIZE, serviceInfo, blockInfo, &tx_index);
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T3T == t3t->Rul->CardRegistry.ActiveProtocol)
         {
-            /* add the block data to the tx buffer */
-            (void)memcpy(&t3t->TxBuffer[tx_index], &blockData[0], (uint32_t)blockDataLen);
-            tx_index = (uint8_t)(tx_index + blockDataLen);
+            status = ptx_NativeTag_T3T_SetCommandHeader(t3t, PTX_T3T_UPDATE_CODE, t3t->NFCID2, PTX_T3T_NFCID2_SIZE, serviceInfo, blockInfo, &tx_index);
 
-            /* send data */
-            status = ptx_NativeTag_T3T_Transceive(t3t, &t3t->TxBuffer[0], tx_index, rx, rxLen, msTimeout);
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* add the block data to the tx buffer */
+                (void)memcpy(&t3t->TxBuffer[tx_index], &blockData[0], (uint32_t)blockDataLen);
+                tx_index = (uint8_t)(tx_index + blockDataLen);
+
+                /* send data */
+                status = ptx_NativeTag_T3T_Transceive(t3t, &t3t->TxBuffer[0], tx_index, rx, rxLen, msTimeout);
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -287,8 +326,15 @@ ptx_Status_t ptx_NativeTag_T3T_Close (ptx_NativeTag_T3T_t *t3t)
 
     if (PTX_COMP_CHECK(t3t, Comp_NativeTag_T3T))
     {
-        memset(t3t, 0, sizeof(ptx_NativeTag_T3T_t));
-        status = PTX_STATUS_SUCCESS;
+        if(ptx_RUL_CardProtocolType_T3T == t3t->Rul->CardRegistry.ActiveProtocol)
+        {
+            memset(t3t, 0, sizeof(ptx_NativeTag_T3T_t));
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -310,12 +356,19 @@ static ptx_Status_t ptx_NativeTag_T3T_Transceive (ptx_NativeTag_T3T_t *t3t,
 
     if (PTX_COMP_CHECK(t3t, Comp_NativeTag_T3T) && (NULL != tx) && (0 != txLen) && (NULL != rx) && (0 != rxLen))
     {
-        tx[0] = (uint8_t)txLen;
-        status = ptx_RUL_Exchange (t3t->rul, tx, txLen, rx, rxLen, msTimeout);
-
-        if (PTX_STATUS_SUCCESS != status)
+        if(ptx_RUL_CardProtocolType_T3T == t3t->Rul->CardRegistry.ActiveProtocol)
         {
-            *rxLen = 0;
+            tx[0] = (uint8_t)txLen;
+            status = ptx_RUL_Exchange (t3t->Rul, tx, txLen, rx, rxLen, msTimeout);
+
+            if (PTX_STATUS_SUCCESS != status)
+            {
+                *rxLen = 0;
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -335,26 +388,33 @@ static ptx_Status_t ptx_NativeTag_T3T_SetCommandHeader (ptx_NativeTag_T3T_t *t3t
 
     if (PTX_COMP_CHECK(t3t, Comp_NativeTag_T3T) && (NULL != bytesWritten) && (PTX_T3T_NFCID2_SIZE == NFCID2Len) && (NULL != NFCID2) && (NULL != serviceInfo.ServiceCodeList) && (NULL != blockInfo.BlockList))
     {
-        /* length byte prepended later */
-        tx_index++;
-        t3t->TxBuffer[tx_index] = commandCode;
-        tx_index++;
-        (void)memcpy(&t3t->TxBuffer[tx_index], &NFCID2[0], NFCID2Len);
-        tx_index = (uint8_t)(tx_index + NFCID2Len);
-        t3t->TxBuffer[tx_index] = serviceInfo.NOS;
-        tx_index++;
-        (void)memcpy(&t3t->TxBuffer[tx_index], &serviceInfo.ServiceCodeList[0], (uint32_t)serviceInfo.ServiceCodeListLen);
-        tx_index = (uint8_t)(tx_index + serviceInfo.ServiceCodeListLen);
-        t3t->TxBuffer[tx_index] = blockInfo.NOB;
-        tx_index++;
-        (void)memcpy(&t3t->TxBuffer[tx_index], &blockInfo.BlockList[0], (uint32_t)blockInfo.BlockListLen);
-        tx_index = (uint8_t)(tx_index + blockInfo.BlockListLen);
+        if(ptx_RUL_CardProtocolType_T3T == t3t->Rul->CardRegistry.ActiveProtocol)
+        {
+            /* length byte prepended later */
+            tx_index++;
+            t3t->TxBuffer[tx_index] = commandCode;
+            tx_index++;
+            (void)memcpy(&t3t->TxBuffer[tx_index], &NFCID2[0], NFCID2Len);
+            tx_index = (uint8_t)(tx_index + NFCID2Len);
+            t3t->TxBuffer[tx_index] = serviceInfo.NOS;
+            tx_index++;
+            (void)memcpy(&t3t->TxBuffer[tx_index], &serviceInfo.ServiceCodeList[0], (uint32_t)serviceInfo.ServiceCodeListLen);
+            tx_index = (uint8_t)(tx_index + serviceInfo.ServiceCodeListLen);
+            t3t->TxBuffer[tx_index] = blockInfo.NOB;
+            tx_index++;
+            (void)memcpy(&t3t->TxBuffer[tx_index], &blockInfo.BlockList[0], (uint32_t)blockInfo.BlockListLen);
+            tx_index = (uint8_t)(tx_index + blockInfo.BlockListLen);
 
-        *bytesWritten = tx_index;
+            *bytesWritten = tx_index;
 
-        status = PTX_STATUS_SUCCESS;
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
+
     }
 
     return status;
 }
-

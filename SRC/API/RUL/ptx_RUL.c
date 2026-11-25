@@ -65,6 +65,7 @@
 #define PTX_RUL_QMEAS_CENTER_FREQ       (13560000U)     /* Q-measurement center frequency in Hz (= 13.56MHz). */
 #define PTX_RUL_ADC_MAXAMPLSB           (235U)          /* Max. amplitude LSB. */
 #define PTX_RUL_AMP_MEAS_FACTOR         (1000U)         /* Amplitude measurement is scaled by a factor of 1000. */
+#define PTX_RUL_TXOVD_ENABLED           (1)             /* System Config Value that indicates active TX Pin Overvoltage Detection. */
 
 /*
  * T3T SENSF-REQ defines.
@@ -205,6 +206,7 @@ ptx_Status_t ptx_RUL_Init(ptx_RUL_t *rul, ptx_RUL_InitParams_t *initParams)
         if (PTX_STATUS_SUCCESS == status)
         {
             rul->EmvCollisionFilter.Limit = initParams->EmvCollisionLimit;
+            rul->SkipEmvcoCollision = PTX_RUL_EXTENSION_NOT_SKIP_EMVCO;
             rul->SystemStatus = ptx_RUL_StatusInfoSystem_OK;
             rul->CompId = Comp_RUL;
             rul->ActiveExtensionEndpoint = NULL;
@@ -496,6 +498,20 @@ ptx_Status_t ptx_RUL_GetStatusInfo(ptx_RUL_t *rul, ptx_RUL_Status_Params_t *stat
                 if (ptx_RUL_StatusInfoSystem_ErrorStandby == rul->SystemStatus)
                 {
                     rul->SystemStatus = ptx_RUL_StatusInfoSystem_OK;
+                }
+                /* TX Pin Overvoltage Error is not a critical system error. It is the way NSC notifies the application
+                 * about detected TX Pin Overvoltage Events. If this notification has been received, the system has deactivated 
+                 * itself back to IDLE (except in DISCOVERY state, where it does not switch states, but restart the discovery loop) 
+                 * and needs to initiate discovery all over again (if required). Since it is not a critical system error, 
+                 * report it back and reset the status for normal operation.
+                 */
+                else if (ptx_RUL_StatusInfoSystem_TxOvD == rul->SystemStatus)
+                {
+                    rul->SystemStatus = ptx_RUL_StatusInfoSystem_OK;
+                }
+                else
+                {
+                    /* Keep the System Status. */
                 }
                 break;
 
@@ -1243,7 +1259,7 @@ ptx_Status_t ptx_RUL_GetRSSIValue(ptx_RUL_t *rul, uint8_t cwPowerLevel, ptx_RUL_
     return status;
 }
 
-ptx_Status_t ptx_RUL_CalibrateTxEsdPreventionThreshold(ptx_RUL_t *rul, uint8_t *results, uint8_t resultsLength)
+ptx_Status_t ptx_RUL_CalibrateTxOVPThreshold(ptx_RUL_t *rul, uint8_t *results, uint8_t resultsLength)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -1362,7 +1378,7 @@ ptx_Status_t ptx_RUL_CalibrateTxEsdPreventionThreshold(ptx_RUL_t *rul, uint8_t *
                 status = ptx_NSC_Read(&rul->Nsc, ANA_RX_LPADC_PP_OUT_REG, 1, &results[power_level]);
             }
 
-            if ((PTX_STATUS_SUCCESS == status) && (PTX_RUL_TX_ESD_PREVENTION_THRESHOLD_MAX < results[power_level]))
+            if ((PTX_STATUS_SUCCESS == status) && (PTX_RUL_TX_TXOV_PREVENTION_THRESHOLD_MAX < results[power_level]))
             {
                 status = PTX_STATUS_E_GEN_OUT_OF_RANGE;
             }
@@ -1528,10 +1544,6 @@ static ptx_Status_t ptx_RUL_AllocInit(ptx_RUL_t *rul, ptx_RUL_InitParams_t *init
             hal_init.Log = &rul->Log;
 
 #if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
-            /* The following 2 parameters are used only for UART interface on OS-based platforms. */
-            hal_init.InterfaceName = initParams->InterfaceInitParams.InterfaceName;
-            hal_init.InterfaceNameLen = initParams->InterfaceInitParams.InterfaceNameLen;
-
             /* Initialize OS context */
             status = ptx_OSAL_Init(&(rul->Osal), rul);
             if (PTX_STATUS_SUCCESS == status)
@@ -2009,9 +2021,7 @@ static ptx_Status_t ptx_RUL_CheckGpioAvailability(ptx_RUL_t *rul, ptx_RUL_GPIONb
             }
         }
 
-
-
-        /* Only allow GPIO configuration if the Auxillary Interface is not active. Check only for GPIO4, GPIO5, GPIO6, GPIO7 and GPIO8. */
+        /* Only allow GPIO configuration if the Auxiliary Interface is not active. Check only for GPIO4, GPIO5, GPIO6, GPIO7 and GPIO8. */
         if ((PTX_STATUS_SUCCESS == status) &&
             ((ptx_RUL_GPIONbr_4 == gpioNbr) || (ptx_RUL_GPIONbr_5 == gpioNbr) || (ptx_RUL_GPIONbr_6 == gpioNbr) || (ptx_RUL_GPIONbr_7 == gpioNbr) || (ptx_RUL_GPIONbr_8 == gpioNbr)))
         {
@@ -2040,6 +2050,15 @@ static ptx_Status_t ptx_RUL_CheckGpioAvailability(ptx_RUL_t *rul, ptx_RUL_GPIONb
             status = ptx_NSC_Read(&(rul->Nsc), SYS_CLOCK_CONTROL1_REG, 1u, &gpio_value);
 
             if ((PTX_STATUS_SUCCESS == status) && (SYS_CLOCK_CONTROL1_REG_CLOCK_REF_GPIO_EN_MASK == (SYS_CLOCK_CONTROL1_REG_CLOCK_REF_GPIO_EN_MASK & gpio_value)))
+            {
+                status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+            }
+        }
+
+        /* Only allow GPIO configuration if GPIO6 is not configured for the TXOVD Error Event Detection. */
+        if ((PTX_STATUS_SUCCESS == status) && (ptx_RUL_GPIONbr_6 == gpioNbr))
+        {
+            if (PTX_RUL_TXOVD_ENABLED == rul->Nsc.SysCfg.TxOvDEn)
             {
                 status = PTX_STATUS_E_GEN_NOT_PERMITTED;
             }

@@ -39,10 +39,10 @@ extern const uint16_t ptx_NSC_uCODE_ASM_REV;
 
 extern const size_t ptx_NSC_uCODE_init_adds [NUM_OF_SECTIONS] ;
 
-#define SIZE_OF_SECTION_0 4
+#define SIZE_OF_SECTION_0 6
 
 extern const uint16_t  ptx_NSC_uCODE_section_0 [SIZE_OF_SECTION_0];
-#define SIZE_OF_SECTION_1 12476
+#define SIZE_OF_SECTION_1 12718
 
 extern const uint16_t  ptx_NSC_uCODE_section_1 [SIZE_OF_SECTION_1];
 #define SIZE_OF_SECTION_2 1

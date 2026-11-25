@@ -253,12 +253,13 @@ static ptx_Status_t ptx_NSC_RfPresenceCheck_CheckResponseAck(ptx_NSC_t* nsc)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    uint8_t rsp_buf[PTX_NSC_LENGTH_MAX];
-    uint32_t rsp_buf_len = PTX_NSC_LENGTH_MAX;
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
         PTX_LOG_V(nsc->Log, "ptx_NSC_RfPresenceCheck_CheckResponseAck");
+
+        uint8_t rsp_buf[PTX_NSC_LENGTH_MAX];
+        uint32_t rsp_buf_len = PTX_NSC_LENGTH_MAX;
 
         status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp_buf, &rsp_buf_len, PTX_NSC_TIMEOUT_DEFAULT, 0);
 
@@ -296,12 +297,12 @@ static ptx_Status_t ptx_NSC_RfPresenceCheck_CheckResponseEmpty(ptx_NSC_t* nsc)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    uint8_t rsp_buf[PTX_NSC_LENGTH_MAX];
-    uint32_t rsp_buf_len = PTX_NSC_LENGTH_MAX;
-
     if (PTX_COMP_CHECK(nsc, Comp_NSC))
     {
         PTX_LOG_V(nsc->Log, "ptx_NSC_RfPresenceCheck_CheckResponseEmpty");
+
+        uint8_t rsp_buf[PTX_NSC_LENGTH_MAX];
+        uint32_t rsp_buf_len = PTX_NSC_LENGTH_MAX;
 
         status = ptx_NSC_CmdProcessor_FetchMsg(nsc, rsp_buf, &rsp_buf_len, PTX_NSC_TIMEOUT_DEFAULT, 0);
 

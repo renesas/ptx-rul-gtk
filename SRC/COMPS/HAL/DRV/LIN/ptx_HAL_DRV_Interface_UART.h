@@ -106,7 +106,7 @@ extern "C" {
 /**
  * \brief HAL GPIO Forward declaration.
  */
-typedef struct ptx_HAL_GPIO ptx_HAL_GPIO_t;
+struct ptx_HAL_GPIO;
 
 
 /**
@@ -122,7 +122,8 @@ typedef struct ptx_HAL_DRV_Interface_UART_PortConfig
     ptx_HAL_DRV_Interface_Port_Type_t   Type;               /**< Implementation Type of the hardware interface port. */
     uint8_t                             ID;                 /**< ID of the hardware interface port implementation. */
 
-    int                                 Dev;                /**< fd ID. */
+    uint32_t                            PortNr;             /**< UART Port Number. */
+    int                                 PortFd;             /**< UART Port File Descriptor. */
     struct termios                      Options;            /**< Terminal options. */
 
     int                                 IrqFd;              /**< UART IRQ GPIO pin file descriptor. */
@@ -143,7 +144,7 @@ typedef struct ptx_HAL_DRV_Interface_UART
 
     ptx_HAL_DRV_Interface_UART_PortConfig_t     *Port;              /**< UART Port Implementation. */
     ptx_Log_t                                   *Log;               /**< Pointer to an initialized logger. */
-    ptx_OSAL_t                                  *OS;                /**< Pointer to an initialized Osal. */
+    ptx_OSAL_t                                  *Osal;              /**< Pointer to an initialized Osal. */
     ptx_Mutex_t                                 Mutex;              /**< Mutex for receiving function. */
     uint32_t                                    Speed;              /**< UART Default driver speed. */
     uint8_t                                     EnableFastMode;     /**< Enable fast mode using 2 stop bits instead of tcdrain. */
@@ -157,12 +158,10 @@ typedef struct ptx_HAL_DRV_Interface_UART_InitParams
     ptx_HAL_DRV_Interface_Port_Type_t   PortType;           /**< Implementation Type of the hardware interface port. */
     uint8_t                             PortID;             /**< ID of the hardware interface port implementation. */
 
-    uint8_t                             *InterfaceName;     /**< Device name. */
-    uint32_t                            InterfaceNameLen;   /**< Device name length. */
     uint32_t                            Speed;              /**< UART Default driver speed. */
     ptx_Log_t                           *Log;               /**< Initialised Logger Context. */
-    void                                *OS;                /**< Osal component. */
-    ptx_HAL_GPIO_t                      *Gpio;              /**< Initialized GPIO Context. */
+    void                                *Osal;              /**< Osal component. */
+    struct ptx_HAL_GPIO                 *Gpio;              /**< Initialized GPIO Context. */
     uint32_t                            Timeout;            /**< UART Default Tx/Rx Transaction Timeout. */
 } ptx_HAL_DRV_Interface_UART_InitParams_t;
 
@@ -181,7 +180,7 @@ typedef struct ptx_HAL_DRV_Interface_UART_InitParams
  *
  * \param[in]       ctx             Pointer to the component structure to be initialized.
  *                                  Will be populated with port configuration, baud rate,
- *                                  OS context, and logger references.
+ *                                  Osal context, and logger references.
  * \param[in]       initParams      Pointer to initialization parameters.
  *
  * \return Status, indicating whether the operation was successful. See \ref ptx_Status_t\.

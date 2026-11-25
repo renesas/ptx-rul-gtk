@@ -116,7 +116,7 @@ typedef struct ptx_NDEF_T3T
     /* Components */
     ptx_Comps_t                     CompId;                         /**< Component Id */
 
-    ptx_NativeTag_T3T_t             t3t;                            /**< T3T Native Tag Component */
+    ptx_NativeTag_T3T_t             T3t;                            /**< T3T Native Tag Component */
     ptx_NDEF_TagLifeCycle_t         LifeCycle;                      /**< Tag Life-Cycle */
     uint8_t                         *RxBuffer;                      /**< Internal Rx-Buffer provided by upper layer (may be shared with other components) */
     uint32_t                        RxBufferSize;                   /**< Internal Rx-Buffer size */
@@ -133,7 +133,7 @@ typedef struct ptx_NDEF_T3T
  */
 typedef struct ptx_NDEF_T3T_InitParams
 {
-    ptx_RUL_t                       *rul;                   /**< RUL provided by upper layer */
+    ptx_RUL_t                       *Rul;                   /**< RUL provided by upper layer */
     uint8_t                         *TxBuffer;              /**< Internal tx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
     uint32_t                        TxBufferSize;           /**< Size of Internal TX-Buffer */
     uint8_t                         *RxBuffer;              /**< Internal rx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */

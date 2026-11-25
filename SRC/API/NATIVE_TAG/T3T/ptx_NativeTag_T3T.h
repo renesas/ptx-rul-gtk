@@ -121,7 +121,7 @@ typedef struct ptx_NativeTag_T3T
 {
     ptx_Comps_t         CompId;                         /**< Component Id */
 
-    ptx_RUL_t           *rul;                           /**< RUL provided by upper layer */
+    ptx_RUL_t           *Rul;                           /**< RUL provided by upper layer */
     uint8_t             *TxBuffer;                      /**< Internal Tx-Buffer provided by upper layer (may be shared with other components) */
     uint8_t             NFCID2[PTX_T3T_NFCID2_SIZE];    /**< ID of the tag */
     uint8_t             MRTI_Check;                     /**< Value stored for calculation of timeout value */
@@ -135,7 +135,7 @@ typedef struct ptx_NativeTag_T3T
  */
 typedef struct ptx_NativeTag_T3T_InitParams
 {
-    ptx_RUL_t           *rul;                           /**< RUL provided by upper layer */
+    ptx_RUL_t           *Rul;                           /**< RUL provided by upper layer */
     uint8_t             *TxBuffer;                      /**< Internal Tx-Buffer provided by upper layer (may be shared with other components) */
     uint32_t            TxBufferSize;                   /**< Size of TX Buffer */
     uint8_t             NFCID2[PTX_T3T_NFCID2_SIZE];    /**< ID of the tag. */

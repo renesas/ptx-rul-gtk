@@ -69,8 +69,12 @@
 #define PTX_HAL_DRV_INTERFACE_UART_NUMBER_PORTS                             (1u)
 
 #define PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX                      64u
-#define PTX_HAL_DRV_INTERFACE_UART_WCHAR_DEFAULT_DEV_NAME                   "/dev/serial0"
-#define PTX_HAL_DRV_INTERFACE_UART_WCHAR_DEFAULT_DEV_NAME_LEN               13u
+
+/*
+ * Default UART device to be used: serial0
+ */
+#define PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_UART_DEV(buffer, no)            snprintf(buffer, PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX, "/dev/serial%u", no)
+
 #define PTX_HAL_DRV_INTERFACE_UART_MAX_ALLOWED_FRAME_LENGTH                 265u /* Equals max HIP Frame length + 1 byte SOF */
 #define PTX_HAL_DRV_INTERFACE_UART_MAX_WRRD_RETRIES                         PTX_HAL_DRV_INTERFACE_UART_MAX_ALLOWED_FRAME_LENGTH
 #define PTX_HAL_DRV_INTERFACE_UART_MIN_BYTES_PER_READ                       1u
@@ -111,7 +115,8 @@ static ptx_HAL_DRV_Interface_UART_PortConfig_t gDrvUartConfigs[PTX_HAL_DRV_INTER
         .Type           = HAL_DRV_Interface_Port_Type_Default,
         .ID             = 0,
 
-        .Dev            = -1,
+        .PortNr         = 0,
+        .PortFd         = -1,
         .Options        = {0},
 
         .IrqFd          = -1,
@@ -133,8 +138,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Init(ptx_HAL_DRV_Interface_UART_t *ctx, 
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_UART_Init");
-
         (void)memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_UART_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_UART_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
@@ -145,10 +148,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Init(ptx_HAL_DRV_Interface_UART_t *ctx, 
                 ctx->Port = &gDrvUartConfigs[config];
                 ctx->Speed = (0 == initParams->Speed) ? PTX_HAL_DRV_INTERFACE_UART_DEFAULT_BAUDRATE : initParams->Speed;
                 ctx->Log = initParams->Log;
-                ctx->OS = (ptx_OSAL_t*)initParams->OS;
+                ctx->Osal = (ptx_OSAL_t*)initParams->Osal;
                 ctx->EnableFastMode = 0;
 
-                status = ptx_OSAL_MutexInit(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+                status = ptx_OSAL_MutexInit(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
@@ -157,7 +160,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Init(ptx_HAL_DRV_Interface_UART_t *ctx, 
                     if (PTX_STATUS_SUCCESS != status)
                     {
                         /* Mutex was properly initialized, but Uart port not properly opened. Clean-up mutex. */
-                        (void) ptx_OSAL_MutexDeInit(ctx->OS, &ctx->Mutex);
+                        (void) ptx_OSAL_MutexDeInit(ctx->Osal, &ctx->Mutex);
                     }
                 }
 
@@ -183,22 +186,20 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_DeInit(ptx_HAL_DRV_Interface_UART_t *ctx
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_DeInit");
-
-        if (0 <= ctx->Port->Dev)
+        if (0 <= ctx->Port->PortFd)
         {
             uint8_t mutex_locked = 0;
 
-            st = ptx_OSAL_MutexLock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+            st = ptx_OSAL_MutexLock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
             if (PTX_STATUS_SUCCESS == st)
             {
                 mutex_locked = 1;
-                (void) close(ctx->Port->Dev);
+                (void) close(ctx->Port->PortFd);
             }
 
             if (1 == mutex_locked)
             {
-                ptx_Status_t status = ptx_OSAL_MutexUnlock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+                ptx_Status_t status = ptx_OSAL_MutexUnlock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
 
                 /* Keep the error status if it was previously set. */
                 st = (PTX_STATUS_SUCCESS == st) ? status : st;
@@ -211,7 +212,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_DeInit(ptx_HAL_DRV_Interface_UART_t *ctx
 
         if (PTX_STATUS_SUCCESS == st)
         {
-            st = ptx_OSAL_MutexDeInit(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+            st = ptx_OSAL_MutexDeInit(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
         }
 
         if (PTX_STATUS_SUCCESS == st)
@@ -230,8 +231,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Open(ptx_HAL_DRV_Interface_UART_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Open");
-
         st = ptx_HAL_DRV_Interface_UART_DiscardData(ctx);
 
         if (PTX_STATUS_SUCCESS == st)
@@ -249,12 +248,19 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Close(ptx_HAL_DRV_Interface_UART_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Close");
+        if (ctx->Port->IrqFd >= 0)
+        {
+            (void)close(ctx->Port->IrqFd);
+            ctx->Port->IrqFd = -1;
+        }
 
-        (void)close(ctx->Port->IrqFd);
-        (void)close(ctx->Port->IrqFdCancel);
+        if (ctx->Port->IrqFdCancel >= 0)
+        {
+            (void)close(ctx->Port->IrqFdCancel);
+            ctx->Port->IrqFdCancel = -1;
+        }
+        
         st = PTX_STATUS_SUCCESS;
-
     }
 
     return st;
@@ -267,8 +273,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, ui
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != txBuf) && (txLen > 0))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Tx");
-
         uint32_t length = txLen;
         int bytes_written = 0;
         uint32_t write_index = 0;
@@ -278,7 +282,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, ui
         {
             uint8_t mutex_locked = 0;
 
-            st = ptx_OSAL_MutexLock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+            st = ptx_OSAL_MutexLock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
             if (PTX_STATUS_SUCCESS == st)
             {
                 mutex_locked = 1;
@@ -289,12 +293,12 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, ui
              */
             if (PTX_STATUS_SUCCESS == st)
             {
-                bytes_written = (int) write(ctx->Port->Dev, &(txBuf[write_index]), length - write_index);
+                bytes_written = (int) write(ctx->Port->PortFd, &(txBuf[write_index]), length - write_index);
             }
 
             if (1 == mutex_locked)
             {
-                ptx_Status_t status = ptx_OSAL_MutexUnlock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+                ptx_Status_t status = ptx_OSAL_MutexUnlock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
 
                 /* Keep the error status if it was previously set. */
                 st = (PTX_STATUS_SUCCESS == st) ? status : st;
@@ -334,7 +338,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Tx(ptx_HAL_DRV_Interface_UART_t *ctx, ui
          */
         if (false == ctx->EnableFastMode)
         {
-            tcdrain(ctx->Port->Dev);
+            tcdrain(ctx->Port->PortFd);
         }
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == st)
@@ -353,8 +357,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Rx(ptx_HAL_DRV_Interface_UART_t *ctx, ui
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != rxBuf))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_Rx");
-
         st = PTX_STATUS_SUCCESS;
         if (0 == rxLen)
         {
@@ -372,7 +374,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_Rx(ptx_HAL_DRV_Interface_UART_t *ctx, ui
             uint32_t retries = PTX_HAL_DRV_INTERFACE_UART_MAX_WRRD_RETRIES; /* In the worst case one byte at a time is read out from the file buffer */
             do
             {
-                rd_status = read(ctx->Port->Dev, &(rxBuf[num_read]), PTX_HAL_DRV_INTERFACE_UART_MAX_ALLOWED_FRAME_LENGTH);
+                rd_status = read(ctx->Port->PortFd, &(rxBuf[num_read]), PTX_HAL_DRV_INTERFACE_UART_MAX_ALLOWED_FRAME_LENGTH);
                 retries --;
                 if (rd_status >= 0)
                 {
@@ -412,8 +414,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_RxIrqLevel(ptx_HAL_DRV_Interface_UART_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != level))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_RxIrqLevel");
-
         uint8_t gpio_state = 0;
 
         /* Check if the IRQ of the GPIO-pin is already pending i.e. set to 1 */
@@ -433,8 +433,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_SetParameter(ptx_HAL_DRV_Interface_UART_
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_SetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -474,8 +472,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_UART_GetParameter(ptx_HAL_DRV_Interface_UART_
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_GetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -505,17 +501,15 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_DiscardData(ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_DiscardData");
-
         uint8_t mutex_locked = 0;
 
-        st = ptx_OSAL_MutexLock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+        st = ptx_OSAL_MutexLock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
         if (PTX_STATUS_SUCCESS == st)
         {
             mutex_locked = 1;
         }
 
-        if ((PTX_STATUS_SUCCESS == st) && (0 == tcflush(ctx->Port->Dev, TCIOFLUSH)))
+        if ((PTX_STATUS_SUCCESS == st) && (0 == tcflush(ctx->Port->PortFd, TCIOFLUSH)))
         {
             st = PTX_STATUS_SUCCESS;
         }
@@ -526,7 +520,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_DiscardData(ptx_HAL_DRV_Interface
 
         if (1 == mutex_locked)
         {
-            ptx_Status_t status = ptx_OSAL_MutexUnlock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+            ptx_Status_t status = ptx_OSAL_MutexUnlock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
 
             /* Keep the error status if it was previously set. */
             st = (PTX_STATUS_SUCCESS == st) ? status : st;
@@ -542,35 +536,27 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_InitComPort(ptx_HAL_DRV_Interface
 
     if ((NULL != ctx) && (NULL != initParams))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_UART_InitComPort");
-
         ctx->Log = initParams->Log;
 
         ptx_HAL_DRV_Interface_UART_PortConfig_t *uartConfig = ctx->Port;
 
-        char dev_name[PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX];
-        (void)memset(dev_name, 0, sizeof(char)*PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX);
+        char buffer[PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX];
+        memset(buffer, 0, sizeof(char) * PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX);
 
-        if (initParams->InterfaceName == NULL)
-        {
-            (void)memcpy(dev_name, PTX_HAL_DRV_INTERFACE_UART_WCHAR_DEFAULT_DEV_NAME, sizeof(char)*PTX_HAL_DRV_INTERFACE_UART_WCHAR_DEFAULT_DEV_NAME_LEN);
-        }
-        else
-        {
-            (void)memcpy(dev_name, initParams->InterfaceName, initParams->InterfaceNameLen);
-        }
+        PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_UART_DEV(buffer, uartConfig->PortNr);
+        int fd = -1;
+        uartConfig->PortFd = -1;
+        fd = open(buffer, O_RDWR | O_NOCTTY);
 
-        uartConfig->Dev = open(dev_name, O_RDWR | O_NOCTTY);
-
-        if (0 <= uartConfig->Dev)
+        if (0 <= fd)
         {
-            if (0 != tcgetattr(uartConfig->Dev, &uartConfig->Options))
+            if (0 != tcgetattr(fd, &uartConfig->Options))
             {
                 st = PTX_STATUS_E_GEN_INTERNAL;
             }
             else
             {
-                if (0 != fcntl(uartConfig->Dev, F_SETFL, 0))
+                if (0 != fcntl(fd, F_SETFL, 0))
                 {
                     st = PTX_STATUS_E_GEN_INTERNAL;
                 }
@@ -597,7 +583,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_InitComPort(ptx_HAL_DRV_Interface
                         if (0 != cfset_ret)
                         {
                             /* if we get here reason is something else than baudrate, otherwise cfsetispeed would have already failed (check errno) */
-                            (void) close(uartConfig->Dev);
                             st = PTX_STATUS_E_GEN_INTERNAL;
                         }
                     }
@@ -631,23 +616,30 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_InitComPort(ptx_HAL_DRV_Interface
 
             if (PTX_STATUS_SUCCESS == st)
             {
-                if (tcsetattr(uartConfig->Dev, TCSANOW, &uartConfig->Options) != 0)
+                if (tcsetattr(fd, TCSANOW, &uartConfig->Options) != 0)
                 {
-                    (void) close(uartConfig->Dev);
                     st = PTX_STATUS_E_GEN_INTERNAL;
                 }
             }
         }
         else
         {
-            (void) close(uartConfig->Dev);
             st = PTX_STATUS_E_GEN_INTERNAL;
         }
 
-        /* If init failed ensure that Dev contains invalid fd ID */
-        if (PTX_STATUS_SUCCESS != st)
+        if (PTX_STATUS_SUCCESS == st)
         {
-            uartConfig->Dev = -1;
+            /* transfer fd */
+            uartConfig->PortFd = fd;
+        }
+        else
+        {
+            /* If init failed ensure that fd is closed and contains invalid fd ID */
+            if (0 <= fd)
+            {
+                (void)close(fd);
+            }
+            uartConfig->PortFd = -1;
         }
     }
 
@@ -738,8 +730,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_OpenAltBaudrate(ptx_HAL_DRV_Inter
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_OpenAltBaudrate");
-
         uint32_t baudrate = 0;
         status = ptx_HAL_DRV_Interface_UART_UartBaudrateConv(altRate, &baudrate);
         if (PTX_STATUS_SUCCESS == status)
@@ -751,7 +741,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_OpenAltBaudrate(ptx_HAL_DRV_Inter
             }
             else
             {
-                (void) close(ctx->Port->Dev);
+                (void) close(ctx->Port->PortFd);
                 status = PTX_STATUS_E_GEN_INTERNAL;
             }
         }
@@ -762,7 +752,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_OpenAltBaudrate(ptx_HAL_DRV_Inter
             if (0 != cfsetospeed(&ctx->Port->Options, baudrate))
             {
                 /* if we get here reason is something else than baudrate, otherwise cfsetispeed would have already failed (check errno) */
-                (void) close(ctx->Port->Dev);
+                (void) close(ctx->Port->PortFd);
                 status = PTX_STATUS_E_GEN_INTERNAL;
             }
         }
@@ -770,9 +760,9 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_OpenAltBaudrate(ptx_HAL_DRV_Inter
         if (PTX_STATUS_SUCCESS == status)
         {
             /* apply port settings */
-            if (0 != tcsetattr(ctx->Port->Dev, TCSANOW, &ctx->Port->Options))
+            if (0 != tcsetattr(ctx->Port->PortFd, TCSANOW, &ctx->Port->Options))
             {
-                (void) close(ctx->Port->Dev);
+                (void) close(ctx->Port->PortFd);
                 status = PTX_STATUS_E_GEN_INTERNAL;
             }
             else
@@ -793,8 +783,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_IRQ_Config (ptx_HAL_DRV_Interface
     int fd;
     if(PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_IRQ_Config");
-
         char buffer[PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX];
         memset(buffer, 0, PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_BUFFER_MAX);
         PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_SET_GPIOCHIP(buffer, PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_GPIOCHIP_USED);
@@ -804,7 +792,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_IRQ_Config (ptx_HAL_DRV_Interface
         * fd is then used for further gpio access.
         */
         fd = open(buffer, O_RDWR | O_NONBLOCK);
-        if (fd > 0)
+        if (0 <= fd)
         {
             ctx->Port->IrqFd = fd;
             st = ptx_HAL_DRV_Interface_UART_GpioSetInput(ctx, &fd);
@@ -859,8 +847,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_GpioSetInput (ptx_HAL_DRV_Interfa
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != retFd))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_GpioSetInput");
-
         int fd;
         int rv;
         struct gpiohandle_request req;
@@ -907,8 +893,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_GpioSetIrqRising (ptx_HAL_DRV_Int
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != retFd))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_GpioSetIrqRising");
-
         int fd, rv;
         struct gpioevent_request req;
 
@@ -922,7 +906,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_GpioSetIrqRising (ptx_HAL_DRV_Int
         }
 
         fd = open(PTX_HAL_DRV_INTERFACE_UART_WCHARDEV_GPIOCHIP_USED, O_RDWR | O_NONBLOCK);
-        if (0 < fd)
+        if (0 <= fd)
         {
             req.lineoffset = ctx->Port->IrqPin;
             req.handleflags = GPIOHANDLE_REQUEST_INPUT;
@@ -956,8 +940,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_GpioCheckPendingIRQ (ptx_HAL_DRV_
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != irqPending))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_GpioCheckPendingIRQ");
-
         int fd;
         int res;
         struct gpiohandle_data data;
@@ -988,9 +970,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_SetStopBitCountInternal(ptx_HAL_D
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_SetStopBitCountInternal");
-
-        if (tcgetattr(ctx->Port->Dev, &ctx->Port->Options) != 0)
+        if (tcgetattr(ctx->Port->PortFd, &ctx->Port->Options) != 0)
         {
             st = PTX_STATUS_E_GEN_INTERNAL;
         }
@@ -1009,7 +989,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_SetStopBitCountInternal(ptx_HAL_D
                 ctx->Port->Options.c_cflag &= (tcflag_t)~CSTOPB;
             }
 
-            if (tcsetattr(ctx->Port->Dev, TCSANOW, &ctx->Port->Options) != 0)
+            if (tcsetattr(ctx->Port->PortFd, TCSANOW, &ctx->Port->Options) != 0)
             {
                 st = PTX_STATUS_E_GEN_INTERNAL;
             }
@@ -1026,8 +1006,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_UART_SetStopBitCount(ptx_HAL_DRV_Inter
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_UART_SetStopBitCount");
-
         const uint8_t HIP_CMD_START_LEN = 3;
         const uint16_t HIF_UART_CONFIG0_REG = 0x018;
 

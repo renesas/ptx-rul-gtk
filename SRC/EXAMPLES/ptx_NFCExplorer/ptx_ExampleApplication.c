@@ -135,12 +135,6 @@ static const uint32_t PTX_DEMO_APP_POLLING_TIME_MS = 50u;
 /* Max. number of polling-loop cycles to wait for a card when writing an NDEF message. */
 #define NDEF_WRITE_MAX_POLLING_CYCLES 10u
 
-/* Device Name used during RUL-initialization. Only used for Desktop-OS versions like Windows or Linux. Can be omitted for MCU platforms. */
-static const char *EXAMPLE_DEVICE_NAME = "COM4";
-
-/* Device Name Length. See above. */
-static const uint16_t EXAMPLE_DEVICE_NAME_LEN = 4u;
-
 /* Interface Type for the connection to the PTX2xxX chips. */
 static const ptx_HAL_Interface_Type_t EXAMPLE_INTERFACE_TYPE = HAL_Interface_Type_SPI;
 
@@ -1384,23 +1378,14 @@ static gpointer initThread(gpointer userData)
     g_print("Init thread started.\n");
     ptx_Status_t status;
 
-    /* Demo Application Parameters */
-    ptx_Utils_AppParams_t appParams;
-
     /* Main API component */
     ptx_RUL_InitParams_t rulInitParams = {0};
-
-    /* Initialize demo application parameters with default values. */
-    (void)memcpy(&appParams.DeviceName[0], EXAMPLE_DEVICE_NAME, EXAMPLE_DEVICE_NAME_LEN);
-    appParams.DeviceNameLen = EXAMPLE_DEVICE_NAME_LEN;
 
     /* Initialize Main RUL API Component.
      *
      * Note: The used Host-Interface i.e. the HAL-component and the Logging-component (if used) get selected via the Build-process (see User Manual)
      *       and get also initialized during the next call to "ptx_RUL_Init".
      */
-    rulInitParams.InterfaceInitParams.InterfaceName = (uint8_t*)&appParams.DeviceName[0];
-    rulInitParams.InterfaceInitParams.InterfaceNameLen = appParams.DeviceNameLen;
     rulInitParams.InterfaceInitParams.InterfaceType = EXAMPLE_INTERFACE_TYPE;
     rulInitParams.InterfaceInitParams.InterfacePortType = EXAMPLE_INTERFACE_PORT_TYPE;
     rulInitParams.InterfaceInitParams.InterfacePortID = EXAMPLE_INTERFACE_PORT_ID;
@@ -3672,13 +3657,13 @@ static ptx_Status_t writeNdefMessage(ptx_RUL_t *rul, ptx_RUL_CardProtocolType_t 
     {
         ptx_NDEF_t ndefComp = {0};
         ptx_NDEF_InitParams_t ndefInitParams = {0};
-        ndefInitParams.rul           = rul;
-        ndefInitParams.rx            = sNdefRxBuffer;
-        ndefInitParams.rxLen         = (uint32_t)NDEF_BUFFER_SIZE;
-        ndefInitParams.tx            = sNdefTxBuffer;
-        ndefInitParams.txLen         = (uint32_t)NDEF_BUFFER_SIZE;
-        ndefInitParams.workBuffer    = sNdefWorkBuffer;
-        ndefInitParams.workBufferLen = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.Rul           = rul;
+        ndefInitParams.Rx            = sNdefRxBuffer;
+        ndefInitParams.RxLen         = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.Tx            = sNdefTxBuffer;
+        ndefInitParams.TxLen         = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.WorkBuffer    = sNdefWorkBuffer;
+        ndefInitParams.WorkBufferLen = (uint32_t)NDEF_BUFFER_SIZE;
 
         writeStatus = ptx_NDEF_Open(&ndefComp, &ndefInitParams);
 
@@ -3764,13 +3749,13 @@ static ptx_Status_t processStateDataExchange(ptx_RUL_t *rul, demoState_t *demoSt
     {
         ptx_NDEF_t ndefComp = {0};
         ptx_NDEF_InitParams_t ndefInitParams = {0};
-        ndefInitParams.rul           = rul;
-        ndefInitParams.rx            = sNdefRxBuffer;
-        ndefInitParams.rxLen         = (uint32_t)NDEF_BUFFER_SIZE;
-        ndefInitParams.tx            = sNdefTxBuffer;
-        ndefInitParams.txLen         = (uint32_t)NDEF_BUFFER_SIZE;
-        ndefInitParams.workBuffer    = sNdefWorkBuffer;
-        ndefInitParams.workBufferLen = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.Rul           = rul;
+        ndefInitParams.Rx            = sNdefRxBuffer;
+        ndefInitParams.RxLen         = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.Tx            = sNdefTxBuffer;
+        ndefInitParams.TxLen         = (uint32_t)NDEF_BUFFER_SIZE;
+        ndefInitParams.WorkBuffer    = sNdefWorkBuffer;
+        ndefInitParams.WorkBufferLen = (uint32_t)NDEF_BUFFER_SIZE;
 
         status = ptx_NDEF_Open(&ndefComp, &ndefInitParams);
 

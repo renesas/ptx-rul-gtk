@@ -783,7 +783,7 @@ ptx_Status_t ptx_OSAL_TimerCreate(ptx_OSAL_t *osalCtx, ptx_Timer_t *hTimer, pptx
             ret = ptx_OSAL_SemInit(osalCtx, &hTimer->WaitCancelSem, 0, max_count);
             if (PTX_STATUS_SUCCESS == ret)
             {
-                hTimer->OS = osalCtx;
+                hTimer->Osal = osalCtx;
                 hTimer->Param = timerParam;
                 hTimer->Proc = timerProc;
                 hTimer->Running = 0;
@@ -1020,12 +1020,12 @@ static void ptx_OSAL_TimerThdProc(void *timerThdParam)
     do
     {
         /* Wait for the timer to get started by another thread. */
-        (void)ptx_OSAL_SemWait(tim->OS, &tim->StartSem);
+        (void)ptx_OSAL_SemWait(tim->Osal, &tim->StartSem);
 
         do
         {
             /* Timer is started. Wait for the interval to elapse. */
-            st = ptx_OSAL_SemTimedWait(tim->OS, &tim->WaitCancelSem, tim->Interval);
+            st = ptx_OSAL_SemTimedWait(tim->Osal, &tim->WaitCancelSem, tim->Interval);
 
             switch (st)
             {
@@ -1239,7 +1239,7 @@ static ptx_Status_t ptx_OSAL_FileHandleClose(ptx_OSAL_t *osalCtx, ptx_File_Handl
     if (PTX_COMP_CHECK(osalCtx, Comp_OSAL) && (NULL != fileHandle) && (NULL != fileHandle->Handle))
     {
         int rv = fclose((FILE*)fileHandle->Handle);
-        fileHandle = NULL;
+        fileHandle->Handle = NULL;
 
         if (EOF == rv)
         {

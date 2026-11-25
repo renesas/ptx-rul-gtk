@@ -77,8 +77,6 @@ ptx_Status_t ptx_HAL_Init (ptx_HAL_t *ctx, ptx_HAL_InitParams_t *initParams)
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_Init");
-
         const uint8_t max_timer_count = (HAL_Tmr_Id_MAX > PTX_HAL_DRV_TMR_MAX_PORTS) ? PTX_HAL_DRV_TMR_MAX_PORTS : HAL_Tmr_Id_MAX;
         const uint8_t timer_count = (max_timer_count > initParams->NumberOfTimers) ? initParams->NumberOfTimers : max_timer_count;
 
@@ -94,6 +92,9 @@ ptx_Status_t ptx_HAL_Init (ptx_HAL_t *ctx, ptx_HAL_InitParams_t *initParams)
         ptx_HAL_GPIO_InitParams_t gpio_init_params;
         memset(&gpio_init_params, 0, sizeof(ptx_HAL_GPIO_InitParams_t));
         gpio_init_params.Log = initParams->Log;
+#if defined(PTX_APP_DIVERSITY_WINDOWS)
+        gpio_init_params.Osal = initParams->Osal; /* only required for Windows driver */
+#endif
 
         status = ptx_HAL_GPIO_Init(&ctx->Gpio, &gpio_init_params);
 
@@ -109,9 +110,6 @@ ptx_Status_t ptx_HAL_Init (ptx_HAL_t *ctx, ptx_HAL_InitParams_t *initParams)
             /* Initialise and open communication device */
             ptx_HAL_Interface_InitParams_t interface_init_params;
             (void)memset(&interface_init_params, 0, sizeof(ptx_HAL_Interface_InitParams_t));
-            interface_init_params.Name = initParams->InterfaceName;
-            interface_init_params.NameLen = initParams->InterfaceNameLen;
-            interface_init_params.Log = initParams->Log;
             interface_init_params.Speed = initParams->InterfaceSpeed;
             interface_init_params.Type = initParams->InterfaceType;
             interface_init_params.PortID = initParams->InterfacePortID;
@@ -119,7 +117,7 @@ ptx_Status_t ptx_HAL_Init (ptx_HAL_t *ctx, ptx_HAL_InitParams_t *initParams)
             interface_init_params.Gpio = &ctx->Gpio;
             interface_init_params.Log = initParams->Log;
 
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
             interface_init_params.Osal = initParams->Osal;
 #endif
             status = ptx_HAL_Interface_Init(&ctx->Interface, &interface_init_params);
@@ -140,7 +138,7 @@ ptx_Status_t ptx_HAL_Init (ptx_HAL_t *ctx, ptx_HAL_InitParams_t *initParams)
 
                 tmr_init_params.Log = initParams->Log;
 
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
                 tmr_init_params.Osal = initParams->Osal;
 #endif
 
@@ -193,8 +191,6 @@ ptx_Status_t ptx_HAL_DeInit (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DeInit");
-
         status = ptx_HAL_Interface_Close(ctx);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -251,8 +247,6 @@ ptx_Status_t ptx_HAL_Interface_Open (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.Open))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_Open");
-
         status = ctx->Interface.Open((void*)(&ctx->Interface));
     }
 
@@ -265,8 +259,6 @@ ptx_Status_t ptx_HAL_Interface_Close (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.Close))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_Close");
-
         status = ctx->Interface.Close((void*)(&ctx->Interface));
     }
 
@@ -280,8 +272,6 @@ ptx_Status_t ptx_HAL_Interface_TRx (ptx_HAL_t *ctx, uint8_t *txBuf[], uint32_t t
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.TRx))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_TRx");
-
         status = ctx->Interface.TRx((void*)(&ctx->Interface), txBuf, txLen, txBufferCnt, rxBuf, rxLen, rxBufferCnt);
     }
 
@@ -294,8 +284,6 @@ ptx_Status_t ptx_HAL_Interface_Tx (ptx_HAL_t *ctx, uint8_t *txBuf, uint32_t txLe
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.Tx))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_Tx");
-
         status = ctx->Interface.Tx((void*)(&ctx->Interface), txBuf, txLen);
     }
 
@@ -308,8 +296,6 @@ ptx_Status_t ptx_HAL_Interface_Rx (ptx_HAL_t *ctx, uint8_t *rxBuf, uint32_t rxLe
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.Rx))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_Rx");
-
         status = ctx->Interface.Rx((void*)(&ctx->Interface), rxBuf, rxLen);
     }
 
@@ -322,14 +308,7 @@ ptx_Status_t ptx_HAL_Interface_RxPending(ptx_HAL_t * ctx, uint8_t* rxPending)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.RxPending))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_RxPending");
-
         status = ctx->Interface.RxPending((void*)(&ctx->Interface), rxPending);
-
-        if ((PTX_STATUS_SUCCESS == status) && (0 != *rxPending))
-        {
-            PTX_LOG_I(ctx->Log, "Detected IRQ");
-        }
     }
 
     return status;
@@ -339,10 +318,8 @@ ptx_Status_t ptx_HAL_Interface_SetParameter(ptx_HAL_t *ctx, ptx_HAL_DRV_Interfac
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx) && (NULL != ctx->Interface.SetParameter))
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.SetParameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_SetParameter");
-
         status = ctx->Interface.SetParameter((void*)(&ctx->Interface), parameter);
     }
 
@@ -353,10 +330,8 @@ ptx_Status_t ptx_HAL_Interface_GetParameter(ptx_HAL_t *ctx, ptx_HAL_DRV_Interfac
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx) && (NULL != ctx->Interface.GetParameter))
+    if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Interface.GetParameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_GetParameter");
-
         status = ctx->Interface.GetParameter((void*)(&ctx->Interface), parameter);
     }
 
@@ -369,8 +344,6 @@ ptx_Status_t ptx_HAL_GPIO_Open (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Gpio.Open))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_GPIO_Open");
-
         status = ctx->Gpio.Open((void*)(&ctx->Gpio.Drv));
     }
 
@@ -383,8 +356,6 @@ ptx_Status_t ptx_HAL_GPIO_Close (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Gpio.Close))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_GPIO_Close");
-
         status = ctx->Gpio.Close((void*)(&ctx->Gpio.Drv));
     }
 
@@ -397,8 +368,6 @@ ptx_Status_t ptx_HAL_GPIO_ReadPin (ptx_HAL_t *ctx, uint16_t pin, uint8_t *level)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Gpio.ReadPin))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_GPIO_ReadPin");
-
         status = ctx->Gpio.ReadPin((void*)(&ctx->Gpio.Drv), pin, level);
     }
 
@@ -411,8 +380,6 @@ ptx_Status_t ptx_HAL_GPIO_WritePin (ptx_HAL_t *ctx, uint16_t pin, uint8_t level)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Gpio.WritePin))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_GPIO_WritePin");
-
         status = ctx->Gpio.WritePin((void*)(&ctx->Gpio.Drv), pin, level);
     }
 
@@ -425,8 +392,6 @@ ptx_Status_t ptx_HAL_GPIO_ReadPort (ptx_HAL_t *ctx, uint32_t port, uint16_t *dat
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Gpio.ReadPort))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_GPIO_ReadPort");
-
         status = ctx->Gpio.ReadPort((void*)(&ctx->Gpio.Drv), port, data);
     }
 
@@ -439,8 +404,6 @@ ptx_Status_t ptx_HAL_GPIO_WritePort (ptx_HAL_t *ctx, uint32_t port, uint16_t dat
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Gpio.WritePort))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_GPIO_WritePort");
-
         status = ctx->Gpio.WritePort((void*)(&ctx->Gpio.Drv), port, data, mask);
     }
 
@@ -453,8 +416,6 @@ ptx_Status_t ptx_HAL_GPIO_SetCfgPin (ptx_HAL_t *ctx, ptx_HAL_DRV_GPIO_Cfg_t cfg[
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != ctx->Gpio.SetCfg))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_GPIO_SetCfgPin");
-
         status = ctx->Gpio.SetCfg((void*)(&ctx->Gpio.Drv), cfg, cfgLen);
     }
 
@@ -467,7 +428,6 @@ ptx_Status_t ptx_HAL_EnableIrq (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_EnableIrq");
         status = ptx_HAL_DRV_MCU_EnableIrq();
     }
 
@@ -480,8 +440,6 @@ ptx_Status_t ptx_HAL_DisableIrq (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DisableIrq");
-
         status = ptx_HAL_DRV_MCU_DisableIrq();
     }
     return status;
@@ -493,8 +451,6 @@ ptx_Status_t ptx_HAL_WaitForIrq (ptx_HAL_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_WaitForIrq");
-
         status = ptx_HAL_DRV_MCU_WaitForIrq();
     }
     return status;
@@ -506,8 +462,6 @@ ptx_Status_t ptx_HAL_Tmr_Open (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (HAL_Tmr_Id_MAX > id) && (NULL != ctx->Tmr[id].Open))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_Open");
-
         status = ctx->Tmr[id].Open((void*)(&ctx->Tmr[id].Drv));
     }
 
@@ -520,8 +474,6 @@ ptx_Status_t ptx_HAL_Tmr_Close (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (HAL_Tmr_Id_MAX > id) && (NULL != ctx->Tmr[id].Close))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_Close");
-
         status = ctx->Tmr[id].Close((void*)(&ctx->Tmr[id].Drv));
     }
 
@@ -534,14 +486,12 @@ ptx_Status_t ptx_HAL_Tmr_Start (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id, ptx_HAL_DRV
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (HAL_Tmr_Id_MAX > id) && (NULL != ctx->Tmr[id].Start) && (NULL != ctx->Tmr[id].Cfg) && (NULL != ctx->Tmr[id].Stop))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_Start");
-
-        uint32_t len = 1;
-
         status = ctx->Tmr[id].Stop((void*)(&ctx->Tmr[id].Drv));
 
         if (PTX_STATUS_SUCCESS == status)
         {
+            uint32_t len = 1;
+
             ptx_HAL_DRV_Tmr_Cfg_t cfg;
             memset(&cfg, 0, sizeof(ptx_HAL_DRV_Tmr_Cfg_t));
 
@@ -568,8 +518,6 @@ ptx_Status_t ptx_HAL_Tmr_Stop (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (HAL_Tmr_Id_MAX > id) && (NULL != ctx->Tmr[id].Stop))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_Stop");
-
         status = ctx->Tmr[id].Stop((void*)(&ctx->Tmr[id].Drv));
     }
 
@@ -582,8 +530,6 @@ ptx_Status_t ptx_HAL_Tmr_IsElapsed (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id, uint8_t
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (HAL_Tmr_Id_MAX > id) && (NULL != ctx->Tmr[id].IsElapsed))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_IsElapsed");
-
         status = ctx->Tmr[id].IsElapsed((void*)(&ctx->Tmr[id].Drv), isElapsed);
     }
 
@@ -596,8 +542,6 @@ ptx_Status_t ptx_HAL_Tmr_RegExecCb (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id, ptx_HAL
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (HAL_Tmr_Id_MAX > id) && (NULL != ctx->Tmr[id].RegExecCb))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_RegExecCb");
-
         status = ctx->Tmr[id].RegExecCb((void*)(&ctx->Tmr[id].Drv), cb, cbCtx);
     }
 
@@ -610,8 +554,6 @@ ptx_Status_t ptx_HAL_Tmr_Cfg (ptx_HAL_t *ctx, ptx_HAL_Tmr_Id_t id, ptx_HAL_DRV_T
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (HAL_Tmr_Id_MAX > id) && (NULL != ctx->Tmr[id].Cfg))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Tmr_Cfg");
-
         status = ctx->Tmr[id].Cfg((void*)(&ctx->Tmr[id].Drv), cfg, len);
     }
 
@@ -630,8 +572,6 @@ ptx_Status_t ptx_HAL_Sleep (ptx_HAL_t *ctx, uint32_t msTimeout )
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (0 != msTimeout) && (NULL != ctx->Tmr[HAL_Tmr_Id_0].Sleep))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Sleep");
-
         status = ctx->Tmr[HAL_Tmr_Id_0].Sleep((void*)(&ctx->Tmr[HAL_Tmr_Id_0].Drv), msTimeout);
     }
 

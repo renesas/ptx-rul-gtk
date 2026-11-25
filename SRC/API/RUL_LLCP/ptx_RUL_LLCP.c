@@ -1537,8 +1537,6 @@ ptx_Status_t ptx_RUL_LLCP_CB_Timer(ptx_HAL_DRV_Tmr_ExecCbCtx_t ctx)
 
     if (PTX_COMP_CHECK(llcp, Comp_LLCP))
     {
-        PTX_LOG_V(&(llcp->Rul->Log), "ptx_RUL_LLCP_CB_ProcessDeactivateNtf");
-
         ++llcp->TimerTicks;
         status = PTX_STATUS_SUCCESS;
     }

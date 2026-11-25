@@ -78,79 +78,6 @@
 #define PTX_NSC_CMD_PROCESSOR_ACTNTF_MINLEN                 (3u)            /* Minimum length of NSC_RF_ACTIVATE_NTF: Opcode + RfTech + RfProt */
 
 /*
- * FSCI MTU Size
- */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_0               (13u)           /* FSCI 0 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_1               (21u)           /* FSCI 1 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_2               (29u)           /* FSCI 2 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_3               (37u)           /* FSCI 3 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_4               (45u)           /* FSCI 4 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_5               (61u)           /* FSCI 5 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_6               (93u)           /* FSCI 6 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_7               (125u)          /* FSCI 7 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_8               (253u)          /* FSCI 8 */
-#define PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX             (253u)          /* FSCI MAX */
-
-/*
- * FSDI MTU Size
- */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_0               (13u)           /* FSDI 0 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_1               (21u)           /* FSDI 1 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_2               (29u)           /* FSDI 2 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_3               (37u)           /* FSDI 3 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_4               (45u)           /* FSDI 4 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_5               (61u)           /* FSDI 5 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_6               (93u)           /* FSDI 6 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_7               (125u)          /* FSDI 7 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_8               (253u)          /* FSDI 8 */
-#define PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_MAX             (253u)          /* FSDI MAX */
-
-/*
- * FSCI Values
- */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_0                    (0u)            /* FSCI Value 0 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_1                    (1u)            /* FSCI Value 1 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_2                    (2u)            /* FSCI Value 2 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_3                    (3u)            /* FSCI Value 3 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_4                    (4u)            /* FSCI Value 4 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_5                    (5u)            /* FSCI Value 5 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_6                    (6u)            /* FSCI Value 6 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_7                    (7u)            /* FSCI Value 7 */
-#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_8                    (8u)            /* FSCI Value 8 */
-
-/*
- * FSDI Values
- */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_0                    (0u)            /* FSDI Value 0 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_1                    (1u)            /* FSDI Value 1 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_2                    (2u)            /* FSDI Value 2 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_3                    (3u)            /* FSDI Value 3 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_4                    (4u)            /* FSDI Value 4 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_5                    (5u)            /* FSDI Value 5 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_6                    (6u)            /* FSDI Value 6 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_7                    (7u)            /* FSDI Value 7 */
-#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_8                    (8u)            /* FSDI Value 8 */
-
-/*
- * LR MTU Size
- */
-#define PTX_NSC_CMD_PROCESSOR_LR_SIZE_64    (64u)                           /* MTU size of 64 byte for NFC-DEP */
-#define PTX_NSC_CMD_PROCESSOR_LR_SIZE_128   (128u)                          /* MTU size of 128 byte for NFC-DEP */
-#define PTX_NSC_CMD_PROCESSOR_LR_SIZE_192   (192)                           /* MTU size of 192 byte for NFC-DEP */
-#define PTX_NSC_CMD_PROCESSOR_LR_SIZE_MAX   (254u)                          /* Maximum MTU size of 254 byte for NFC-DEP */
-
-/* Calculate the maximum usable payload bytes for NFC-DEP */
-#define PTX_NSC_CMD_PROCESSOR_CALC_MTU_SIZE(x)                (uint8_t)(x-3)
-
-/*
- * LR Value
- */
-#define PTX_NSC_CMD_PROCESSOR_LR_VAL_0  (0x00)
-#define PTX_NSC_CMD_PROCESSOR_LR_VAL_1  (0x10)
-#define PTX_NSC_CMD_PROCESSOR_LR_VAL_2  (0x20)
-#define PTX_NSC_CMD_PROCESSOR_LR_VAL_3  (0x30)
-
-/*
  * Maximum number of NSC messages to be fetched in a single call to ptx_NSC_CmdProcessor_FetchMsg.
  */
 #define PTX_NSC_FETCHMSG_COUNT_MAX                          (10u)           /* Max. 10 messages */
@@ -684,7 +611,10 @@ static ptx_Status_t ptx_NSC_CmdProcessor_ProcessNtfMsg(ptx_NSC_t *nsc, uint8_t *
                 {
                     if (PTX_NSC_CMD_PROCESSOR_RFFIELD_ON == msg[1])
                     {
-                        nsc->State = ptx_NSC_State_Listen_Idle;
+                        /* 
+                         * RF Field On notification does not change the NSC state, 
+                         * it is only changed with an Activate NTF. 
+                         */
                     }
                     else if (PTX_NSC_CMD_PROCESSOR_RFFIELD_OFF == msg[1])
                     {
@@ -763,7 +693,7 @@ static ptx_Status_t ptx_NSC_CmdProcessor_ProcessNtfMsg(ptx_NSC_t *nsc, uint8_t *
 
                 if (PTX_NSC_CMD_PROCESSOR_ACTNTF_MINLEN <= msgLen)
                 {
-                    status = ptx_NSC_ProcessRfActivateNtf(&msg[1], msgLen - 1, &ntf);
+                    status = ptx_NSC_ProcessRfActivateNtf(nsc, &msg[1], msgLen - 1, &ntf);
                 }
                 else
                 {
@@ -836,6 +766,14 @@ static ptx_Status_t ptx_NSC_CmdProcessor_ProcessNtfMsg(ptx_NSC_t *nsc, uint8_t *
                         case NSC_ErrorCode_StandbyMode:
                             /* This is sent when NSC turns from RF_DISCOVERY (Standby mode) to RF_IDLE state. */
                             nsc->State = ptx_NSC_State_Idle;
+                            break;
+                        case NSC_ErrorCode_TxOvervoltage:
+                            if(ptx_NSC_State_Discovery != nsc->State)
+                            {
+                                /* This is sent when an TX Pin Overvoltage-Event got detected and 
+                                NSC turns from any state (except in RF_DISCOVERY) to RF_IDLE state. */
+                                nsc->State = ptx_NSC_State_Idle;
+                            }
                             break;
                         default:
                             /* Other errors are just forwarded up. */
@@ -1016,7 +954,7 @@ static void ptx_NSC_ParseRfActivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfActivate_Ntf_t 
 
     /* Check state transitions for Listen mode. */
     
-    if ((ptx_NSC_RfTech_Passive_Listen_A <= ntf->RfTech) && (ptx_NSC_RfTech_Passive_Listen_F >= ntf->RfTech))
+    if ((ptx_NSC_RfTech_Passive_Listen_A <= ntf->RfTech) && (ptx_NSC_RfTech_Active_Listen >= ntf->RfTech))
     {
         if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) || (ptx_NSC_RfProtocol_NfcDep == ntf->RfProt))
         {
@@ -1041,201 +979,15 @@ static void ptx_NSC_ParseRfActivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfActivate_Ntf_t 
             nsc->State = ptx_NSC_State_Poll;
         }
     }
-
-    if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Poll_A == ntf->RfTech))
-    {
-        switch (ntf->RfProtParams.IsoDep.PollA.FSCI)
-        {
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_0:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_0;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_1:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_1;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_2:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_2;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_3:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_3;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_4:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_4;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_5:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_5;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_6:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_6;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_7:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_7;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_8:
-            /* FALLTHROUGH */
-            default:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX;
-                break;
-        }
-    }
-    else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Poll_B == ntf->RfTech))
-    {
-        switch ((ntf->RfTechParams.PollB.SensBRes[PTX_NSC_RF_DISCOVER_PROTINFO1_OFFSET] & PTX_NSC_RF_DISCOVER_PINFO1_FSCI_MASK) >> 4)
-        {
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_0:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_0;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_1:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_1;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_2:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_2;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_3:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_3;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_4:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_4;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_5:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_5;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_6:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_6;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_7:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_7;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_8:
-            /* FALLTHROUGH */
-            default:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX;
-                break;
-        }
-    }
-    else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech))
-    {
-        switch ((ntf->RfProtParams.IsoDep.ListenA.Rats & PTX_NSC_RF_DISCOVER_RATS_FSDI_MASK) >> 4)
-        {
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_0:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_0;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_1:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_1;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_2:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_2;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_3:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_3;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_4:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_4;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_5:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_5;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_6:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_6;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_7:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_7;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_8:
-            /* FALLTHROUGH */
-            default:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_MAX;
-                break;
-        }
-    }
-
-    else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Listen_B == ntf->RfTech))
-    {
-        switch (ntf->RfProtParams.IsoDep.ListenB.Attrib[PTX_NSC_RF_DISCOVER_PARAM2_OFFSET] & PTX_NSC_RF_DISCOVER_ATRRIB_FSDI_MASK)
-        {
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_0:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_0;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_1:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_1;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_2:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_2;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_3:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_3;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_4:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_4;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_5:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_5;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_6:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_6;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_7:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_7;
-                break;
-            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_8:
-            /* FALLTHROUGH */
-            default:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSDI_MTU_SIZE_MAX;
-                break;
-        }
-    }
-    else if (ptx_NSC_RfProtocol_NfcDep == ntf->RfProt)
-    {
-        /*Setting MTU size depending on the RF tech*/
-
-        uint8_t mtu_size = 0x00;
-        if (ptx_NSC_RfTech_Active_Listen == ntf->RfTech)
-        {
-            mtu_size = ntf->RfProtParams.NfcDep.PollAF.AtrRes[16];
-        }
-        else if (ptx_NSC_RfTech_Active_Poll == ntf->RfTech || ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech || ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech)
-        {
-            mtu_size = ntf->RfProtParams.NfcDep.ListenAF.Lr;
-        }
-        else
-        {
-            mtu_size = 0xFF;
-        }
-        switch ((mtu_size & PTX_NSC_RF_DISCOVER_LISTEN_LR_MASK))
-        {
-            case PTX_NSC_CMD_PROCESSOR_LR_VAL_0:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_CALC_MTU_SIZE(PTX_NSC_CMD_PROCESSOR_LR_SIZE_64);
-                break;
-
-            case PTX_NSC_CMD_PROCESSOR_LR_VAL_1:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_CALC_MTU_SIZE(PTX_NSC_CMD_PROCESSOR_LR_SIZE_128);
-                break;
-
-            case PTX_NSC_CMD_PROCESSOR_LR_VAL_2:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_CALC_MTU_SIZE(PTX_NSC_CMD_PROCESSOR_LR_SIZE_192);
-                break;
-
-            case PTX_NSC_CMD_PROCESSOR_LR_VAL_3:
-            /* FALLTHROUGH */
-            default:
-                nsc->MtU = PTX_NSC_CMD_PROCESSOR_CALC_MTU_SIZE(PTX_NSC_CMD_PROCESSOR_LR_SIZE_MAX);
-                break;
-        }
-    }
-    else
-    {
-        nsc->MtU = PTX_NSC_MAX_TRANSFER_UNIT_SIZE;
-    }
 }
 
 static void ptx_NSC_ParseRfDeactivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfDeactivate_Ntf_t *ntf, ptx_Status_t *st)
 {
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != ntf) && (NULL !=  st))
     {
         PTX_LOG_V(nsc->Log, "ptx_NSC_ParseRfDeactivateNtf");
 
-        status = *st;
+        ptx_Status_t status = *st;
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -1264,7 +1016,7 @@ static void ptx_NSC_ParseRfDeactivateNtf(ptx_NSC_t *nsc, ptx_NSC_RfDeactivate_Nt
                 nsc->State = nsc->PendingState;
             }
 
-            nsc->MtU = PTX_NSC_CMD_PROCESSOR_FSCI_MTU_SIZE_MAX;
+            nsc->MtU = PTX_NSC_MAX_TRANSFER_UNIT_SIZE;
 
             if (NULL != nsc->CmdProcessor.ProcessRfDeactivateNtf)
             {

@@ -63,7 +63,7 @@
 /*
  * Get environment variable. Workaround for MinGW (otherwise undefined) - works only with major version 9, not needed anymore beyond
  */
-#if (__GNUC__ == 9) || (__GNUC__ < 9)
+#if (__GNUC__ == 9) || (__GNUC__ < 9) && !(__clang__)
     errno_t getenv_s(uint32_t *pReturnValue, char *buffer, uint32_t numberOfElements, const char *varname);
 #endif
 

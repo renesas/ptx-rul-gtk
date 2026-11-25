@@ -213,7 +213,7 @@ typedef struct ptx_HAL_Tmr
 typedef struct ptx_HAL_Tmr_InitParams
 {
 
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
     void                        *Osal;          /**< Osal context - used by specific implementations. */
 #endif
     void 			            *RFU;           /**< Empty struct not allowed in clang */

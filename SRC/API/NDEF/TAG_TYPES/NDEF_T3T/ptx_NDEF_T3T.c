@@ -125,7 +125,7 @@
 /*
  *  T3T Read Operation.
  *
- *  ndefT3T             Pointer to component.
+ *  ndefT3t             Pointer to component.
  *  NFCID2                Tag ID.
  *  NFCID2Len             Length of Tag ID.
  *  serviceInfo           Information about Services to be updated.
@@ -136,7 +136,7 @@
  *
  * returns Status, indicating whether the operation was successful.
  */
-static ptx_Status_t ptx_NDEF_T3T_Check  (ptx_NDEF_T3T_t *ndefT3T,
+static ptx_Status_t ptx_NDEF_T3T_Check  (ptx_NDEF_T3T_t *ndefT3t,
                                          ptx_NativeTag_T3T_Services_t serviceInfo,
                                          ptx_NativeTag_T3T_Blocks_t blockInfo,
                                          uint8_t *rx,
@@ -146,7 +146,7 @@ static ptx_Status_t ptx_NDEF_T3T_Check  (ptx_NDEF_T3T_t *ndefT3T,
 /*
  *  T3T Write Operation.
  *
- *  ndefT3T             Pointer to component.
+ *  ndefT3t             Pointer to component.
  *  NFCID2                Tag ID.
  *  NFCID2Len             Length of Tag ID.
  *  serviceInfo           Information about Services to be updated.
@@ -159,7 +159,7 @@ static ptx_Status_t ptx_NDEF_T3T_Check  (ptx_NDEF_T3T_t *ndefT3T,
  *
  * returns Status, indicating whether the operation was successful.
  */
-static ptx_Status_t ptx_NDEF_T3T_Update (ptx_NDEF_T3T_t *ndefT3T,
+static ptx_Status_t ptx_NDEF_T3T_Update (ptx_NDEF_T3T_t *ndefT3t,
                                          ptx_NativeTag_T3T_Services_t serviceInfo,
                                          ptx_NativeTag_T3T_Blocks_t blockInfo,
                                          uint8_t *blockData,
@@ -171,13 +171,13 @@ static ptx_Status_t ptx_NDEF_T3T_Update (ptx_NDEF_T3T_t *ndefT3T,
 /*
  *  Read Message loop.
  *
- *      ndefT3T             Pointer to component.
+ *      ndefT3t             Pointer to component.
  *     msgLen                Length of Message read.
  *  msgBuffer             Message data buffer.
  *
  * returns Status, indicating whether the operation was successful.
  */
-static ptx_Status_t ptx_NDEF_T3T_ReadLoop(ptx_NDEF_T3T_t *ndefT3T, uint32_t *msgLen, uint8_t *msgBuffer);
+static ptx_Status_t ptx_NDEF_T3T_ReadLoop(ptx_NDEF_T3T_t *ndefT3t, uint32_t *msgLen, uint8_t *msgBuffer);
 
 /*
  *  Write Message Loop.
@@ -187,35 +187,35 @@ static ptx_Status_t ptx_NDEF_T3T_ReadLoop(ptx_NDEF_T3T_t *ndefT3T, uint32_t *msg
  *
  * returns Status, indicating whether the operation was successful.
  */
-static ptx_Status_t ptx_NDEF_T3T_WriteLoop (ptx_NDEF_T3T_t *ndefT3T, uint32_t msgLen, uint8_t *msgBuffer);
+static ptx_Status_t ptx_NDEF_T3T_WriteLoop (ptx_NDEF_T3T_t *ndefT3t, uint32_t msgLen, uint8_t *msgBuffer);
 
 /*
  *  Get Attribute Information.
  *
- *  ndefT3T             Pointer to component.
+ *  ndefT3t             Pointer to component.
  *
  * returns Status, indicating whether the operation was successful.
  */
-static ptx_Status_t ptx_NDEF_T3T_GetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3T);
+static ptx_Status_t ptx_NDEF_T3T_GetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3t);
 
 /*
  *  Set Attribute Information.
  *
- *  ndefT3T             Pointer to component.
+ *  ndefT3t             Pointer to component.
  *
  * returns Status, indicating whether the operation was successful.
  */
-static ptx_Status_t ptx_NDEF_T3T_SetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3T);
+static ptx_Status_t ptx_NDEF_T3T_SetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3t);
 
 /*
  *  Calculate Communication Checksum.
  *
- *  ndefT3T             Pointer to component.
+ *  ndefT3t             Pointer to component.
  *  checksum             Calculated Checksum.
  *
  * returns Status, indicating whether the operation was successful.
  */
-static ptx_Status_t ptx_NDEF_T3T_CalculateChecksum (ptx_NDEF_T3T_t *ndefT3T, uint16_t *checksum);
+static ptx_Status_t ptx_NDEF_T3T_CalculateChecksum (ptx_NDEF_T3T_t *ndefT3t, uint16_t *checksum);
 
 /*
  *  Generate a BlockList, assuming all blocks from startBlock onwards are to be used.
@@ -235,49 +235,56 @@ static ptx_Status_t ptx_NDEF_T3T_GenerateBlockList(uint8_t* blockList, uint16_t 
  * API FUNCTIONS
  * ####################################################################################################################
  */
-ptx_Status_t ptx_NDEF_T3T_Open (ptx_NDEF_T3T_t *ndefT3T, ptx_NDEF_T3T_InitParams_t *initParams)
+ptx_Status_t ptx_NDEF_T3T_Open (ptx_NDEF_T3T_t *ndefT3t, ptx_NDEF_T3T_InitParams_t *initParams)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
 
-    if ((NULL != ndefT3T) && (NULL != initParams))
+    if ((NULL != ndefT3t) && (NULL != initParams))
     {
-        if ((NULL != initParams->rul) &&
+        if ((NULL != initParams->Rul) &&
             (NULL != initParams->TxBuffer) &&
             (0 != initParams->TxBufferSize) &&
             (NULL != initParams->RxBuffer) &&
             (0 != initParams->RxBufferSize))
         {
-            /* clear component */
-            (void)memset(ndefT3T, 0, sizeof(ptx_NDEF_T3T_t));
-
-            ndefT3T->RxBuffer = initParams->RxBuffer;
-            ndefT3T->RxBufferSize = (uint32_t)(initParams->RxBufferSize);
-            ndefT3T->LifeCycle = TagLC_NoNDEFTag;
-
-
-            memcpy(ndefT3T->NFCID2, &initParams->rul->CardRegistry.ActiveCard->TechParam.TypeF.SensFRes[PTX_T3T_SENSFRES_OFFSET_NFCID2], PTX_T3T_NFCID2_SIZE);
-            ndefT3T->MRTI_Check = initParams->rul->CardRegistry.ActiveCard->TechParam.TypeF.SensFRes[PTX_T3T_SENSFRES_OFFSET_MRTI_CHECK];
-            ndefT3T->MRTI_Update = initParams->rul->CardRegistry.ActiveCard->TechParam.TypeF.SensFRes[PTX_T3T_SENSFRES_OFFSET_MRTI_UPDATE];
-
-            /* initialise lower layer component */
-            ptx_NativeTag_T3T_InitParams_t T3T_init_params;
-            (void)memset(&T3T_init_params, 0, sizeof(ptx_NativeTag_T3T_InitParams_t));
-
-            T3T_init_params.rul = initParams->rul;
-            T3T_init_params.TxBuffer = initParams->TxBuffer;
-            T3T_init_params.TxBufferSize = (uint32_t)(initParams->TxBufferSize);
-            memcpy(T3T_init_params.NFCID2, ndefT3T->NFCID2, PTX_T3T_NFCID2_SIZE);
-            T3T_init_params.NFCID2Len = PTX_T3T_NFCID2_SIZE;
-            T3T_init_params.MRTI_Check = ndefT3T->MRTI_Check;
-            T3T_init_params.MRTI_Update = ndefT3T->MRTI_Update;
-
-            status = ptx_NativeTag_T3T_Open(&ndefT3T->t3t, &T3T_init_params);
-
-            /* set Component-ID at the end to prevent further calls in case of an error */
-            if (PTX_STATUS_SUCCESS == status)
+            if(ptx_RUL_CardProtocolType_T3T == initParams->Rul->CardRegistry.ActiveProtocol)
             {
-                ndefT3T->CompId = Comp_T3TOP;
+                /* clear component */
+                (void)memset(ndefT3t, 0, sizeof(ptx_NDEF_T3T_t));
+
+                ndefT3t->RxBuffer = initParams->RxBuffer;
+                ndefT3t->RxBufferSize = (uint32_t)(initParams->RxBufferSize);
+                ndefT3t->LifeCycle = TagLC_NoNDEFTag;
+
+
+                memcpy(ndefT3t->NFCID2, &initParams->Rul->CardRegistry.ActiveCard->TechParam.TypeF.SensFRes[PTX_T3T_SENSFRES_OFFSET_NFCID2], PTX_T3T_NFCID2_SIZE);
+                ndefT3t->MRTI_Check = initParams->Rul->CardRegistry.ActiveCard->TechParam.TypeF.SensFRes[PTX_T3T_SENSFRES_OFFSET_MRTI_CHECK];
+                ndefT3t->MRTI_Update = initParams->Rul->CardRegistry.ActiveCard->TechParam.TypeF.SensFRes[PTX_T3T_SENSFRES_OFFSET_MRTI_UPDATE];
+
+                /* initialise lower layer component */
+                ptx_NativeTag_T3T_InitParams_t t2t_init_params;
+                (void)memset(&t2t_init_params, 0, sizeof(ptx_NativeTag_T3T_InitParams_t));
+
+                t2t_init_params.Rul = initParams->Rul;
+                t2t_init_params.TxBuffer = initParams->TxBuffer;
+                t2t_init_params.TxBufferSize = (uint32_t)(initParams->TxBufferSize);
+                memcpy(t2t_init_params.NFCID2, ndefT3t->NFCID2, PTX_T3T_NFCID2_SIZE);
+                t2t_init_params.NFCID2Len = PTX_T3T_NFCID2_SIZE;
+                t2t_init_params.MRTI_Check = ndefT3t->MRTI_Check;
+                t2t_init_params.MRTI_Update = ndefT3t->MRTI_Update;
+
+                status = ptx_NativeTag_T3T_Open(&ndefT3t->T3t, &t2t_init_params);
+
+                /* set Component-ID at the end to prevent further calls in case of an error */
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    ndefT3t->CompId = Comp_T3TOP;
+                }
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_NOT_PERMITTED;
             }
         }
         else
@@ -289,64 +296,78 @@ ptx_Status_t ptx_NDEF_T3T_Open (ptx_NDEF_T3T_t *ndefT3T, ptx_NDEF_T3T_InitParams
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T3T_FormatTag (ptx_NDEF_T3T_t *ndefT3T)
+ptx_Status_t ptx_NDEF_T3T_FormatTag (ptx_NDEF_T3T_t *ndefT3t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP))
     {
-        status = PTX_STATUS_E_NDEF_UNSUPPORTED;
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
+        {
+            status = PTX_STATUS_E_NDEF_UNSUPPORTED;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T3T_CheckMessage (ptx_NDEF_T3T_t *ndefT3T)
+ptx_Status_t ptx_NDEF_T3T_CheckMessage (ptx_NDEF_T3T_t *ndefT3t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     uint8_t nfcid2[PTX_T3T_NFCID2_SIZE];
     ptx_NativeTag_T3T_MRTI_t mrti_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP))
     {
-        /* set NFCID2 */
-        (void)memcpy(&nfcid2[0], &ndefT3T->NFCID2[0], PTX_T3T_NFCID2_SIZE);
-        mrti_info.MRTICheck = ndefT3T->MRTI_Check;
-        mrti_info.MRTIUpdate = ndefT3T->MRTI_Update;
-
-        status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3T->t3t,
-                                                 &nfcid2[0],
-                                                 PTX_T3T_NFCID2_SIZE,
-                                                 1u,           /* Until we know the maximum amount of blocks, assume 1. */
-                                                 1u,
-                                                 mrti_info);
-
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            /* read attribute information block (equivalent to CC params) */
-            status = ptx_NDEF_T3T_GetAttributeInformationBlock(ndefT3T);
+            /* set NFCID2 */
+            (void)memcpy(&nfcid2[0], &ndefT3t->NFCID2[0], PTX_T3T_NFCID2_SIZE);
+            mrti_info.MRTICheck = ndefT3t->MRTI_Check;
+            mrti_info.MRTIUpdate = ndefT3t->MRTI_Update;
+
+            status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3t->T3t,
+                                                    &nfcid2[0],
+                                                    PTX_T3T_NFCID2_SIZE,
+                                                    1u,           /* Until we know the maximum amount of blocks, assume 1. */
+                                                    1u,
+                                                    mrti_info);
+
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* read attribute information block (equivalent to CC params) */
+                status = ptx_NDEF_T3T_GetAttributeInformationBlock(ndefT3t);
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                if (PTX_T3TOP_READ_ONLY_FLAG != ndefT3t->CCParams.RWFlag)
+                {
+                    ndefT3t->LifeCycle = (0 != ndefT3t->CCParams.Ln) ? TagLC_ReadWrite : TagLC_Initialised;
+
+                }
+                else
+                {
+                    ndefT3t->LifeCycle = TagLC_ReadOnly;
+                }
+            }
         }
-
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            if (PTX_T3TOP_READ_ONLY_FLAG != ndefT3T->CCParams.RWFlag)
-            {
-                ndefT3T->LifeCycle = (0 != ndefT3T->CCParams.Ln) ? TagLC_ReadWrite : TagLC_Initialised;
-
-            }
-            else
-            {
-                ndefT3T->LifeCycle = TagLC_ReadOnly;
-            }
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T3T_ReadMessage (ptx_NDEF_T3T_t *ndefT3T, uint8_t *msgBuffer, uint32_t *msgLen)
+ptx_Status_t ptx_NDEF_T3T_ReadMessage (ptx_NDEF_T3T_t *ndefT3t, uint8_t *msgBuffer, uint32_t *msgLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -354,66 +375,72 @@ ptx_Status_t ptx_NDEF_T3T_ReadMessage (ptx_NDEF_T3T_t *ndefT3T, uint8_t *msgBuff
     uint8_t nfcid2[PTX_T3T_NFCID2_SIZE];
     ptx_NativeTag_T3T_MRTI_t mrti_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
-        msg_buffer_size = *msgLen;
-
-        if (0 != msg_buffer_size)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            switch (ndefT3T->LifeCycle)
+            msg_buffer_size = *msgLen;
+
+            if (0 != msg_buffer_size)
             {
-                case TagLC_Initialised:
-                case TagLC_ReadWrite:
-                case TagLC_ReadOnly:
-                    /* OK */
-                    status = PTX_STATUS_SUCCESS;
-                    break;
+                switch (ndefT3t->LifeCycle)
+                {
+                    case TagLC_Initialised:
+                    case TagLC_ReadWrite:
+                    case TagLC_ReadOnly:
+                        /* OK */
+                        status = PTX_STATUS_SUCCESS;
+                        break;
 
-                default:
-                    status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
-                    break;
-            }
+                    default:
+                        status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
+                        break;
+                }
 
-            /* check if previous writing procedures have finished */
-            if (PTX_T3TOP_WRITE_FLAG_ON == ndefT3T->CCParams.WriteFlag)
-            {
-                status = PTX_STATUS_E_NDEF_T3T_WRITE_IN_PROGRESS;
-            }
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* set NFCID2 */
-                (void)memcpy(&nfcid2[0], &ndefT3T->NFCID2[0], (uint32_t)PTX_T3T_NFCID2_SIZE);
-                mrti_info.MRTICheck = ndefT3T->MRTI_Check;
-                mrti_info.MRTIUpdate = ndefT3T->MRTI_Update;
-
-
-                status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3T->t3t,
-                                                         &nfcid2[0],
-                                                         PTX_T3T_NFCID2_SIZE,
-                                                         ndefT3T->CCParams.NbrInt,
-                                                         ndefT3T->CCParams.NbwInt,
-                                                         mrti_info);
-
+                /* check if previous writing procedures have finished */
+                if (PTX_T3TOP_WRITE_FLAG_ON == ndefT3t->CCParams.WriteFlag)
+                {
+                    status = PTX_STATUS_E_NDEF_T3T_WRITE_IN_PROGRESS;
+                }
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    /* read blocks */
-                    status = ptx_NDEF_T3T_ReadLoop(ndefT3T, msgLen, msgBuffer);
+                    /* set NFCID2 */
+                    (void)memcpy(&nfcid2[0], &ndefT3t->NFCID2[0], (uint32_t)PTX_T3T_NFCID2_SIZE);
+                    mrti_info.MRTICheck = ndefT3t->MRTI_Check;
+                    mrti_info.MRTIUpdate = ndefT3t->MRTI_Update;
+
+
+                    status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3t->T3t,
+                                                            &nfcid2[0],
+                                                            PTX_T3T_NFCID2_SIZE,
+                                                            ndefT3t->CCParams.NbrInt,
+                                                            ndefT3t->CCParams.NbwInt,
+                                                            mrti_info);
+
+
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        /* read blocks */
+                        status = ptx_NDEF_T3T_ReadLoop(ndefT3t, msgLen, msgBuffer);
+                    }
                 }
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
             }
         }
         else
         {
-            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T3T_WriteMessage (ptx_NDEF_T3T_t *ndefT3T, uint8_t *msgBuffer, uint32_t msgLen)
+ptx_Status_t ptx_NDEF_T3T_WriteMessage (ptx_NDEF_T3T_t *ndefT3t, uint8_t *msgBuffer, uint32_t msgLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -425,171 +452,191 @@ ptx_Status_t ptx_NDEF_T3T_WriteMessage (ptx_NDEF_T3T_t *ndefT3T, uint8_t *msgBuf
 
     ptx_NativeTag_T3T_MRTI_t mrti_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP))
     {
-        switch (ndefT3T->LifeCycle)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            case TagLC_Initialised:
-            case TagLC_ReadWrite:
-                /* OK */
-                status = PTX_STATUS_SUCCESS;
-                break;
+            switch (ndefT3t->LifeCycle)
+            {
+                case TagLC_Initialised:
+                case TagLC_ReadWrite:
+                    /* OK */
+                    status = PTX_STATUS_SUCCESS;
+                    break;
 
-            default:
+                default:
+                    status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
+                    break;
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* set NFCID2 */
+                (void)memcpy(&nfcid2[0], &ndefT3t->NFCID2[0], (uint32_t)PTX_T3T_NFCID2_SIZE);
+                mrti_info.MRTICheck = ndefT3t->MRTI_Check;
+                mrti_info.MRTIUpdate = ndefT3t->MRTI_Update;
+
+                status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3t->T3t,
+                                                        &nfcid2[0],
+                                                        PTX_T3T_NFCID2_SIZE,
+                                                        ndefT3t->CCParams.NbrInt,
+                                                        ndefT3t->CCParams.NbwInt,
+                                                        mrti_info);
+            }
+
+            /* check for other write procedure in progress */
+            if (PTX_T3TOP_WRITE_FLAG_ON == ndefT3t->CCParams.WriteFlag)
+            {
                 status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
-                break;
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* set NFCID2 */
-            (void)memcpy(&nfcid2[0], &ndefT3T->NFCID2[0], (uint32_t)PTX_T3T_NFCID2_SIZE);
-            mrti_info.MRTICheck = ndefT3T->MRTI_Check;
-            mrti_info.MRTIUpdate = ndefT3T->MRTI_Update;
-
-            status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3T->t3t,
-                                                     &nfcid2[0],
-                                                     PTX_T3T_NFCID2_SIZE,
-                                                     ndefT3T->CCParams.NbrInt,
-                                                     ndefT3T->CCParams.NbwInt,
-                                                     mrti_info);
-        }
-
-        /* check for other write procedure in progress */
-        if (PTX_T3TOP_WRITE_FLAG_ON == ndefT3T->CCParams.WriteFlag)
-        {
-            status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* check for empty message */
-            if ((0 != msgLen) && (NULL != msgBuffer))
-            {
-                msg_buffer = msgBuffer;
-                msg_len = (uint16_t)msgLen;
-            }
-            else
-            {
-                msg_buffer = &EMPTY_NDEF_MESSAGE[0];
-                msg_len = sizeof(EMPTY_NDEF_MESSAGE);
             }
 
-            nbr_data_blocks = (uint16_t)(msg_len / PTX_T3TOP_BLOCK_SIZE);
-            if (0 != (msg_len % PTX_T3TOP_BLOCK_SIZE))
+            if (PTX_STATUS_SUCCESS == status)
             {
-                nbr_data_blocks++;
-            }
-
-            if (ndefT3T->CCParams.NmaxB >= nbr_data_blocks)
-            {
-                /* write flag needs to be set to ON */
-                ndefT3T->CCParams.WriteFlag = PTX_T3TOP_WRITE_FLAG_ON;
-                status = ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3T);
-
-                if (PTX_STATUS_SUCCESS == status)
+                /* check for empty message */
+                if ((0 != msgLen) && (NULL != msgBuffer))
                 {
-                    status = ptx_NDEF_T3T_WriteLoop(ndefT3T, msg_len, msg_buffer);
-                }
-
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    /* write is done, check if write flag needs to be set to OFF and write Ln field */
-
-                    ndefT3T->CCParams.WriteFlag = PTX_T3TOP_WRITE_FLAG_OFF;
-
-                    /* update message length infos */
-                    ndefT3T->CCParams.Ln = (uint32_t)msgLen;
-                    ndefT3T->CCParams.Nbc = (ndefT3T->CCParams.Ln % 16);
-                    if (0 != (ndefT3T->CCParams.Ln % 16))
-                    {
-                        ndefT3T->CCParams.Nbc++;
-                    }
-                    status = ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3T);
-
-                    if (PTX_STATUS_SUCCESS == status)
-                    {
-                        switch (msgLen)
-                        {
-                            case 0:
-                                ndefT3T->LifeCycle = TagLC_Initialised;
-                                break;
-                            default:
-                                ndefT3T->LifeCycle = TagLC_ReadWrite;
-                                break;
-                        }
-                    }
+                    msg_buffer = msgBuffer;
+                    msg_len = (uint16_t)msgLen;
                 }
                 else
                 {
-                    /* write might have failed, write flag needs to be set to OFF */
-                    ndefT3T->CCParams.WriteFlag = PTX_T3TOP_WRITE_FLAG_OFF;
-                    (void)ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3T);
+                    msg_buffer = &EMPTY_NDEF_MESSAGE[0];
+                    msg_len = sizeof(EMPTY_NDEF_MESSAGE);
+                }
+
+                nbr_data_blocks = (uint16_t)(msg_len / PTX_T3TOP_BLOCK_SIZE);
+                if (0 != (msg_len % PTX_T3TOP_BLOCK_SIZE))
+                {
+                    nbr_data_blocks++;
+                }
+
+                if (ndefT3t->CCParams.NmaxB >= nbr_data_blocks)
+                {
+                    /* write flag needs to be set to ON */
+                    ndefT3t->CCParams.WriteFlag = PTX_T3TOP_WRITE_FLAG_ON;
+                    status = ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3t);
+
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        status = ptx_NDEF_T3T_WriteLoop(ndefT3t, msg_len, msg_buffer);
+                    }
+
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        /* write is done, check if write flag needs to be set to OFF and write Ln field */
+
+                        ndefT3t->CCParams.WriteFlag = PTX_T3TOP_WRITE_FLAG_OFF;
+
+                        /* update message length infos */
+                        ndefT3t->CCParams.Ln = (uint32_t)msgLen;
+                        ndefT3t->CCParams.Nbc = (ndefT3t->CCParams.Ln % 16);
+                        if (0 != (ndefT3t->CCParams.Ln % 16))
+                        {
+                            ndefT3t->CCParams.Nbc++;
+                        }
+                        status = ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3t);
+
+                        if (PTX_STATUS_SUCCESS == status)
+                        {
+                            switch (msgLen)
+                            {
+                                case 0:
+                                    ndefT3t->LifeCycle = TagLC_Initialised;
+                                    break;
+                                default:
+                                    ndefT3t->LifeCycle = TagLC_ReadWrite;
+                                    break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        /* write might have failed, write flag needs to be set to OFF */
+                        ndefT3t->CCParams.WriteFlag = PTX_T3TOP_WRITE_FLAG_OFF;
+                        (void)ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3t);
+                    }
                 }
             }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T3T_LockTag (ptx_NDEF_T3T_t *ndefT3T)
+ptx_Status_t ptx_NDEF_T3T_LockTag (ptx_NDEF_T3T_t *ndefT3t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     uint8_t nfcid2[PTX_T3T_NFCID2_SIZE];
     ptx_NativeTag_T3T_MRTI_t mrti_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP))
     {
-        if (0 == ndefT3T->CCParams.Ln)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
-        }
-        else
-        {
-            status = PTX_STATUS_SUCCESS;
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* set NFCID2 */
-            (void)memcpy(&nfcid2[0], &ndefT3T->NFCID2[0], (uint32_t)PTX_T3T_NFCID2_SIZE);
-            mrti_info.MRTICheck = ndefT3T->MRTI_Check;
-            mrti_info.MRTIUpdate = ndefT3T->MRTI_Update;
-
-            status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3T->t3t,
-                                                     &nfcid2[0],
-                                                     PTX_T3T_NFCID2_SIZE,
-                                                     ndefT3T->CCParams.NbrInt,
-                                                     ndefT3T->CCParams.NbwInt,
-                                                     mrti_info);
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            ndefT3T->CCParams.RWFlag = PTX_T3TOP_READ_ONLY_FLAG;
-
-            status = ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3T);
+            if (0 == ndefT3t->CCParams.Ln)
+            {
+                status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
+            }
+            else
+            {
+                status = PTX_STATUS_SUCCESS;
+            }
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                ndefT3T->LifeCycle = TagLC_ReadOnly;
+                /* set NFCID2 */
+                (void)memcpy(&nfcid2[0], &ndefT3t->NFCID2[0], (uint32_t)PTX_T3T_NFCID2_SIZE);
+                mrti_info.MRTICheck = ndefT3t->MRTI_Check;
+                mrti_info.MRTIUpdate = ndefT3t->MRTI_Update;
+
+                status =  ptx_NativeTag_T3T_SetTagParams(&ndefT3t->T3t,
+                                                        &nfcid2[0],
+                                                        PTX_T3T_NFCID2_SIZE,
+                                                        ndefT3t->CCParams.NbrInt,
+                                                        ndefT3t->CCParams.NbwInt,
+                                                        mrti_info);
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                ndefT3t->CCParams.RWFlag = PTX_T3TOP_READ_ONLY_FLAG;
+
+                status = ptx_NDEF_T3T_SetAttributeInformationBlock(ndefT3t);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    ndefT3t->LifeCycle = TagLC_ReadOnly;
+                }
             }
         }
-
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T3T_Close (ptx_NDEF_T3T_t *ndefT3T)
+ptx_Status_t ptx_NDEF_T3T_Close (ptx_NDEF_T3T_t *ndefT3t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP))
     {
-        status = ptx_NativeTag_T3T_Close(&ndefT3T->t3t);
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
+        {
+            status = ptx_NativeTag_T3T_Close(&ndefT3t->T3t);
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -600,7 +647,7 @@ ptx_Status_t ptx_NDEF_T3T_Close (ptx_NDEF_T3T_t *ndefT3T)
  * INTERNAL FUNCTIONS / CALLBACK(s)
  * ####################################################################################################################
  */
-static ptx_Status_t ptx_NDEF_T3T_Check (ptx_NDEF_T3T_t *ndefT3T,
+static ptx_Status_t ptx_NDEF_T3T_Check (ptx_NDEF_T3T_t *ndefT3t,
                                         ptx_NativeTag_T3T_Services_t serviceInfo,
                                         ptx_NativeTag_T3T_Blocks_t blockInfo,
                                         uint8_t *rx,
@@ -610,48 +657,55 @@ static ptx_Status_t ptx_NDEF_T3T_Check (ptx_NDEF_T3T_t *ndefT3T,
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint8_t num_bytes_res;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) &&
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP) &&
         (NULL != serviceInfo.ServiceCodeList) && (NULL != blockInfo.BlockList) &&
         (0 != serviceInfo.ServiceCodeListLen) && (0 != blockInfo.BlockListLen) &&
         (0 != serviceInfo.NOS) && (0 != blockInfo.NOB) &&
         (NULL != rx) && (NULL != rxLen))
     {
-        *rxLen = (uint32_t)ndefT3T->RxBufferSize;
-
-        /* send native tag command */
-        status = ptx_NativeTag_T3T_Check(&ndefT3T->t3t, serviceInfo, blockInfo, rx, rxLen, msTimeout);
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            /* handle response */
-            if ((0 != *rxLen) && (PTX_T3TOP_CHECK_RSP_OFFSET_DATA <= *rxLen))
+            *rxLen = (uint32_t)ndefT3t->RxBufferSize;
+
+            /* send native tag command */
+            status = ptx_NativeTag_T3T_Check(&ndefT3t->T3t, serviceInfo, blockInfo, rx, rxLen, msTimeout);
+
+            if (PTX_STATUS_SUCCESS == status)
             {
-                /* OK, check response */
-                if ((PTX_T3TOP_STATUSFLAG1_OK != rx[PTX_T3TOP_CHECK_RSP_OFFSET_STATUSFLAG1]) || (PTX_T3TOP_STATUSFLAG2_OK != rx[PTX_T3TOP_CHECK_RSP_OFFSET_STATUSFLAG2]))
+                /* handle response */
+                if ((0 != *rxLen) && (PTX_T3TOP_CHECK_RSP_OFFSET_DATA <= *rxLen))
                 {
-                    /* error, no block data received */
-                    status = PTX_STATUS_E_NDEF_TAG_NACK;
+                    /* OK, check response */
+                    if ((PTX_T3TOP_STATUSFLAG1_OK != rx[PTX_T3TOP_CHECK_RSP_OFFSET_STATUSFLAG1]) || (PTX_T3TOP_STATUSFLAG2_OK != rx[PTX_T3TOP_CHECK_RSP_OFFSET_STATUSFLAG2]))
+                    {
+                        /* error, no block data received */
+                        status = PTX_STATUS_E_NDEF_TAG_NACK;
+                    }
+                    else
+                    {
+                        /* OK, result stays in RxBuffer */
+                        num_bytes_res = (uint8_t)(rx[PTX_T3TOP_CHECK_RSP_OFFSET_NUMBER_BYTES] * PTX_T3TOP_BLOCK_SIZE);
+
+                        memmove(ndefT3t->RxBuffer, &ndefT3t->RxBuffer[PTX_T3TOP_CHECK_RSP_OFFSET_DATA], sizeof(uint8_t) * num_bytes_res);
+                        *rxLen = num_bytes_res;
+                    }
                 }
                 else
                 {
-                    /* OK, result stays in RxBuffer */
-                    num_bytes_res = (uint8_t)(rx[PTX_T3TOP_CHECK_RSP_OFFSET_NUMBER_BYTES] * PTX_T3TOP_BLOCK_SIZE);
-
-                    memmove(ndefT3T->RxBuffer, &ndefT3T->RxBuffer[PTX_T3TOP_CHECK_RSP_OFFSET_DATA], sizeof(uint8_t) * num_bytes_res);
-                    *rxLen = num_bytes_res;
+                    status = PTX_STATUS_E_NSC_RFERROR;
                 }
             }
-            else
-            {
-                status = PTX_STATUS_E_NSC_RFERROR;
-            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T3T_Update (ptx_NDEF_T3T_t *ndefT3T,
+static ptx_Status_t ptx_NDEF_T3T_Update (ptx_NDEF_T3T_t *ndefT3t,
                                          ptx_NativeTag_T3T_Services_t serviceInfo,
                                          ptx_NativeTag_T3T_Blocks_t blockInfo,
                                          uint8_t *blockData,
@@ -662,64 +716,71 @@ static ptx_Status_t ptx_NDEF_T3T_Update (ptx_NDEF_T3T_t *ndefT3T,
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) &&
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP) &&
         (NULL != serviceInfo.ServiceCodeList) && (NULL != blockInfo.BlockList) &&
         (0 != serviceInfo.ServiceCodeListLen) && (0 != blockInfo.BlockListLen) &&
         (0 != serviceInfo.NOS) && (0 != blockInfo.NOB) &&
         (NULL != rx) && (NULL != rxLen) && (NULL != blockData))
     {
-        *rxLen = (uint32_t)ndefT3T->RxBufferSize;
-
-        /* send native tag command */
-        status = ptx_NativeTag_T3T_Update(&ndefT3T->t3t, serviceInfo, blockInfo, blockData, blockDataLen, rx, rxLen, msTimeout);
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            /* handle response */
-            if (0 != *rxLen)
-            {
-                /* OK, check response */
-                if ((PTX_T3TOP_UPDATE_RSP_LENGTH <= *rxLen) && (PTX_T3TOP_STATUSFLAG1_OK != rx[PTX_T3TOP_UPDATE_RSP_OFFSET_STATUSFLAG1]) && (PTX_T3TOP_STATUSFLAG2_OK != rx[PTX_T3TOP_UPDATE_RSP_OFFSET_STATUSFLAG2]))
-                {
-                    /* error */
-                    switch (rx[PTX_T3TOP_UPDATE_RSP_OFFSET_STATUSFLAG2])
-                    {
-                        case PTX_T3TOP_UPDATE_RSP_STATUSFLAG2_ACCESS_DENIED:
-                            /* cannot write to memory */
-                            status = PTX_STATUS_E_NDEF_TAG_ACCESS_DENIED;
-                            break;
-                        case PTX_T3TOP_UPDATE_RSP_STATUSFLAG2_MAX_NUM_WRITES:
-                            /* operation successful, but exceeded the max number of writes to memory */
-                            break;
-                        default:
-                            status = PTX_STATUS_E_NSC_RFERROR;
-                            break;
-                    }
+            *rxLen = (uint32_t)ndefT3t->RxBufferSize;
 
+            /* send native tag command */
+            status = ptx_NativeTag_T3T_Update(&ndefT3t->T3t, serviceInfo, blockInfo, blockData, blockDataLen, rx, rxLen, msTimeout);
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* handle response */
+                if (0 != *rxLen)
+                {
+                    /* OK, check response */
+                    if ((PTX_T3TOP_UPDATE_RSP_LENGTH <= *rxLen) && (PTX_T3TOP_STATUSFLAG1_OK != rx[PTX_T3TOP_UPDATE_RSP_OFFSET_STATUSFLAG1]) && (PTX_T3TOP_STATUSFLAG2_OK != rx[PTX_T3TOP_UPDATE_RSP_OFFSET_STATUSFLAG2]))
+                    {
+                        /* error */
+                        switch (rx[PTX_T3TOP_UPDATE_RSP_OFFSET_STATUSFLAG2])
+                        {
+                            case PTX_T3TOP_UPDATE_RSP_STATUSFLAG2_ACCESS_DENIED:
+                                /* cannot write to memory */
+                                status = PTX_STATUS_E_NDEF_TAG_ACCESS_DENIED;
+                                break;
+                            case PTX_T3TOP_UPDATE_RSP_STATUSFLAG2_MAX_NUM_WRITES:
+                                /* operation successful, but exceeded the max number of writes to memory */
+                                break;
+                            default:
+                                status = PTX_STATUS_E_NSC_RFERROR;
+                                break;
+                        }
+
+                    }
+                    else
+                    {
+                        /* OK */
+                    }
                 }
                 else
                 {
-                    /* OK */
+                    status = PTX_STATUS_E_NSC_RFERROR;
                 }
             }
-            else
-            {
-                status = PTX_STATUS_E_NSC_RFERROR;
-            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T3T_ReadLoop(ptx_NDEF_T3T_t *ndefT3T, uint32_t *msgLen, uint8_t *msgBuffer)
+static ptx_Status_t ptx_NDEF_T3T_ReadLoop(ptx_NDEF_T3T_t *ndefT3t, uint32_t *msgLen, uint8_t *msgBuffer)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     uint16_t current_block = 1;
     uint32_t rx_len;
     uint32_t bytes_to_copy;
-    uint16_t nr_ndef_blocks = ndefT3T->CCParams.Nbc;
+    uint16_t nr_ndef_blocks = ndefT3t->CCParams.Nbc;
     uint16_t blocks_to_read = 0;
     uint32_t bytes_read = 0;
     uint32_t msg_len = 0;
@@ -735,73 +796,80 @@ static ptx_Status_t ptx_NDEF_T3T_ReadLoop(ptx_NDEF_T3T_t *ndefT3T, uint32_t *msg
     ptx_NativeTag_T3T_Services_t service_info;
     ptx_NativeTag_T3T_Blocks_t block_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != msgLen) && (0 != *msgLen) && (NULL != msgBuffer))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP) && (NULL != msgLen) && (0 != *msgLen) && (NULL != msgBuffer))
     {
-        msg_len = (uint32_t)(*msgLen);
-
-        status = PTX_STATUS_SUCCESS;
-        while ((ndefT3T->CCParams.Nbc > (current_block - 1)) && (PTX_STATUS_SUCCESS == status))
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            block_list_len = PTX_T3TOP_NBR_INTERNAL * 3u;
+            msg_len = (uint32_t)(*msgLen);
 
-            if ((nr_ndef_blocks - (current_block - 1)) <= ndefT3T->CCParams.NbrInt)
+            status = PTX_STATUS_SUCCESS;
+            while ((ndefT3t->CCParams.Nbc > (current_block - 1)) && (PTX_STATUS_SUCCESS == status))
             {
-                blocks_to_read = (uint16_t)(nr_ndef_blocks - (current_block - 1));
-            }
-            else
-            {
-                blocks_to_read = ndefT3T->CCParams.NbrInt;
-            }
-            status = ptx_NDEF_T3T_GenerateBlockList(block_list, &block_list_len, blocks_to_read, ndefT3T->CCParams.NbrInt, current_block);
+                block_list_len = PTX_T3TOP_NBR_INTERNAL * 3u;
 
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                block_info.NOB = (uint8_t)blocks_to_read;
-                block_info.BlockList = block_list;
-                block_info.BlockListLen = (uint8_t)block_list_len;
-
-                service_info.NOS = PTX_T3TOP_NOS_NDEF;
-                service_info.ServiceCodeList = service_code_list;
-                service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
-
-                status = ptx_NDEF_T3T_Check(ndefT3T, service_info, block_info, ndefT3T->RxBuffer, &rx_len, ndefT3T->t3t.TagTimeoutCheck);
-            }
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* in case of last read operation only copy NDEF bytes to message buffer */
-                bytes_to_copy = (uint32_t)((ndefT3T->CCParams.Ln < (uint32_t)(bytes_read + (uint32_t)(blocks_to_read * PTX_T3TOP_BLOCK_SIZE)))
-                                           ? (uint32_t)(ndefT3T->CCParams.Ln - bytes_read)
-                                           : (uint32_t)(blocks_to_read * PTX_T3TOP_BLOCK_SIZE));
-
-                if (msg_len >= (bytes_read + bytes_to_copy))
+                if ((nr_ndef_blocks - (current_block - 1)) <= ndefT3t->CCParams.NbrInt)
                 {
-                    (void) memcpy(&msgBuffer[bytes_read], &ndefT3T->RxBuffer[0], bytes_to_copy);
-
-                    bytes_read = (uint32_t)(bytes_read + bytes_to_copy);
-                    current_block = (uint16_t)(current_block + blocks_to_read);
+                    blocks_to_read = (uint16_t)(nr_ndef_blocks - (current_block - 1));
                 }
                 else
                 {
-                    status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
+                    blocks_to_read = ndefT3t->CCParams.NbrInt;
+                }
+                status = ptx_NDEF_T3T_GenerateBlockList(block_list, &block_list_len, blocks_to_read, ndefT3t->CCParams.NbrInt, current_block);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    block_info.NOB = (uint8_t)blocks_to_read;
+                    block_info.BlockList = block_list;
+                    block_info.BlockListLen = (uint8_t)block_list_len;
+
+                    service_info.NOS = PTX_T3TOP_NOS_NDEF;
+                    service_info.ServiceCodeList = service_code_list;
+                    service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
+
+                    status = ptx_NDEF_T3T_Check(ndefT3t, service_info, block_info, ndefT3t->RxBuffer, &rx_len, ndefT3t->T3t.TagTimeoutCheck);
+                }
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    /* in case of last read operation only copy NDEF bytes to message buffer */
+                    bytes_to_copy = (uint32_t)((ndefT3t->CCParams.Ln < (uint32_t)(bytes_read + (uint32_t)(blocks_to_read * PTX_T3TOP_BLOCK_SIZE)))
+                                            ? (uint32_t)(ndefT3t->CCParams.Ln - bytes_read)
+                                            : (uint32_t)(blocks_to_read * PTX_T3TOP_BLOCK_SIZE));
+
+                    if (msg_len >= (bytes_read + bytes_to_copy))
+                    {
+                        (void) memcpy(&msgBuffer[bytes_read], &ndefT3t->RxBuffer[0], bytes_to_copy);
+
+                        bytes_read = (uint32_t)(bytes_read + bytes_to_copy);
+                        current_block = (uint16_t)(current_block + blocks_to_read);
+                    }
+                    else
+                    {
+                        status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
+                    }
                 }
             }
-        }
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            *msgLen = bytes_read;
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                *msgLen = bytes_read;
+            }
+            else
+            {
+                *msgLen = 0;
+            }
         }
         else
         {
-            *msgLen = 0;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T3T_WriteLoop (ptx_NDEF_T3T_t *ndefT3T, uint32_t msgLen, uint8_t *msgBuffer)
+static ptx_Status_t ptx_NDEF_T3T_WriteLoop (ptx_NDEF_T3T_t *ndefT3t, uint32_t msgLen, uint8_t *msgBuffer)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -824,104 +892,118 @@ static ptx_Status_t ptx_NDEF_T3T_WriteLoop (ptx_NDEF_T3T_t *ndefT3T, uint32_t ms
     ptx_NativeTag_T3T_Services_t service_info;
     ptx_NativeTag_T3T_Blocks_t block_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != msgBuffer) && (0 != msgLen))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP) && (NULL != msgBuffer) && (0 != msgLen))
     {
-        status = PTX_STATUS_SUCCESS;
-
-        nbr_data_blocks = (uint16_t)(msgLen / PTX_T3TOP_BLOCK_SIZE);
-        if (0 != (msgLen % PTX_T3TOP_BLOCK_SIZE))
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            nbr_data_blocks++;
-        }
+            status = PTX_STATUS_SUCCESS;
 
-        if (ndefT3T->CCParams.NmaxB < nbr_data_blocks)
-        {
-            status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
-        }
-
-        while ((msgLen > bytes_written) && (PTX_STATUS_SUCCESS == status))
-        {
-            block_list_len = PTX_T3TOP_NBW_INTERNAL * 3u;
-
-            if ((nbr_data_blocks - (current_block - 1)) <= ndefT3T->CCParams.NbwInt)
+            nbr_data_blocks = (uint16_t)(msgLen / PTX_T3TOP_BLOCK_SIZE);
+            if (0 != (msgLen % PTX_T3TOP_BLOCK_SIZE))
             {
-                blocks_to_write = (uint16_t)(nbr_data_blocks - (current_block - 1));
-            }
-            else
-            {
-                blocks_to_write = ndefT3T->CCParams.NbwInt;
-            }
-            status = ptx_NDEF_T3T_GenerateBlockList(block_list, &block_list_len, blocks_to_write, ndefT3T->CCParams.NbwInt, current_block);
-
-            /* find out if padding is needed and fill data block */
-            if ((msgLen < (bytes_written + (uint32_t)((blocks_to_write * PTX_T3TOP_BLOCK_SIZE)))) && (0 != ((msgLen - bytes_written) % PTX_T3TOP_BLOCK_SIZE)) && (PTX_STATUS_SUCCESS == status))
-            {
-                nbr_padding_bytes = (uint8_t)(PTX_T3TOP_BLOCK_SIZE - ((msgLen - bytes_written) % PTX_T3TOP_BLOCK_SIZE));
-            }
-            else
-            {
-                nbr_padding_bytes = 0;
+                nbr_data_blocks++;
             }
 
-            if (((PTX_T3TOP_BLOCK_SIZE * PTX_T3TOP_NBW_INTERNAL) >= ((PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes)) && (msgLen >= (uint32_t)(bytes_written + (uint32_t)((PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes))))
-            {
-                (void)memcpy(&block_data[0], &msgBuffer[bytes_written], (uint32_t)(PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes);
-            }
-            else
+            if (ndefT3t->CCParams.NmaxB < nbr_data_blocks)
             {
                 status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
             }
 
-            if ((0 != nbr_padding_bytes) && ((PTX_T3TOP_BLOCK_SIZE * PTX_T3TOP_NBW_INTERNAL) > (PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes))
+            while ((msgLen > bytes_written) && (PTX_STATUS_SUCCESS == status))
             {
-                (void)memset(&block_data[(PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes], 0x00, nbr_padding_bytes);
-            }
+                block_list_len = PTX_T3TOP_NBW_INTERNAL * 3u;
 
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                block_info.NOB = (uint8_t)blocks_to_write;
-                block_info.BlockList = block_list;
-                block_info.BlockListLen = (uint8_t)block_list_len;
+                if ((nbr_data_blocks - (current_block - 1)) <= ndefT3t->CCParams.NbwInt)
+                {
+                    blocks_to_write = (uint16_t)(nbr_data_blocks - (current_block - 1));
+                }
+                else
+                {
+                    blocks_to_write = ndefT3t->CCParams.NbwInt;
+                }
+                status = ptx_NDEF_T3T_GenerateBlockList(block_list, &block_list_len, blocks_to_write, ndefT3t->CCParams.NbwInt, current_block);
 
-                service_info.NOS = PTX_T3TOP_NOS_NDEF;
-                service_info.ServiceCodeList = service_code_list;
-                service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
+                /* find out if padding is needed and fill data block */
+                if ((msgLen < (bytes_written + (uint32_t)((blocks_to_write * PTX_T3TOP_BLOCK_SIZE)))) && (0 != ((msgLen - bytes_written) % PTX_T3TOP_BLOCK_SIZE)) && (PTX_STATUS_SUCCESS == status))
+                {
+                    nbr_padding_bytes = (uint8_t)(PTX_T3TOP_BLOCK_SIZE - ((msgLen - bytes_written) % PTX_T3TOP_BLOCK_SIZE));
+                }
+                else
+                {
+                    nbr_padding_bytes = 0;
+                }
 
-                status = ptx_NDEF_T3T_Update(ndefT3T, service_info, block_info, block_data, (uint8_t)(PTX_T3TOP_BLOCK_SIZE * block_info.NOB), ndefT3T->RxBuffer, &rx_len, ndefT3T->t3t.TagTimeoutUpdate);
+                if (((PTX_T3TOP_BLOCK_SIZE * PTX_T3TOP_NBW_INTERNAL) >= ((PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes)) && (msgLen >= (uint32_t)(bytes_written + (uint32_t)((PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes))))
+                {
+                    (void)memcpy(&block_data[0], &msgBuffer[bytes_written], (uint32_t)(PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes);
+                }
+                else
+                {
+                    status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
+                }
+
+                if ((0 != nbr_padding_bytes) && ((PTX_T3TOP_BLOCK_SIZE * PTX_T3TOP_NBW_INTERNAL) > (PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes))
+                {
+                    (void)memset(&block_data[(PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes], 0x00, nbr_padding_bytes);
+                }
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    bytes_written = (uint32_t)(bytes_written + (uint32_t)((PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes));
-                    current_block = (uint16_t)(current_block + blocks_to_write);
-                    (void)memset(&block_data[0], 0x00, PTX_T3TOP_BLOCK_SIZE);
+                    block_info.NOB = (uint8_t)blocks_to_write;
+                    block_info.BlockList = block_list;
+                    block_info.BlockListLen = (uint8_t)block_list_len;
+
+                    service_info.NOS = PTX_T3TOP_NOS_NDEF;
+                    service_info.ServiceCodeList = service_code_list;
+                    service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
+
+                    status = ptx_NDEF_T3T_Update(ndefT3t, service_info, block_info, block_data, (uint8_t)(PTX_T3TOP_BLOCK_SIZE * block_info.NOB), ndefT3t->RxBuffer, &rx_len, ndefT3t->T3t.TagTimeoutUpdate);
+
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        bytes_written = (uint32_t)(bytes_written + (uint32_t)((PTX_T3TOP_BLOCK_SIZE * blocks_to_write) - nbr_padding_bytes));
+                        current_block = (uint16_t)(current_block + blocks_to_write);
+                        (void)memset(&block_data[0], 0x00, PTX_T3TOP_BLOCK_SIZE);
+                    }
                 }
             }
         }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T3T_CalculateChecksum (ptx_NDEF_T3T_t *ndefT3T, uint16_t *checksum)
+static ptx_Status_t ptx_NDEF_T3T_CalculateChecksum (ptx_NDEF_T3T_t *ndefT3t, uint16_t *checksum)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP) && (NULL != checksum))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP) && (NULL != checksum))
     {
-        *checksum = 0;
-        ndefT3T->CCParams.Checksum = (uint16_t)(((uint16_t)ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_HIGH] << 8u) | (uint16_t)ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_LOW]);
-
-        for (uint8_t i = 0; i < PTX_T3TOP_ATTRIBUTE_INFORMATION_BYTES; i++)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            *checksum = (uint16_t)(*checksum + ndefT3T->CCParams.AttributeInformationBlock[i]);
-        }
+            *checksum = 0;
+            ndefT3t->CCParams.Checksum = (uint16_t)(((uint16_t)ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_HIGH] << 8u) | (uint16_t)ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_LOW]);
 
-        status = PTX_STATUS_SUCCESS;
+            for (uint8_t i = 0; i < PTX_T3TOP_ATTRIBUTE_INFORMATION_BYTES; i++)
+            {
+                *checksum = (uint16_t)(*checksum + ndefT3t->CCParams.AttributeInformationBlock[i]);
+            }
+
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T3T_GetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3T)
+static ptx_Status_t ptx_NDEF_T3T_GetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint8_t service_code_list[PTX_T3TOP_NOS_NDEF * 2u];
@@ -932,94 +1014,101 @@ static ptx_Status_t ptx_NDEF_T3T_GetAttributeInformationBlock (ptx_NDEF_T3T_t *n
     ptx_NativeTag_T3T_Services_t service_info;
     ptx_NativeTag_T3T_Blocks_t block_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP))
     {
-        service_code_list[0] = (PTX_T3TOP_READ_ATTRIBUTE_INFORMATION_BLOCK_SC & 0xFF);
-        service_code_list[1] = (PTX_T3TOP_READ_ATTRIBUTE_INFORMATION_BLOCK_SC >> 8u);
-        block_list[0] = 0x80;
-        block_list[1] = 0x00;
-
-        service_info.NOS = PTX_T3TOP_NOS_NDEF;
-        service_info.ServiceCodeList = service_code_list;
-        service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
-
-        block_info.NOB = PTX_T3TOP_NOB_NDEF;
-        block_info.BlockList = block_list;
-        block_info.BlockListLen = PTX_T3TOP_NOB_NDEF * 2u;
-
-        /* read the attribute information block */
-        status = ptx_NDEF_T3T_Check(ndefT3T, service_info, block_info, ndefT3T->RxBuffer, &rx_len, ndefT3T->t3t.TagTimeoutCheck);
-        if ((PTX_STATUS_SUCCESS == status) && (PTX_T3TOP_ATTRIBUTE_INFORMATION_BYTES_CHECKSUM == rx_len))
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            (void)memcpy(&ndefT3T->CCParams.AttributeInformationBlock[0], &ndefT3T->RxBuffer[0], (uint32_t)rx_len);
+            service_code_list[0] = (PTX_T3TOP_READ_ATTRIBUTE_INFORMATION_BLOCK_SC & 0xFF);
+            service_code_list[1] = (PTX_T3TOP_READ_ATTRIBUTE_INFORMATION_BLOCK_SC >> 8u);
+            block_list[0] = 0x80;
+            block_list[1] = 0x00;
 
-            status = ptx_NDEF_T3T_CalculateChecksum(ndefT3T, &checksum);
+            service_info.NOS = PTX_T3TOP_NOS_NDEF;
+            service_info.ServiceCodeList = service_code_list;
+            service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
 
-            if (ndefT3T->CCParams.Checksum == checksum)
+            block_info.NOB = PTX_T3TOP_NOB_NDEF;
+            block_info.BlockList = block_list;
+            block_info.BlockListLen = PTX_T3TOP_NOB_NDEF * 2u;
+
+            /* read the attribute information block */
+            status = ptx_NDEF_T3T_Check(ndefT3t, service_info, block_info, ndefT3t->RxBuffer, &rx_len, ndefT3t->T3t.TagTimeoutCheck);
+            if ((PTX_STATUS_SUCCESS == status) && (PTX_T3TOP_ATTRIBUTE_INFORMATION_BYTES_CHECKSUM == rx_len))
             {
-                /* fill the components */
-                ndefT3T->CCParams.Version = ndefT3T->CCParams.AttributeInformationBlock[0];
-                if ((PTX_T3T_SUPPORTED_VERSION >> 4u) != (ndefT3T->CCParams.Version >> 4u))
+                (void)memcpy(&ndefT3t->CCParams.AttributeInformationBlock[0], &ndefT3t->RxBuffer[0], (uint32_t)rx_len);
+
+                status = ptx_NDEF_T3T_CalculateChecksum(ndefT3t, &checksum);
+
+                if (ndefT3t->CCParams.Checksum == checksum)
+                {
+                    /* fill the components */
+                    ndefT3t->CCParams.Version = ndefT3t->CCParams.AttributeInformationBlock[0];
+                    if ((PTX_T3T_SUPPORTED_VERSION >> 4u) != (ndefT3t->CCParams.Version >> 4u))
+                    {
+                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    }
+                    ndefT3t->CCParams.MajorVersion = (ndefT3t->CCParams.Version >> 4u);
+                    ndefT3t->CCParams.MinorVersion = (ndefT3t->CCParams.Version & 0x0F);
+
+                    ndefT3t->CCParams.Nbr = ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_MAX_READ_BLOCKS];
+                    ndefT3t->CCParams.Nbw = ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_MAX_WRITE_BLOCKS];
+
+                    /* Check if we can actually do the maximum */
+                    if (PTX_T3TOP_NBR_INTERNAL < ndefT3t->CCParams.Nbr)
+                    {
+                        ndefT3t->CCParams.NbrInt = PTX_T3TOP_NBR_INTERNAL;
+                    }
+                    else
+                    {
+                        ndefT3t->CCParams.NbrInt = ndefT3t->CCParams.Nbr;
+                    }
+                    if (PTX_T3TOP_NBW_INTERNAL < ndefT3t->CCParams.Nbw)
+                    {
+                        ndefT3t->CCParams.NbwInt = PTX_T3TOP_NBW_INTERNAL;
+                    }
+                    else
+                    {
+                        ndefT3t->CCParams.NbwInt = ndefT3t->CCParams.Nbw;
+                    }
+
+                    /* byte 3 upper, byte 4 lower */
+                    ndefT3t->CCParams.NmaxB = (uint16_t)(((uint16_t)ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_HIGH] << 8u) | (uint16_t)ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_LOW]);
+
+                    (void)memcpy(&ndefT3t->CCParams.RFU[0], &ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_RFU], (uint32_t)PTX_T3T_RFU_SIZE);
+
+                    ndefT3t->CCParams.WriteFlag = ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_WRITE_FLAG];
+                    ndefT3t->CCParams.RWFlag = ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_RWFLAG];
+
+                    ndefT3t->CCParams.Ln  = (((uint32_t)ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_HIGH] << 16u) | ((uint32_t)ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_MID] << 8u) | (uint32_t)ndefT3t->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_LOW]);
+                    if (0 == ndefT3t->CCParams.Ln % PTX_T3T_BLOCK_SIZE)
+                    {
+                        ndefT3t->CCParams.Nbc = (uint16_t)(ndefT3t->CCParams.Ln / PTX_T3T_BLOCK_SIZE);
+                    }
+                    else
+                    {
+                        ndefT3t->CCParams.Nbc = (uint16_t)((ndefT3t->CCParams.Ln / PTX_T3T_BLOCK_SIZE) + 1);
+                    }
+                }
+                else
                 {
                     status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                }
-                ndefT3T->CCParams.MajorVersion = (ndefT3T->CCParams.Version >> 4u);
-                ndefT3T->CCParams.MinorVersion = (ndefT3T->CCParams.Version & 0x0F);
-
-                ndefT3T->CCParams.Nbr = ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_MAX_READ_BLOCKS];
-                ndefT3T->CCParams.Nbw = ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_MAX_WRITE_BLOCKS];
-
-                /* Check if we can actually do the maximum */
-                if (PTX_T3TOP_NBR_INTERNAL < ndefT3T->CCParams.Nbr)
-                {
-                    ndefT3T->CCParams.NbrInt = PTX_T3TOP_NBR_INTERNAL;
-                }
-                else
-                {
-                    ndefT3T->CCParams.NbrInt = ndefT3T->CCParams.Nbr;
-                }
-                if (PTX_T3TOP_NBW_INTERNAL < ndefT3T->CCParams.Nbw)
-                {
-                    ndefT3T->CCParams.NbwInt = PTX_T3TOP_NBW_INTERNAL;
-                }
-                else
-                {
-                    ndefT3T->CCParams.NbwInt = ndefT3T->CCParams.Nbw;
-                }
-
-                /* byte 3 upper, byte 4 lower */
-                ndefT3T->CCParams.NmaxB = (uint16_t)(((uint16_t)ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_HIGH] << 8u) | (uint16_t)ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_LOW]);
-
-                (void)memcpy(&ndefT3T->CCParams.RFU[0], &ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_RFU], (uint32_t)PTX_T3T_RFU_SIZE);
-
-                ndefT3T->CCParams.WriteFlag = ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_WRITE_FLAG];
-                ndefT3T->CCParams.RWFlag = ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_RWFLAG];
-
-                ndefT3T->CCParams.Ln  = (((uint32_t)ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_HIGH] << 16u) | ((uint32_t)ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_MID] << 8u) | (uint32_t)ndefT3T->CCParams.AttributeInformationBlock[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_LOW]);
-                if (0 == ndefT3T->CCParams.Ln % PTX_T3T_BLOCK_SIZE)
-                {
-                    ndefT3T->CCParams.Nbc = (uint16_t)(ndefT3T->CCParams.Ln / PTX_T3T_BLOCK_SIZE);
-                }
-                else
-                {
-                    ndefT3T->CCParams.Nbc = (uint16_t)((ndefT3T->CCParams.Ln / PTX_T3T_BLOCK_SIZE) + 1);
                 }
             }
             else
             {
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                status = PTX_STATUS_E_NDEF_PROTOCOL_ERROR;
             }
         }
         else
         {
-            status = PTX_STATUS_E_NDEF_PROTOCOL_ERROR;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T3T_SetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3T)
+static ptx_Status_t ptx_NDEF_T3T_SetAttributeInformationBlock (ptx_NDEF_T3T_t *ndefT3t)
 {
     /* translate the attributes back into bytes and write the block */
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -1032,49 +1121,56 @@ static ptx_Status_t ptx_NDEF_T3T_SetAttributeInformationBlock (ptx_NDEF_T3T_t *n
     ptx_NativeTag_T3T_Services_t service_info;
     ptx_NativeTag_T3T_Blocks_t block_info;
 
-    if (PTX_COMP_CHECK(ndefT3T, Comp_T3TOP))
+    if (PTX_COMP_CHECK(ndefT3t, Comp_T3TOP))
     {
-        /* get the components into a data block (already updated outside the function) */
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_VERSION]  = ndefT3T->CCParams.Version;
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_MAX_READ_BLOCKS]  = ndefT3T->CCParams.Nbr;
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_MAX_WRITE_BLOCKS]  = ndefT3T->CCParams.Nbw;
-
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_HIGH]  = (uint8_t)(ndefT3T->CCParams.NmaxB >> 8u);
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_LOW]  = (uint8_t)(ndefT3T->CCParams.NmaxB & 0xFF);
-
-        (void)memcpy(&attribute_information[PTX_T3T_ATTRIB_OFFSET_RFU], &ndefT3T->CCParams.RFU[0], (uint32_t)PTX_T3T_RFU_SIZE);
-
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_WRITE_FLAG]  = ndefT3T->CCParams.WriteFlag;
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_RWFLAG] = ndefT3T->CCParams.RWFlag;
-
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_HIGH] = (uint8_t)(ndefT3T->CCParams.Ln >> 16u);
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_MID] = (uint8_t)((ndefT3T->CCParams.Ln >> 8u) & 0xFF);
-        attribute_information[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_LOW] = (uint8_t)(ndefT3T->CCParams.Ln & 0xFF);
-
-        memcpy(&ndefT3T->CCParams.AttributeInformationBlock[0], &attribute_information[0], PTX_T3TOP_ATTRIBUTE_INFORMATION_BYTES);
-
-        status = ptx_NDEF_T3T_CalculateChecksum(ndefT3T, &checksum);
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T3T == ndefT3t->T3t.Rul->CardRegistry.ActiveProtocol)
         {
-            attribute_information[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_HIGH] = (uint8_t)(checksum >> 8u);
-            attribute_information[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_LOW] = (uint8_t)(checksum & 0xFF);
+            /* get the components into a data block (already updated outside the function) */
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_VERSION]  = ndefT3t->CCParams.Version;
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_MAX_READ_BLOCKS]  = ndefT3t->CCParams.Nbr;
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_MAX_WRITE_BLOCKS]  = ndefT3t->CCParams.Nbw;
 
-            (void)memcpy(&ndefT3T->CCParams.AttributeInformationBlock[0], &attribute_information[0], (uint32_t)PTX_T3T_BLOCK_SIZE);
-            /* write attribute block */
-            service_code_list[0] = (PTX_T3TOP_WRITE_ATTRIBUTE_INFORMATION_BLOCK_SC & 0xFF);
-            service_code_list[1] = (PTX_T3TOP_WRITE_ATTRIBUTE_INFORMATION_BLOCK_SC >> 8u);
-            block_list[0] = (PTX_T3TOP_BLOCKLIST_2BYTES_BASE >> 8u);
-            block_list[1] = (PTX_T3TOP_BLOCKLIST_2BYTES_BASE & 0xFF);
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_HIGH]  = (uint8_t)(ndefT3t->CCParams.NmaxB >> 8u);
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_NBR_AVAILABLE_BLOCKS_LOW]  = (uint8_t)(ndefT3t->CCParams.NmaxB & 0xFF);
 
-            service_info.NOS = PTX_T3TOP_NOS_NDEF;
-            service_info.ServiceCodeList = service_code_list;
-            service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
+            (void)memcpy(&attribute_information[PTX_T3T_ATTRIB_OFFSET_RFU], &ndefT3t->CCParams.RFU[0], (uint32_t)PTX_T3T_RFU_SIZE);
 
-            block_info.NOB = PTX_T3TOP_NOB_NDEF;
-            block_info.BlockList = block_list;
-            block_info.BlockListLen = PTX_T3TOP_NOB_NDEF * 2u;
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_WRITE_FLAG]  = ndefT3t->CCParams.WriteFlag;
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_RWFLAG] = ndefT3t->CCParams.RWFlag;
 
-            status = ptx_NDEF_T3T_Update(ndefT3T, service_info, block_info, attribute_information, sizeof(attribute_information), ndefT3T->RxBuffer, &rx_len, ndefT3T->t3t.TagTimeoutUpdate);
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_HIGH] = (uint8_t)(ndefT3t->CCParams.Ln >> 16u);
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_MID] = (uint8_t)((ndefT3t->CCParams.Ln >> 8u) & 0xFF);
+            attribute_information[PTX_T3T_ATTRIB_OFFSET_NDEF_DATA_LENGTH_LOW] = (uint8_t)(ndefT3t->CCParams.Ln & 0xFF);
+
+            memcpy(&ndefT3t->CCParams.AttributeInformationBlock[0], &attribute_information[0], PTX_T3TOP_ATTRIBUTE_INFORMATION_BYTES);
+
+            status = ptx_NDEF_T3T_CalculateChecksum(ndefT3t, &checksum);
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                attribute_information[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_HIGH] = (uint8_t)(checksum >> 8u);
+                attribute_information[PTX_T3T_ATTRIB_OFFSET_CHECKSUM_LOW] = (uint8_t)(checksum & 0xFF);
+
+                (void)memcpy(&ndefT3t->CCParams.AttributeInformationBlock[0], &attribute_information[0], (uint32_t)PTX_T3T_BLOCK_SIZE);
+                /* write attribute block */
+                service_code_list[0] = (PTX_T3TOP_WRITE_ATTRIBUTE_INFORMATION_BLOCK_SC & 0xFF);
+                service_code_list[1] = (PTX_T3TOP_WRITE_ATTRIBUTE_INFORMATION_BLOCK_SC >> 8u);
+                block_list[0] = (PTX_T3TOP_BLOCKLIST_2BYTES_BASE >> 8u);
+                block_list[1] = (PTX_T3TOP_BLOCKLIST_2BYTES_BASE & 0xFF);
+
+                service_info.NOS = PTX_T3TOP_NOS_NDEF;
+                service_info.ServiceCodeList = service_code_list;
+                service_info.ServiceCodeListLen = PTX_T3TOP_NOS_NDEF * 2u;
+
+                block_info.NOB = PTX_T3TOP_NOB_NDEF;
+                block_info.BlockList = block_list;
+                block_info.BlockListLen = PTX_T3TOP_NOB_NDEF * 2u;
+
+                status = ptx_NDEF_T3T_Update(ndefT3t, service_info, block_info, attribute_information, sizeof(attribute_information), ndefT3t->RxBuffer, &rx_len, ndefT3t->T3t.TagTimeoutUpdate);
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 

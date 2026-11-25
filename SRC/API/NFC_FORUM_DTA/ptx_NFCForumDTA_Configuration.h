@@ -260,7 +260,7 @@ typedef void(*ptx_NFCForumDTA_ApplicationCallback_t)(void* ctx);
 */
 typedef struct ptx_NFCForumDTA_InitParams
 {
-    ptx_RUL_t                               *rul;                   /**< Pointer to an initialized RUL component. */
+    ptx_RUL_t                               *Rul;                   /**< Pointer to an initialized RUL component. */
     ptx_NFCForumDTA_ApplicationCallback_t   applicationCallback;    /**< Callback-function for higher-level application. */
     uint8_t                                 *NDEFMessageBuffer;     /**< Pointer to an initialized Message Buffer. */
     uint32_t                                NDEFMessageBufferSize;  /**< Size of the NDEF Message Bugger */
@@ -276,7 +276,7 @@ typedef struct ptx_NFCForumDTA
 {
     ptx_Comps_t                 CompId;                         /**< Component ID. */
 
-    ptx_RUL_t                   *rul;                           /**< RUL Component */
+    ptx_RUL_t                   *Rul;                           /**< RUL Component */
     ptx_NDEF_t                  ndef;                           /**< NDEF Component */
 #if !defined(PTX_DISABLE_LISTEN_MODE)
     ptx_RUL_HCE_t               hce;                            /**< HCE Component */

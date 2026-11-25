@@ -111,12 +111,12 @@ extern "C" {
 /**
  * \brief HAL Forward declaration.
  */
-typedef struct ptx_HAL ptx_HAL_t;
+struct ptx_HAL;
 
 /**
  * \brief HIP Forward declaration.
  */
-typedef struct ptx_HIP ptx_HIP_t;
+struct ptx_HIP;
 
 
 /**
@@ -199,7 +199,7 @@ typedef struct ptx_NSC_PllConfig
  *
  * \return Status, indicating whether the operation was successful. See ptx_Status_t.
  */
-typedef ptx_Status_t (*ptx_NSC_ExtendDiscoveryParametersCb_t) (void *ctx, uint8_t **bufferPos, uint32_t *availableLen);
+typedef ptx_Status_t (*ptx_NSC_ExtendDiscoveryParametersCb_t) (void *ctx, ptx_NSC_RfDiscover_Param_t *discoverParams, uint32_t paramCnt ,uint8_t **bufferPos, uint32_t *availableLen);
 
 /**
  * \brief Main Component Structure
@@ -208,8 +208,8 @@ typedef struct ptx_NSC
 {
     ptx_Comps_t                             CompId;         /**< Component ID. */
 
-    ptx_HIP_t                               *HIP;           /**< HIP Layer. */
-    ptx_HAL_t                               *HAL;           /**< HW Layer. */
+    struct ptx_HIP                          *HIP;           /**< HIP Layer. */
+    struct ptx_HAL                          *HAL;           /**< HW Layer. */
 
     ptx_NSC_State_t                         State;          /**< Internal State. */
     ptx_NSC_State_t                         LastDiscState;  /**< Internal State after the last successful NSC_RF_DISCOVER_CMD. */
@@ -250,8 +250,8 @@ typedef struct ptx_NSC
  */
 typedef struct ptx_NSC_InitParams
 {
-    ptx_HIP_t                           *Hip;           /**< Pointer to HIP component. */
-    ptx_HAL_t                           *Hal;           /**< Pointer to HAL component. */
+    struct ptx_HIP                      *Hip;           /**< Pointer to HIP component. */
+    struct ptx_HAL                      *Hal;           /**< Pointer to HAL component. */
     void                                *ExtParams;     /**< Reference to Extension specific initialization parameters. Used and defined by any of the variants (AIS or RUL). */
     ptx_Log_t                           *Log;           /**< Pointer to logger context. */
 

@@ -190,6 +190,9 @@ typedef struct ptx_HAL_GPIO
 typedef struct ptx_HAL_GPIO_InitParams
 {
     ptx_Log_t                   *Log;         /**< Log context. */
+#if defined(PTX_APP_DIVERSITY_WINDOWS)
+      void                      *Osal;        /**< Pointer to initialized OSAL context (only required for Windows) */
+#endif
 } ptx_HAL_GPIO_InitParams_t;
 
 /*

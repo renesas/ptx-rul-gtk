@@ -97,9 +97,6 @@ ptx_Status_t ptx_NSC_RfConfig (ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param_t *rfConfi
 
     if (PTX_STATUS_SUCCESS == status)
     {
-        /* Checks up to now were successful. However, config has still not taken place. So, set error status. */
-        status = PTX_STATUS_E_GEN_INTERNAL;
-
         if ((NULL == rfConfigParams) && (0 == rfConfigParamCnt))
         {
             /* No parameters provided. Try to load parameters via LoadCfg callback. */
@@ -254,22 +251,18 @@ static ptx_Status_t ptx_NSC_RfConfig_Send(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    uint8_t ready_to_send = 0;
-    uint8_t buffer_full = 0;
-    uint32_t buffer_offset = 0;
-
-    uint8_t buffer[PTX_NSC_RFCONFIG_BUFFER_MAX_LEN];
-    memset(buffer, 0, PTX_NSC_RFCONFIG_BUFFER_MAX_LEN);
 
     if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != params) && (0 != paramCnt))
     {
         PTX_LOG_V(nsc->Log, "ptx_NSC_RfConfig_Send");
 
+        uint32_t buffer_offset = 0;
+
+        uint8_t buffer[PTX_NSC_RFCONFIG_BUFFER_MAX_LEN];
+        memset(buffer, 0, PTX_NSC_RFCONFIG_BUFFER_MAX_LEN);
+
         for (uint8_t i = 0; i < paramCnt; i++)
         {
-            ready_to_send = 0;
-            buffer_full = 0;
-
             /* Default: provided ID is not valid until it is proven differently.
              * If ID is invalid, the loop shall be exited.
              */
@@ -278,6 +271,9 @@ static ptx_Status_t ptx_NSC_RfConfig_Send(ptx_NSC_t *nsc, ptx_NSC_RfConfig_Param
             /* Check if ID is valid. */
             if (0 != ptx_NSC_RfConfig_CheckId(params[i].Id))
             {
+                uint8_t ready_to_send = 0;
+                uint8_t buffer_full = 0;
+
                 /* Parameter ID is valid. Try to load the data into the message buffer. */
                 status = ptx_NSC_RfConfig_AddToCmd(buffer, &buffer_offset, &params[i]);
                 if (PTX_STATUS_SUCCESS == status)

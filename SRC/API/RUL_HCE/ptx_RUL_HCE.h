@@ -114,13 +114,32 @@ typedef enum ptx_RUL_HCE_EventQueueRanges
 } ptx_RUL_HCE_EventQueueRanges_t;
 
 /**
+ * \brief RUL HCE Error Identifiers
+ */
+typedef enum ptx_RUL_HCE_ErrorType
+{
+    RUL_HCE_ErrorType_RfCollision,              /**< Rf Error Collision. */
+    RUL_HCE_ErrorType_RfTimeout,                /**< Rf Error Timeout. */
+    RUL_HCE_ErrorType_RfTransmission,           /**< Rf Error Transmission. */
+    RUL_HCE_ErrorType_RfProtocol,               /**< Rf Error Protocol. */
+    RUL_HCE_ErrorType_SystemOverCurrent,        /**< System Error overcurrent. */
+    RUL_HCE_ErrorType_SystemOverTemperature,    /**< System Error Temperature. */
+    RUL_HCE_ErrorType_SystemVddTx,              /**< System Error VDD Tx. */
+    RUL_HCE_ErrorType_SystemOtp,                /**< System Error OTP configuration. */
+    RUL_HCE_ErrorType_SystemStandby,            /**< System Error Standby. System exited Standby mode, Discovery is not active. */
+    RUL_HCE_ErrorType_SystemOutOfMemory,        /**< System Error Out of memory. */
+    RUL_HCE_ErrorType_SystemTxOverVoltage,      /**< System Error TX Pin Overvoltage Event Detected. */
+    RUL_HCE_ErrorType_Max,                      /**< Safeguard. */
+} ptx_RUL_HCE_ErrorType_t;
+
+/**
  * \brief RUL HCE Event Identifiers
  */
 typedef enum ptx_RUL_HCE_EventType
 {
     RUL_HCE_EventType_NoEvent,          /**< No Event. */
     RUL_HCE_EventType_ExtFieldOn,       /**< External Field On */
-    RUL_HCE_EventType_ExtFieldOff,      /**< External Field Off. (Received if field was turned of but card NOT activated, if card activated and turned of -> deactivate NTF with reason field of) */
+    RUL_HCE_EventType_ExtFieldOff,      /**< External Field Off. (Received if field was turned off but card NOT activated, if card activated and turned off -> deactivate NTF with reason field off) */
     RUL_HCE_EventType_Activated,        /**< Activated. TODO which type */
     RUL_HCE_EventType_Data,             /**< Data Event. */
     RUL_HCE_EventType_Deactivated,      /**< Deactivated. */
@@ -171,9 +190,19 @@ typedef struct ptx_RUL_HCE_InitParams
 
     ptx_RUL_t                          *Rul;                /**< Pointer to the RUL component. */
     ptx_Log_t                          *Log;                /**< Logger Component */
-  
 
 } ptx_RUL_HCE_InitParams_t;
+
+/**
+* Parameters describing the Poller that activated the HCE Listener.
+*/
+typedef struct ptx_RUL_HCE_PollerParams
+{
+    ptx_RUL_CardProtocolType_t      Protocol;       /**< RF protocol selected by the activating Poller. */
+    ptx_RUL_CardRfProtocolParam_t   ProtocolParam;  /**< RF protocol parameters negotiated with the activating Poller. */
+    ptx_RUL_CardRfTechType_t        TechType;       /**< RF technology used by the activating Poller. */
+} ptx_RUL_HCE_PollerParams_t;
+
 
 /**
  * \brief RUL HCE Structure.
@@ -194,11 +223,9 @@ typedef struct ptx_RUL_HCE
 
     ptx_RUL_HCE_DiscoverState_t     DiscoverState;      /**< Discover State. */
 
-    ptx_NSC_RfProtocol_t            ActiveProtocol;     /**< Currently active protocol */
-    uint8_t                         ActiveTech;         /**< Currently active Technology*/
+    ptx_RUL_HCE_PollerParams_t      PollerParams;       /**< RF/protocol parameters of the Poller that activated this HCE session. */
 
     ptx_Log_t                       *Log;               /**< Logger Component */
-
 
 } ptx_RUL_HCE_t;
 

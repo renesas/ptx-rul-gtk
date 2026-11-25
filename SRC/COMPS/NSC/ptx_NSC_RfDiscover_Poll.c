@@ -165,7 +165,7 @@ ptx_Status_t ptx_NSC_ParamParser_Poll(uint8_t **bufferPos, uint32_t *availableLe
         (*bufferPos)[cmd_idx] = NSC_RfDiscover_Param_Type_Poll;
         cmd_idx++;
 
-        (*bufferPos)[cmd_idx] = param->Poll.PollMode;
+        (*bufferPos)[cmd_idx] = (uint8_t) param->Poll.PollMode;
         cmd_idx++;
 
         (*bufferPos)[cmd_idx] = param_poll->GuardTime;
@@ -608,7 +608,7 @@ static ptx_Status_t ptx_NSC_ConfigurePoll(ptx_NSC_RfDiscovery_Cfg_t *cfg, ptx_NS
              * i.e. they are treated as default value: 0.
              */
             pollParams->NtfEnable = (uint8_t)(((1 == cfg->EnableLPCDNtf) ? PTX_NSC_RF_DISCOVER_POLL_LPCD_NTF_ENABLE : PTX_NSC_RF_DISCOVER_POLL_ALL_NTF_DISABLE) |
-                                              ((1 == cfg->EnableErrorNtf) ? PTX_NSC_RF_DISCOVER_POLL_ERROR_NTF_ENABLE : PTX_NSC_RF_DISCOVER_POLL_ALL_NTF_DISABLE));
+                                              (PTX_NSC_RF_DISCOVER_POLL_ERROR_NTF_ENABLE));
 
             pollParams->IdleTime[0] = (uint8_t)((cfg->IdleTime >>  0) & (uint8_t)0xFF);
             pollParams->IdleTime[1] = (uint8_t)((cfg->IdleTime >>  8) & (uint8_t)0xFF);

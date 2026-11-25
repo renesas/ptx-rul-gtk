@@ -188,20 +188,26 @@ ptx_Status_t ptx_NativeTag_T4T_Open (ptx_NativeTag_T4T_t *t4t, ptx_NativeTag_T4T
 
     if ((NULL != t4t) && (NULL != initParams))
     {
-        if ((NULL != initParams->rul) && (NULL != initParams->TxBuffer) && (PTX_T4T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
+        if ((NULL != initParams->Rul) && (NULL != initParams->TxBuffer) && (PTX_T4T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
         {
+            if(ptx_RUL_CardProtocolType_T4T == initParams->Rul->CardRegistry.ActiveProtocol)
+            {
             /* clear component */
             (void)memset(t4t, 0, sizeof(ptx_NativeTag_T4T_t));
 
             /* set members */
             t4t->CompId = Comp_NativeTag_T4T;
-            t4t->rul = initParams->rul;
+            t4t->Rul = initParams->Rul;
             t4t->TxBuffer = initParams->TxBuffer;
             /* Communicate success to upper layers. */
             status = PTX_STATUS_SUCCESS;
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+            }
         }
     }
-
     return status;
 }
 
@@ -216,13 +222,20 @@ ptx_Status_t ptx_NativeTag_T4T_Select_File (ptx_NativeTag_T4T_t *t4t,
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != data) && (NULL != rx) && (NULL != rxLen))
     {
-        t4t->Fields.nbr_data_length_bytes = 1u;
-        t4t->Fields.nbr_expected_length_bytes = 0u;
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
+        {
+            t4t->Fields.nbr_data_length_bytes = 1u;
+            t4t->Fields.nbr_expected_length_bytes = 0u;
 
 
-        status = ptx_NativeTag_T4T_Select(t4t, PTX_T4T_P1_SELECT_FILE, PTX_T4T_P2_SELECT_FILE,
-                                          data, LC_FIELD_NDEF_FILE_SELECT, LE_FIELD_NDEF_FILE_SELECT,
-                                          rx, rxLen, msTimeout);
+            status = ptx_NativeTag_T4T_Select(t4t, PTX_T4T_P1_SELECT_FILE, PTX_T4T_P2_SELECT_FILE,
+                                            data, LC_FIELD_NDEF_FILE_SELECT, LE_FIELD_NDEF_FILE_SELECT,
+                                            rx, rxLen, msTimeout);
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -238,14 +251,21 @@ ptx_Status_t ptx_NativeTag_T4T_Select_NDEF_Application (ptx_NativeTag_T4T_t *t4t
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != rx) && (NULL != rxLen))
     {
-        t4t->Fields.nbr_data_length_bytes = 1u;
-        t4t->Fields.nbr_expected_length_bytes = 1u;
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
+        {
+            t4t->Fields.nbr_data_length_bytes = 1u;
+            t4t->Fields.nbr_expected_length_bytes = 1u;
 
-        uint8_t PTX_T4T_DATA_FIELD_NDEF_APP_SELECT[] = {0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01};
+            uint8_t PTX_T4T_DATA_FIELD_NDEF_APP_SELECT[] = {0xD2, 0x76, 0x00, 0x00, 0x85, 0x01, 0x01};
 
-        status = ptx_NativeTag_T4T_Select(t4t, PTX_T4T_P1_SELECT_NDEF_APP, PTX_T4T_P2_SELECT_NDEF_APP,
-                                          PTX_T4T_DATA_FIELD_NDEF_APP_SELECT, LC_FIELD_NDEF_APP_SELECT,
-                                          LE_FIELD_NDEF_APP_SELECT, rx, rxLen, msTimeout);
+            status = ptx_NativeTag_T4T_Select(t4t, PTX_T4T_P1_SELECT_NDEF_APP, PTX_T4T_P2_SELECT_NDEF_APP,
+                                            PTX_T4T_DATA_FIELD_NDEF_APP_SELECT, LC_FIELD_NDEF_APP_SELECT,
+                                            LE_FIELD_NDEF_APP_SELECT, rx, rxLen, msTimeout);
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -270,48 +290,54 @@ ptx_Status_t ptx_NativeTag_T4T_Select (ptx_NativeTag_T4T_t *t4t,
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != data) && (NULL != rx) && (NULL != rxLen))
     {
-
-        /* fill the fields */
-        t4t->Fields.data_length_field[0] = nbrDataBytes;
-        (void)memcpy(&data_field[0], &data[0], (uint32_t)nbrDataBytes);
-        t4t->Fields.nbr_data_bytes = nbrDataBytes;
-
-        if (0 != t4t->Fields.nbr_expected_length_bytes)
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
         {
-            t4t->Fields.expected_length_field[0] = expectedResponseLen;
-        }
+            /* fill the fields */
+            t4t->Fields.data_length_field[0] = nbrDataBytes;
+            (void)memcpy(&data_field[0], &data[0], (uint32_t)nbrDataBytes);
+            t4t->Fields.nbr_data_bytes = nbrDataBytes;
 
-        status = ptx_NativeTag_T4T_SetCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_SELECT, p1, p2, &bytes_set);
-
-        /* push Le byte back, then fill data */
-        if (0 != t4t->Fields.nbr_expected_length_bytes)
-        {
-            if (bytes_set > 0)
+            if (0 != t4t->Fields.nbr_expected_length_bytes)
             {
-                t4t->TxBuffer[bytes_set + nbrDataBytes - 1] = t4t->TxBuffer[bytes_set - 1];
-                (void)memcpy(&t4t->TxBuffer[bytes_set - 1], &data_field[0], nbrDataBytes);
-                bytes_set = (uint8_t)(bytes_set + nbrDataBytes);
+                t4t->Fields.expected_length_field[0] = expectedResponseLen;
+            }
+
+            status = ptx_NativeTag_T4T_SetCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_SELECT, p1, p2, &bytes_set);
+
+            /* push Le byte back, then fill data */
+            if (0 != t4t->Fields.nbr_expected_length_bytes)
+            {
+                if (bytes_set > 0)
+                {
+                    t4t->TxBuffer[bytes_set + nbrDataBytes - 1] = t4t->TxBuffer[bytes_set - 1];
+                    (void)memcpy(&t4t->TxBuffer[bytes_set - 1], &data_field[0], nbrDataBytes);
+                    bytes_set = (uint8_t)(bytes_set + nbrDataBytes);
+                }
+                else
+                {
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                }
             }
             else
             {
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                (void)memcpy(&t4t->TxBuffer[bytes_set], &data_field[0], nbrDataBytes);
+                bytes_set = (uint8_t)(bytes_set + nbrDataBytes);
+            }
+
+            /* everything ok so far? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T4T_Transceive(t4t, bytes_set, rx, rxLen, msTimeout);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                }
             }
         }
         else
         {
-            (void)memcpy(&t4t->TxBuffer[bytes_set], &data_field[0], nbrDataBytes);
-            bytes_set = (uint8_t)(bytes_set + nbrDataBytes);
-        }
-
-        /* everything ok so far? - send data */
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            status = ptx_NativeTag_T4T_Transceive(t4t, bytes_set, rx, rxLen, msTimeout);
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
-            }
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -333,29 +359,35 @@ ptx_Status_t ptx_NativeTag_T4T_ReadBinary (ptx_NativeTag_T4T_t *t4t,
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != rx) && (NULL != rxLen))
     {
-
-        /* offset in p1 and p2 */
-        p1 = (uint8_t)((uint16_t)offset >> 8u);
-        p2 = (uint8_t)((uint16_t)offset & ((1u << 8u) -1u));
-
-        /* fill the fields */
-        t4t->Fields.expected_length_field[0] = nbrExpectedResponseBytes;
-        t4t->Fields.nbr_data_bytes = 0;
-        t4t->Fields.nbr_data_length_bytes = 0;
-        t4t->Fields.nbr_expected_length_bytes = 1;
-
-
-        status = ptx_NativeTag_T4T_SetCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_READ_BINARY, p1, p2, &bytes_written);
-
-        /* everything ok so far? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
         {
-            status = ptx_NativeTag_T4T_Transceive(t4t, bytes_written, rx, rxLen, msTimeout);
+            /* offset in p1 and p2 */
+            p1 = (uint8_t)((uint16_t)offset >> 8u);
+            p2 = (uint8_t)((uint16_t)offset & ((1u << 8u) -1u));
 
+            /* fill the fields */
+            t4t->Fields.expected_length_field[0] = nbrExpectedResponseBytes;
+            t4t->Fields.nbr_data_bytes = 0;
+            t4t->Fields.nbr_data_length_bytes = 0;
+            t4t->Fields.nbr_expected_length_bytes = 1;
+
+
+            status = ptx_NativeTag_T4T_SetCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_READ_BINARY, p1, p2, &bytes_written);
+
+            /* everything ok so far? - send data */
             if (PTX_STATUS_SUCCESS == status)
             {
-                (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                status = ptx_NativeTag_T4T_Transceive(t4t, bytes_written, rx, rxLen, msTimeout);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                }
             }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -374,32 +406,39 @@ ptx_Status_t ptx_NativeTag_T4T_ReadBinaryODO (ptx_NativeTag_T4T_t *t4t,
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* offset contained in data field via BER-TLV */
-        t4t->Fields.ber_tlv_data_field[0] = PTX_T4T_BER_TLV_T_FIELD;
-        t4t->Fields.ber_tlv_data_field[1] = 0x03;
-
-        t4t->Fields.ber_tlv_data_field[2] =  (uint8_t)(offset >> 16u); /* byte index 1 (index 0 unused) */
-        t4t->Fields.ber_tlv_data_field[3] = (uint8_t)((uint16_t)offset >> 8u); /* byte index 2 */
-        t4t->Fields.ber_tlv_data_field[4] = ((uint16_t)offset & ((1u << 8u) -1u)); /* byte index 3 */
-
-        t4t->Fields.data_length_field[0] = sizeof(t4t->Fields.ber_tlv_data_field); /* first value */
-        t4t->Fields.nbr_data_length_bytes = 1;
-
-        /* fill the fields */
-        t4t->Fields.expected_length_field[0] = (nbrExpectedResponseBytes + PTX_T4T_TLV_BYTES_HEADER_LEN);
-        t4t->Fields.nbr_expected_length_bytes = 1;
-
-        status = ptx_NativeTag_T4T_SetODOCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_READ_BINARY_ODO, &bytes_written);
-
-        /* everything ok so far? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
         {
-            status = ptx_NativeTag_T4T_Transceive(t4t, bytes_written, rx, rxLen, msTimeout);
+            /* offset contained in data field via BER-TLV */
+            t4t->Fields.ber_tlv_data_field[0] = PTX_T4T_BER_TLV_T_FIELD;
+            t4t->Fields.ber_tlv_data_field[1] = 0x03;
 
+            t4t->Fields.ber_tlv_data_field[2] =  (uint8_t)(offset >> 16u); /* byte index 1 (index 0 unused) */
+            t4t->Fields.ber_tlv_data_field[3] = (uint8_t)((uint16_t)offset >> 8u); /* byte index 2 */
+            t4t->Fields.ber_tlv_data_field[4] = ((uint16_t)offset & ((1u << 8u) -1u)); /* byte index 3 */
+
+            t4t->Fields.data_length_field[0] = sizeof(t4t->Fields.ber_tlv_data_field); /* first value */
+            t4t->Fields.nbr_data_length_bytes = 1;
+
+            /* fill the fields */
+            t4t->Fields.expected_length_field[0] = (nbrExpectedResponseBytes + PTX_T4T_TLV_BYTES_HEADER_LEN);
+            t4t->Fields.nbr_expected_length_bytes = 1;
+
+            status = ptx_NativeTag_T4T_SetODOCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_READ_BINARY_ODO, &bytes_written);
+
+            /* everything ok so far? - send data */
             if (PTX_STATUS_SUCCESS == status)
             {
-                (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                status = ptx_NativeTag_T4T_Transceive(t4t, bytes_written, rx, rxLen, msTimeout);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                }
             }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -423,30 +462,37 @@ ptx_Status_t ptx_NativeTag_T4T_UpdateBinary (ptx_NativeTag_T4T_t *t4t,
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != data) && (NULL != rx) && (NULL != rxLen))
     {
-        /* offset in p1 and p2 */
-        p1 = (uint8_t)((uint16_t)offset >> 8u);
-        p2 = (uint8_t)((uint16_t)offset & ((1u << 8u) -1u));
-
-        /* fill the fields */
-        t4t->Fields.data_length_field[0] = nbrDataBytes;
-        t4t->Fields.nbr_data_length_bytes = 1;
-        (void)memcpy(&data_field[0], data, (uint32_t)nbrDataBytes);
-        t4t->Fields.nbr_data_bytes = nbrDataBytes;
-
-        status = ptx_NativeTag_T4T_SetCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_UPDATE_BINARY, p1, p2, &bytes_set);
-
-        (void)memcpy(&t4t->TxBuffer[bytes_set], &data_field[0], t4t->Fields.nbr_data_bytes);
-        bytes_set = (uint8_t)(bytes_set + t4t->Fields.nbr_data_bytes);
-
-        /* everything ok so far? - send data */
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
         {
-            status = ptx_NativeTag_T4T_Transceive(t4t, bytes_set, rx, rxLen, msTimeout);
+            /* offset in p1 and p2 */
+            p1 = (uint8_t)((uint16_t)offset >> 8u);
+            p2 = (uint8_t)((uint16_t)offset & ((1u << 8u) -1u));
 
+            /* fill the fields */
+            t4t->Fields.data_length_field[0] = nbrDataBytes;
+            t4t->Fields.nbr_data_length_bytes = 1;
+            (void)memcpy(&data_field[0], data, (uint32_t)nbrDataBytes);
+            t4t->Fields.nbr_data_bytes = nbrDataBytes;
+
+            status = ptx_NativeTag_T4T_SetCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_UPDATE_BINARY, p1, p2, &bytes_set);
+
+            (void)memcpy(&t4t->TxBuffer[bytes_set], &data_field[0], t4t->Fields.nbr_data_bytes);
+            bytes_set = (uint8_t)(bytes_set + t4t->Fields.nbr_data_bytes);
+
+            /* everything ok so far? - send data */
             if (PTX_STATUS_SUCCESS == status)
             {
-                (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                status = ptx_NativeTag_T4T_Transceive(t4t, bytes_set, rx, rxLen, msTimeout);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                }
             }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -467,46 +513,53 @@ ptx_Status_t ptx_NativeTag_T4T_UpdateBinaryODO (ptx_NativeTag_T4T_t *t4t,
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != data) && (NULL != rx) && (NULL != rxLen))
     {
-        /* offset contained in data field via BER-TLV */
-        t4t->Fields.ber_tlv_data_field[0] = PTX_T4T_BER_TLV_T_FIELD;
-        t4t->Fields.ber_tlv_data_field[1] = 0x03;
-
-        t4t->Fields.ber_tlv_data_field[2] =  (uint8_t)(offset >> 16u); //byte index 1 (index 0 unused)
-        t4t->Fields.ber_tlv_data_field[3] = (uint8_t)((uint16_t)offset >> 8u); //byte index 2
-        t4t->Fields.ber_tlv_data_field[4] = ((uint16_t)offset & ((1u << 8u) -1u)); //byte index 3
-
-        /* fill the fields */
-        data_field_ODO[0] = PTX_T4T_DATA_TLV_T_FIELD;
-        data_field_ODO[1] = nbrDataBytes;
-        (void)memcpy(&data_field_ODO[2], data, (uint32_t)nbrDataBytes);
-
-        /* change LC field */
-        t4t->Fields.nbr_data_length_bytes = 1;
-        if (0xFF >= (nbrDataBytes + 7))
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
         {
-            t4t->Fields.data_length_field[0] = (uint8_t)(nbrDataBytes + 7); /* data + ODO + 2 bytes data structure */
+            /* offset contained in data field via BER-TLV */
+            t4t->Fields.ber_tlv_data_field[0] = PTX_T4T_BER_TLV_T_FIELD;
+            t4t->Fields.ber_tlv_data_field[1] = 0x03;
 
-            t4t->Fields.nbr_data_bytes = (uint16_t)(nbrDataBytes + 2); /* data + DDO bytes, equal to length of data_field_ODO */
+            t4t->Fields.ber_tlv_data_field[2] =  (uint8_t)(offset >> 16u); //byte index 1 (index 0 unused)
+            t4t->Fields.ber_tlv_data_field[3] = (uint8_t)((uint16_t)offset >> 8u); //byte index 2
+            t4t->Fields.ber_tlv_data_field[4] = ((uint16_t)offset & ((1u << 8u) -1u)); //byte index 3
 
-            status = ptx_NativeTag_T4T_SetODOCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_UPDATE_BINARY_ODO, &bytes_set);
+            /* fill the fields */
+            data_field_ODO[0] = PTX_T4T_DATA_TLV_T_FIELD;
+            data_field_ODO[1] = nbrDataBytes;
+            (void)memcpy(&data_field_ODO[2], data, (uint32_t)nbrDataBytes);
+
+            /* change LC field */
+            t4t->Fields.nbr_data_length_bytes = 1;
+            if (0xFF >= (nbrDataBytes + 7))
+            {
+                t4t->Fields.data_length_field[0] = (uint8_t)(nbrDataBytes + 7); /* data + ODO + 2 bytes data structure */
+
+                t4t->Fields.nbr_data_bytes = (uint16_t)(nbrDataBytes + 2); /* data + DDO bytes, equal to length of data_field_ODO */
+
+                status = ptx_NativeTag_T4T_SetODOCommandAPDU(t4t, PTX_T4T_CLASS_BYTE_NON_SECURE_MESSAGING, PTX_T4T_INSTRUCTION_CODE_UPDATE_BINARY_ODO, &bytes_set);
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
+            }
+
+            /* everything ok so far? - send data */
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                (void)memcpy(&t4t->TxBuffer[bytes_set], &data_field_ODO[0], t4t->Fields.nbr_data_bytes);
+                bytes_set = (uint8_t)(bytes_set + t4t->Fields.nbr_data_bytes);
+
+                status = ptx_NativeTag_T4T_Transceive(t4t, bytes_set, rx, rxLen, msTimeout);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
+                }
+            }
         }
         else
         {
-            status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
-        }
-
-        /* everything ok so far? - send data */
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            (void)memcpy(&t4t->TxBuffer[bytes_set], &data_field_ODO[0], t4t->Fields.nbr_data_bytes);
-            bytes_set = (uint8_t)(bytes_set + t4t->Fields.nbr_data_bytes);
-
-            status = ptx_NativeTag_T4T_Transceive(t4t, bytes_set, rx, rxLen, msTimeout);
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                (void)memset(&t4t->Fields, 0, sizeof(ptx_NativeTag_T4T_CommandAPDUFields_t));
-            }
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -519,9 +572,16 @@ ptx_Status_t ptx_NativeTag_T4T_Close (ptx_NativeTag_T4T_t *t4t)
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T))
     {
-        memset(t4t, 0, sizeof(ptx_NativeTag_T4T_t));
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
+        {
+            memset(t4t, 0, sizeof(ptx_NativeTag_T4T_t));
 
-        status = PTX_STATUS_SUCCESS;
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -544,18 +604,25 @@ static ptx_Status_t ptx_NativeTag_T4T_SetCommandAPDU (ptx_NativeTag_T4T_t *t4t,
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != bytesWritten))
     {
-        t4t->TxBuffer[index] = classByte;
-        index++;
-        t4t->TxBuffer[index] = instructionByte;
-        index++;
-        t4t->TxBuffer[index] = paramByte1;
-        index++;
-        t4t->TxBuffer[index] = paramByte2;
-        index++;
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
+        {
+            t4t->TxBuffer[index] = classByte;
+            index++;
+            t4t->TxBuffer[index] = instructionByte;
+            index++;
+            t4t->TxBuffer[index] = paramByte1;
+            index++;
+            t4t->TxBuffer[index] = paramByte2;
+            index++;
 
-        status = ptx_NativeTag_T4T_ParsePayload(t4t, &index, instructionByte, paramByte1, paramByte2, 0);
+            status = ptx_NativeTag_T4T_ParsePayload(t4t, &index, instructionByte, paramByte1, paramByte2, 0);
 
-        *bytesWritten = index;
+            *bytesWritten = index;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -572,18 +639,25 @@ static ptx_Status_t ptx_NativeTag_T4T_SetODOCommandAPDU (ptx_NativeTag_T4T_t *t4
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != bytesWritten))
     {
-        t4t->TxBuffer[index] = classByte;
-        index++;
-        t4t->TxBuffer[index] = instructionByte;
-        index++;
-        t4t->TxBuffer[index] = 0x00; /* p1 */
-        index++;
-        t4t->TxBuffer[index] = 0x00; /* p2 */
-        index++;
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
+        {
+            t4t->TxBuffer[index] = classByte;
+            index++;
+            t4t->TxBuffer[index] = instructionByte;
+            index++;
+            t4t->TxBuffer[index] = 0x00; /* p1 */
+            index++;
+            t4t->TxBuffer[index] = 0x00; /* p2 */
+            index++;
 
-        status = ptx_NativeTag_T4T_ParsePayload(t4t, &index, instructionByte, paramByteODO, paramByteODO, 1);
+            status = ptx_NativeTag_T4T_ParsePayload(t4t, &index, instructionByte, paramByteODO, paramByteODO, 1);
 
-        *bytesWritten = index;
+            *bytesWritten = index;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -599,74 +673,81 @@ static ptx_Status_t ptx_NativeTag_T4T_ParsePayload(ptx_NativeTag_T4T_t *t4t, uin
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != idx))
     {
-        index = *idx;
-        if ((PTX_T4T_INSTRUCTION_CODE_READ_BINARY == instructionByte) ||
-            (PTX_T4T_INSTRUCTION_CODE_READ_BINARY_ODO == instructionByte))
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
         {
-            max_transfer = ptx_NativeTag_T4T_SetMTU(useODO, 0);
-        }
-        if (PTX_T4T_INSTRUCTION_CODE_UPDATE_BINARY_ODO == instructionByte)
-        {
-            max_transfer = ptx_NativeTag_T4T_SetMTU(useODO, 1);
-        }
+            index = *idx;
+            if ((PTX_T4T_INSTRUCTION_CODE_READ_BINARY == instructionByte) ||
+                (PTX_T4T_INSTRUCTION_CODE_READ_BINARY_ODO == instructionByte))
+            {
+                max_transfer = ptx_NativeTag_T4T_SetMTU(useODO, 0);
+            }
+            if (PTX_T4T_INSTRUCTION_CODE_UPDATE_BINARY_ODO == instructionByte)
+            {
+                max_transfer = ptx_NativeTag_T4T_SetMTU(useODO, 1);
+            }
 
-        switch (t4t->Fields.nbr_data_length_bytes)
-        {
-            case 0:
-                status = PTX_STATUS_SUCCESS;
-                break;
-            case 1:
-                if (0 != t4t->Fields.data_length_field[0])
-                {
-                    if (max_transfer >= (command_header_len + t4t->Fields.data_length_field[0] + 1)) /* (class,instruction,p1,p2) + data + Le */
+            switch (t4t->Fields.nbr_data_length_bytes)
+            {
+                case 0:
+                    status = PTX_STATUS_SUCCESS;
+                    break;
+                case 1:
+                    if (0 != t4t->Fields.data_length_field[0])
                     {
-                        t4t->TxBuffer[index] = t4t->Fields.data_length_field[0];
-                        index++;
-                        status = PTX_STATUS_SUCCESS;
+                        if (max_transfer >= (command_header_len + t4t->Fields.data_length_field[0] + 1)) /* (class,instruction,p1,p2) + data + Le */
+                        {
+                            t4t->TxBuffer[index] = t4t->Fields.data_length_field[0];
+                            index++;
+                            status = PTX_STATUS_SUCCESS;
+                        }
+                        else
+                        {
+                            status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
+                        }
                     }
                     else
                     {
-                        status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
+                        status = PTX_STATUS_SUCCESS;
                     }
-                }
-                else
-                {
-                    status = PTX_STATUS_SUCCESS;
-                }
-                break;
-            default:
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* invalid length */
-                break;
-        }
+                    break;
+                default:
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* invalid length */
+                    break;
+            }
 
-        if (0x00 != useODO)
-        {
-            memcpy(&t4t->TxBuffer[index], &t4t->Fields.ber_tlv_data_field[0], ber_tlv_len);
-            index = (uint8_t)(index + ber_tlv_len);
-        }
+            if (0x00 != useODO)
+            {
+                memcpy(&t4t->TxBuffer[index], &t4t->Fields.ber_tlv_data_field[0], ber_tlv_len);
+                index = (uint8_t)(index + ber_tlv_len);
+            }
 
-        switch (t4t->Fields.nbr_expected_length_bytes)
-        {
-            case 0:
-                /* the NDEF App Select requires a set LE Byte */
-                if ((0x00 == useODO) && (PTX_T4T_P1_SELECT_NDEF_APP == p1) && (PTX_T4T_P2_SELECT_NDEF_APP == p2))
-                {
+            switch (t4t->Fields.nbr_expected_length_bytes)
+            {
+                case 0:
+                    /* the NDEF App Select requires a set LE Byte */
+                    if ((0x00 == useODO) && (PTX_T4T_P1_SELECT_NDEF_APP == p1) && (PTX_T4T_P2_SELECT_NDEF_APP == p2))
+                    {
+                        t4t->TxBuffer[index] = t4t->Fields.expected_length_field[0];
+                        index++;
+                        t4t->Fields.nbr_expected_length_bytes = 1;
+                    }
+                    break;
+                case 1:
                     t4t->TxBuffer[index] = t4t->Fields.expected_length_field[0];
                     index++;
-                    t4t->Fields.nbr_expected_length_bytes = 1;
-                }
-                break;
-            case 1:
-                t4t->TxBuffer[index] = t4t->Fields.expected_length_field[0];
-                index++;
-                break;
-            default:
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* invalid length */
-                break;
+                    break;
+                default:
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* invalid length */
+                    break;
+            }
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                *idx = index;
+            }
         }
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            *idx = index;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -701,12 +782,19 @@ static ptx_Status_t ptx_NativeTag_T4T_Transceive (ptx_NativeTag_T4T_t *t4t, uint
 
     if (PTX_COMP_CHECK(t4t, Comp_NativeTag_T4T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* send command */
-        status = ptx_RUL_Exchange(t4t->rul, &t4t->TxBuffer[0], txLen, rx, rxLen, msTimeout);
-
-        if (PTX_STATUS_SUCCESS != status)
+        if(ptx_RUL_CardProtocolType_T4T == t4t->Rul->CardRegistry.ActiveProtocol)
         {
-            *rxLen = 0;
+            /* send command */
+            status = ptx_RUL_Exchange(t4t->Rul, &t4t->TxBuffer[0], txLen, rx, rxLen, msTimeout);
+
+            if (PTX_STATUS_SUCCESS != status)
+            {
+                *rxLen = 0;
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 

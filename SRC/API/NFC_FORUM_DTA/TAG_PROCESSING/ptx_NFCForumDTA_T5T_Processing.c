@@ -138,7 +138,7 @@ ptx_Status_t ptx_NFCForumDTA_T5TSleepSelect(ptx_NFCForumDTA_t *dta)
 
         initParams.TxBuffer = tx_buf;
         initParams.TxBufferSize = PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE;
-        initParams.rul = dta->rul;
+        initParams.Rul = dta->Rul;
 
         ptx_NativeTag_T5T_Open(&t5t, &initParams);
 
@@ -153,7 +153,7 @@ ptx_Status_t ptx_NFCForumDTA_T5TSleepSelect(ptx_NFCForumDTA_t *dta)
             rf_params->Value.Fwt.FwtValue[1] = (uint8_t)((timeout >> 8) & (uint8_t)0xFF);
             rf_params->Value.Fwt.FwtValue[0] = (uint8_t)((timeout >> 0) & (uint8_t)0xFF);
 
-            status = ptx_NSC_RfSetParameter(&(dta->rul->Nsc), &rf_params[0], rf_ParamLen);
+            status = ptx_NSC_RfSetParameter(&(dta->Rul->Nsc), &rf_params[0], rf_ParamLen);
 
             uint8_t *uid_ptr = &dta->cardRegistry->Cards[1].TechParam.TypeV.InventoryRes[2];
             uint8_t uid_len = PTX_T5T_UID_LEN;
@@ -172,7 +172,7 @@ ptx_Status_t ptx_NFCForumDTA_T5TSleepSelect(ptx_NFCForumDTA_t *dta)
                 rf_params->Value.Fwt.FwtValue[2] = (uint8_t)((timeout >> 16) & (uint8_t)0xFF);
                 rf_params->Value.Fwt.FwtValue[1] = (uint8_t)((timeout >> 8) & (uint8_t)0xFF);
                 rf_params->Value.Fwt.FwtValue[0] = (uint8_t)((timeout >> 0) & (uint8_t)0xFF);
-                status = ptx_NSC_RfSetParameter(&(dta->rul->Nsc), &rf_params[0], rf_ParamLen);
+                status = ptx_NSC_RfSetParameter(&(dta->Rul->Nsc), &rf_params[0], rf_ParamLen);
             }
 
             if (PTX_STATUS_SUCCESS == status)
@@ -183,8 +183,8 @@ ptx_Status_t ptx_NFCForumDTA_T5TSleepSelect(ptx_NFCForumDTA_t *dta)
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    dta->rul->CardRegistry.ActiveCard = &dta->rul->CardRegistry.Cards[0];
-                    dta->rul->CardRegistry.ActiveProtocol = ptx_RUL_CardProtocolType_T5T;
+                    dta->Rul->CardRegistry.ActiveCard = &dta->Rul->CardRegistry.Cards[0];
+                    dta->Rul->CardRegistry.ActiveProtocol = ptx_RUL_CardProtocolType_T5T;
                 }
             }
         }
@@ -204,15 +204,15 @@ ptx_Status_t ptx_NFCForumDTA_T5TMode(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_Tes
     {
         if ((0x0021 == testCfg->PATTERN_NUMBER) || (0x0012 == testCfg->PATTERN_NUMBER) || (0x0001 == testCfg->PATTERN_NUMBER) || (0x0002 == testCfg->PATTERN_NUMBER) || (0x0003 == testCfg->PATTERN_NUMBER))
         {
-            ndefInitParams->t5tMode = ptx_NDEF_T5T_Mode_Addressed;
+            ndefInitParams->T5tMode = ptx_NDEF_T5T_Mode_Addressed;
         }
         else if (0x0031 == testCfg->PATTERN_NUMBER)
         {
-            ndefInitParams->t5tMode = ptx_NDEF_T5T_Mode_Selected;
+            ndefInitParams->T5tMode = ptx_NDEF_T5T_Mode_Selected;
         }
         else
         {
-            ndefInitParams->t5tMode = ptx_NDEF_T5T_Mode_NonAddressed;
+            ndefInitParams->T5tMode = ptx_NDEF_T5T_Mode_NonAddressed;
         }
 
         status = PTX_STATUS_SUCCESS;

@@ -100,7 +100,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessListenEvents(ptx_NFCForumDTA_t *dta, ptx_NFC
 
         uint8_t deactivated = 0;
         uint8_t no_event_count_deact = 0;
-        uint8_t rf_protocol = dta->hce.ActiveProtocol;
+        uint8_t rf_protocol = dta->hce.PollerParams.Protocol;
         status = PTX_STATUS_SUCCESS;
 
         while (((PTX_STATUS_SUCCESS == status) || (PTX_STATUS_E_GEN_NOT_FOUND == status)) && (0xFF > no_event_count_deact) && (!dta->quitDTA))
@@ -118,7 +118,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessListenEvents(ptx_NFCForumDTA_t *dta, ptx_NFC
                         break;
 
                     case RUL_HCE_EventType_Activated:
-                        rf_protocol = dta->hce.ActiveProtocol;
+                        rf_protocol = dta->hce.PollerParams.Protocol;
                         status = PTX_STATUS_SUCCESS;
                         break;
 
@@ -138,7 +138,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessListenEvents(ptx_NFCForumDTA_t *dta, ptx_NFC
                                 dta->State = ptx_NFCForumDTA_State_DEACTIVATE_DISCOVER;
                                 break;
                             case ptx_NSC_RfDeactivate_Reason_RF_Field:
-                                if (ptx_NSC_RfProtocol_T3T == rf_protocol)
+                                if (ptx_RUL_CardProtocolType_T3T == rf_protocol)
                                 {
                                     dta->State = ptx_NFCForumDTA_State_WAIT_4_ACTIVATION;
                                 }
@@ -217,22 +217,22 @@ static ptx_Status_t ptx_NFCForumDTA_ProcessPollDataExchangeNDEF(ptx_NFCForumDTA_
         uint8_t tx_buf[PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE];
         memset(tx_buf, 0, sizeof(uint8_t) * PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE);
 
-        ndefInitParams.tx = tx_buf;
-        ndefInitParams.txLen = PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE;
+        ndefInitParams.Tx = tx_buf;
+        ndefInitParams.TxLen = PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE;
 
         uint8_t rx_buf[PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE];
         memset(rx_buf, 0, sizeof(uint8_t) * PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE);
 
-        ndefInitParams.rx = rx_buf;
-        ndefInitParams.rxLen = PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE;
+        ndefInitParams.Rx = rx_buf;
+        ndefInitParams.RxLen = PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE;
 
         uint8_t work_buf[PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE];
         memset(work_buf, 0, sizeof(uint8_t) * PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE);
 
-        ndefInitParams.workBuffer = work_buf;
-        ndefInitParams.workBufferLen = PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE;
+        ndefInitParams.WorkBuffer = work_buf;
+        ndefInitParams.WorkBufferLen = PTX_NFCFORUMDTA_NDEF_TRANSMISSION_BUFFER_SIZE;
 
-        ndefInitParams.rul = dta->rul;
+        ndefInitParams.Rul = dta->Rul;
 
 
         if (ptx_RUL_CardProtocolType_T5T == dta->cardRegistry->ActiveProtocol)

@@ -92,7 +92,7 @@ extern "C" {
 /**
  * \brief HAL GPIO Forward declaration.
  */
-typedef struct ptx_HAL_GPIO ptx_HAL_GPIO_t;
+struct ptx_HAL_GPIO;
 
 /**
  * \brief Port Configuration
@@ -120,10 +120,10 @@ typedef struct ptx_HAL_DRV_Interface_SPI
 {
     ptx_Comps_t                             CompId;         /**< Component ID. */
 
-    ptx_HAL_FTD2XXCtx_t                     *Ftd2xx_ctx;    /**< FTDI context. */
+    ptx_HAL_FTD2XXCtx_t                     *Ftd2xxCtx;     /**< FTDI context. */
     ptx_HAL_DRV_Interface_SPI_PortConfig_t  *Port;          /**< Pointer to Port config. */
     ptx_Log_t                               *Log;           /**< Pointer to an initialized logger. */
-    ptx_OSAL_t                              *OS;            /**< Pointer to an initialized Osal. */
+    ptx_OSAL_t                              *Osal;          /**< Pointer to an initialized Osal. */
     uint32_t                                Speed;          /**< SPI Communication Speed. */
 
 } ptx_HAL_DRV_Interface_SPI_t;
@@ -139,8 +139,8 @@ typedef struct ptx_HAL_DRV_Interface_SPI_InitParams
     uint32_t                            Speed;              /**< SPI Communication Speed. */
     uint32_t                            IrqPin;             /**< IRQ Pin. */
     ptx_Log_t                           *Log;               /**< Pointer to an initialized logger. */
-    void                                *OS;                /**< Pointer to an initialized OS. */
-    ptx_HAL_GPIO_t                      *Gpio;              /**< Initialized GPIO Context. */
+    void                                *Osal;              /**< Pointer to an initialized Osal. */
+    struct ptx_HAL_GPIO                 *Gpio;              /**< Initialized GPIO Context. */
 
 } ptx_HAL_DRV_Interface_SPI_InitParams_t;
 

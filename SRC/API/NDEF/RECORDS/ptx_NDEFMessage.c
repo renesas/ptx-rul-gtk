@@ -144,7 +144,10 @@ ptx_Status_t ptx_NDEFMessage_Parse (uint8_t *srcBuffer, uint32_t bufferLen, ptx_
             }
             else
             {
-                payload_length = *((uint32_t*)src_buffer_cpy);
+                payload_length = ((uint32_t)src_buffer_cpy[0] << 24) |
+                                 ((uint32_t)src_buffer_cpy[1] << 16) |
+                                 ((uint32_t)src_buffer_cpy[2] << 8)  |
+                                 ((uint32_t)src_buffer_cpy[3]);
                 src_buffer_cpy += 4;
             }
 

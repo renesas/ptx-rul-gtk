@@ -414,7 +414,6 @@ static ptx_Status_t ptx_NSC_CltMsg_BuildRawBits (ptx_NSC_t *nsc, uint8_t *pldByt
             uint32_t index_raw_bits = 0;
             uint32_t index_raw_bytes = 0;
             uint32_t index_payload = 0;
-            uint8_t par_temp = 0;
             (void)memset(pldRawBits, 0, lengthRawBits);
 
             do
@@ -439,7 +438,7 @@ static ptx_Status_t ptx_NSC_CltMsg_BuildRawBits (ptx_NSC_t *nsc, uint8_t *pldByt
                 index_raw_bytes ++;
 
                 /* Write parity */
-                par_temp = (uint8_t) ((pldParityBits[index_payload] & 0x01) << (index_raw_bits % 8u)) ;
+                uint8_t par_temp = (uint8_t) ((pldParityBits[index_payload] & 0x01) << (index_raw_bits % 8u)) ;
                 pldRawBits[index_raw_bytes] = pldRawBits[index_raw_bytes] | par_temp;
                 index_raw_bits ++;
                 index_raw_bytes = (0 == (index_raw_bits % 8u)) ? (index_raw_bytes + 1) : index_raw_bytes;

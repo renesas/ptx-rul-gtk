@@ -69,7 +69,6 @@
 #if defined(PTX_PLATFORM_OS)
 void ptx_Utils_AppParameters_Load(uint32_t nrOfArgs, char *argv[], ptx_Utils_AppParams_t *appParams)
 {
-    uint32_t argument_length;
     char *current_argument;
 
     if ((0 != nrOfArgs) && (PTX_UTILS_MAX_NR_DEMO_PARAMS > nrOfArgs) && (NULL != argv) && (NULL != appParams))
@@ -78,24 +77,10 @@ void ptx_Utils_AppParameters_Load(uint32_t nrOfArgs, char *argv[], ptx_Utils_App
         {
             current_argument = argv[i];
 
-            /* Device-name provided as command-line argument ? */
-            if (0 == strncmp(&current_argument[0], "-dn", 3))
-            {
-                argument_length = (uint32_t)((uint16_t)strlen(&current_argument[3]));
-
-                if (0 < argument_length)
-                {
-                    (void)memset(appParams->DeviceName, 0, PTX_UTILS_DEVICE_NAME_MAX_LENGTH);
-                    (void)memcpy(&appParams->DeviceName[0], &current_argument[3], argument_length);
-                    appParams->DeviceNameLen = (uint16_t)argument_length;
-                }
-            }
-
             if (0 == strcmp(&current_argument[0], "-help"))
             {
                 ptx_Utils_Print("===========================\n");
-                ptx_Utils_Print("Supported Arguments:       \n");
-                ptx_Utils_Print("-dnX .... Device Name where \"X\" designates the actual platform name of the device. Examples for \"X\": \"COM4\" on Windows, \"/dev/spidev0.0\" on Linux. \n");
+                ptx_Utils_Print("No Supported Arguments:    \n");
                 ptx_Utils_Print("===========================\n");
             }
         }

@@ -50,9 +50,11 @@
 
 #include <stdbool.h>
 #include "ptx_RUL_WLC.h"
+#include "ptx_NSC_Int.h"
 #include "ptx_RUL.h"
 #include "ptx_HIP.h"
 #include "ptx_RUL_WLC_Proprietary.h"
+#include "ptx_Status.h"
 
 /*
  * ####################################################################################################################
@@ -245,9 +247,20 @@ ptx_Status_t ptx_RUL_WLC_GetListenerType(ptx_RUL_WLC_t *ctx, ptx_RUL_WLC_Listene
              /* Check for Renesas Technology Corp. manufacturer code. */
              && ( (REN_TECH_CORP_MANUFACTURER_CODE == ctx->InitParams.Rul->CardRegistry.ActiveCard->TechParam.TypeA.NfcId1[0]) ||
              /* Check for Renesas Electronics Corp. manufacturer code. */
-                  (REN_ELEC_CORP_MANUFACTURER_CODE == ctx->InitParams.Rul->CardRegistry.ActiveCard->TechParam.TypeA.NfcId1[0])) )
+                  (REN_ELEC_CORP_MANUFACTURER_CODE == ctx->InitParams.Rul->CardRegistry.ActiveCard->TechParam.TypeA.NfcId1[0]) ||
+             /** Check for PTX manufacturer code. */                  
+                  (PTX_CORP_MANUFACTURER_CODE == ctx->InitParams.Rul->CardRegistry.ActiveCard->TechParam.TypeA.NfcId1[0])) )
         {
-            *type = ListenerType_Proprietary;
+            if( (ctx->NdefComp.TagCtx.T2t.CCParams.InternalBytes[0] == DEVICE_ID_PTX31W_B0) &&
+                (ctx->NdefComp.TagCtx.T2t.CCParams.InternalBytes[1] == DEVICE_ID_PTX31W_B1) )
+            {
+                *type = ListenerType_PTX30W;
+            }
+            else if( (ctx->NdefComp.TagCtx.T2t.CCParams.InternalBytes[0] == DEVICE_ID_RRQ36031_B0) &&
+                     (ctx->NdefComp.TagCtx.T2t.CCParams.InternalBytes[1] == DEVICE_ID_RRQ36031_B1) )
+            {
+                *type = ListenerType_RRQ36031;
+            }
         }
     }
 
@@ -360,12 +373,9 @@ ptx_Status_t ptx_RUL_WLC_RunPollerStateMachine(ptx_RUL_WLC_t *ctx)
             do
             {
                 /* Check regularly for System-state/-health (e.g. temperature/over-current errors etc.) */
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    status = ptx_RUL_GetStatusInfo(ctx->InitParams.Rul, &status_params);
-                }
+                ptx_Status_t tmp_status = ptx_RUL_GetStatusInfo(ctx->InitParams.Rul, &status_params);
 
-                if (PTX_STATUS_SUCCESS == status)
+                if (PTX_STATUS_SUCCESS == tmp_status)
                 {
                     if (ptx_RUL_StatusInfoSystem_OK != status_params.Info.System)
                     {
@@ -691,7 +701,7 @@ ptx_Status_t ptx_RUL_WLC_StateWCCA_ReadCapabilityRecord(ptx_RUL_WLC_t *ctx)
             {
                 uint8_t rx[PTX_T5T_SELECT_RES_LEN] = {0};
                 uint32_t rxLen = PTX_T5T_SELECT_RES_LEN;
-                status = ptx_NativeTag_T5T_Select(&(ctx->NdefComp.tagCtx.t5t.t5t), 0, &(card_registry->ActiveCard->TechParam.TypeV.InventoryRes[PTX_T5T_INVENTORY_RES_OFFSET_UID]), PTX_T5T_UID_LEN, rx, &rxLen, PTX_T5T_DEFAULT_TIMEOUT_MS);
+                status = ptx_NativeTag_T5T_Select(&(ctx->NdefComp.TagCtx.T5t.T5t), 0, &(card_registry->ActiveCard->TechParam.TypeV.InventoryRes[PTX_T5T_INVENTORY_RES_OFFSET_UID]), PTX_T5T_UID_LEN, rx, &rxLen, PTX_T5T_DEFAULT_TIMEOUT_MS);
 
                 if((PTX_STATUS_SUCCESS != status) || (PTX_T5T_RES_FLAG_ERROR_LEN != rxLen) || (0 != (rx[PTX_T5T_OFFSET_RES_FLAG] & PTX_T5T_RES_FLAG_ERROR_MASK)))
                 {
@@ -941,6 +951,8 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_StartStaticCharging(ptx_RUL_WLC_t *ctx)
             ptx_NSC_WLC_WptOptions_t wpt_options;
             if (PTX_STATUS_SUCCESS == status)
             {
+                ptx_RUL_WLC_ListenerType_t listener_type;
+                ptx_RUL_WLC_GetListenerType(ctx, &listener_type);
 
                 /* Options for WPT cycle. */
                 wpt_options.WptAmp = ctx->TxMultiplier;
@@ -948,7 +960,9 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_StartStaticCharging(ptx_RUL_WLC_t *ctx)
                 wpt_options.WptDur = cap_wt_ms;
                 wpt_options.IcdEn  = ctx->InitParams.WptIcdEnable;
                 wpt_options.IcdGt  = ctx->InitParams.WptIcdGuardTime;
-
+                /** If Listener is a non-ptx device, set RffSyncDuration to 0. */
+                wpt_options.RffSyncDuration  = (listener_type == ListenerType_PTX30W ? ctx->InitParams.WptRffSyncTime : 0u);
+                
                 /* Start WPT cycle */
                 ctx->WptState = WptState_Idle;
                 status = ptx_RUL_WLC_StartPowerTransfer(ctx, &wpt_options);
@@ -1030,6 +1044,9 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_StartNegotiatedCharging(ptx_RUL_WLC_t *ctx)
                     ptx_NSC_WLC_WptOptions_t wpt_options;
                     if (PTX_STATUS_SUCCESS == status)
                     {
+                        ptx_RUL_WLC_ListenerType_t listener_type;
+                        ptx_RUL_WLC_GetListenerType(ctx, &listener_type);
+
                         wpt_options.WptAmp = ctx->TxMultiplier;
                         
                         /* WPT power level is too high, therefore reduce level below threshold to the defined pwr level. */
@@ -1047,11 +1064,13 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_StartNegotiatedCharging(ptx_RUL_WLC_t *ctx)
                         {
                             wpt_options.NfcAmp = ctx->TxMultiplier;
                         }
-
+                        
                         wpt_options.WptDur = wpt_duration_ms - hold_off_duration_ms - ctx->InitParams.WptPostSettleTime;
                         wpt_options.IcdEn  = ctx->InitParams.WptIcdEnable;
                         wpt_options.IcdGt  = ctx->InitParams.WptIcdGuardTime;
-
+                        /** If Listener is a non-ptx device, set RffSyncDuration to 0. */
+                        wpt_options.RffSyncDuration  = (listener_type == ListenerType_PTX30W ? ctx->InitParams.WptRffSyncTime : 0u);
+                        
                         ctx->WptState = WptState_Idle;
                         status = ptx_RUL_WLC_StartPowerTransfer(ctx, &wpt_options);
                     }
@@ -1107,84 +1126,77 @@ ptx_Status_t ptx_RUL_WLC_StateWPT_PollCharging(ptx_RUL_WLC_t *ctx)
 
         if ((State_WPT_PollCharging == ctx->State) && (1u == ctx->StateMachineActive))
         {
-            ptx_RUL_Status_Params_t status_params;
-            status_params.Type = ptx_RUL_StatusType_System;
-            status = ptx_RUL_GetStatusInfo(ctx->InitParams.Rul, &status_params);
-
-            if (PTX_STATUS_SUCCESS == status)
+            /* Check if charging cycle successfully terminated. Once the WPT State is idle we internally terminated
+             * the WPT cycle.
+             */
+            if ( WptState_Idle == ctx->WptState )
             {
-                /* Check if charging cycle successfully terminated. Once the WPT State is idle we internally terminated
-                 * the WPT cycle.
-                 */
-                if ( WptState_Idle == ctx->WptState )
+                status = ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
+
+                ptx_NDEFRecord_WLCCAP_Mode_t mode;
+                if (PTX_STATUS_SUCCESS == status)
                 {
-                    status = ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
+                    status = ptx_NDEFRecord_WLCCAP_GetMode(&ctx->RecordWlcCap, &mode);
+                }
 
-                    ptx_NDEFRecord_WLCCAP_Mode_t mode;
-                    if (PTX_STATUS_SUCCESS == status)
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    if (Mode_Static == mode)
                     {
-                        status = ptx_NDEFRecord_WLCCAP_GetMode(&ctx->RecordWlcCap, &mode);
+                        ctx->State = State_WCCA_ReadCapabilityRecord;
                     }
-
-                    if (PTX_STATUS_SUCCESS == status)
+                    else
                     {
-                        if (Mode_Static == mode)
+                        status = ptx_RUL_Sleep(ctx->InitParams.Rul, ctx->InitParams.WptPostSettleTime);
+
+                        uint8_t info_req;
+                        if (PTX_STATUS_SUCCESS == status)
                         {
-                            ctx->State = State_WCCA_ReadCapabilityRecord;
+                            status = ptx_NDEFRecord_WLCCTL_GetWptInfoReq(&ctx->RecordWlcCtl, &info_req);
                         }
-                        else
+
+                        if (PTX_STATUS_SUCCESS == status)
                         {
-                            status = ptx_RUL_Sleep(ctx->InitParams.Rul, ctx->InitParams.WptPostSettleTime);
-
-                            uint8_t info_req;
-                            if (PTX_STATUS_SUCCESS == status)
+                            /* Check if the Listener wants us to omit the WLCINF field in the next negotiation cycle. */
+                            if (info_req)
                             {
-                                status = ptx_NDEFRecord_WLCCTL_GetWptInfoReq(&ctx->RecordWlcCtl, &info_req);
+                                ctx->State = State_WCC_WriteInfoRecord;
                             }
-
-                            if (PTX_STATUS_SUCCESS == status)
+                            else
                             {
-                                /* Check if the Listener wants us to omit the WLCINF field in the next negotiation cycle. */
-                                if (info_req)
-                                {
-                                    ctx->State = State_WCC_WriteInfoRecord;
-                                }
-                                else
-                                {
-                                    ctx->State = State_WCC_ReadControlRecord;
-                                }
+                                ctx->State = State_WCC_ReadControlRecord;
                             }
                         }
                     }
-
-                    ptx_RUL_WLC_NtfCallback(ctx, Notification_WptCycleFinished, &(ctx->WptState), sizeof(ptx_RUL_WLC_WptState_t));
                 }
-                else if ( WptState_ICD == ctx->WptState ) /*< Foreign object detected during WPT cycle. */
-                {
-                    status = ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
 
-                    if (PTX_STATUS_SUCCESS == status)
-                    {
-                        status = PTX_STATUS_WLC_WPT_ICD;
-                    }
-                    ptx_RUL_WLC_NtfCallback(ctx, Notification_WptCycleFinished, &(ctx->WptState), sizeof(ptx_RUL_WLC_WptState_t));
+                ptx_RUL_WLC_NtfCallback(ctx, Notification_WptCycleFinished, &(ctx->WptState), sizeof(ptx_RUL_WLC_WptState_t));
+            }
+            else if ( WptState_ICD == ctx->WptState ) /*< Foreign object detected during WPT cycle. */
+            {
+                status = ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    status = PTX_STATUS_WLC_WPT_ICD;
                 }
-                else
+                ptx_RUL_WLC_NtfCallback(ctx, Notification_WptCycleFinished, &(ctx->WptState), sizeof(ptx_RUL_WLC_WptState_t));
+            }
+            else
+            {
+                /* No WPT event happened. */
+                uint8_t is_elapsed = 0;
+                status = ptx_HAL_Tmr_IsElapsed(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1, &is_elapsed);
+
+                if ((PTX_STATUS_SUCCESS == status) && (0 != is_elapsed)) /*< Timeout and no response from PTX2xxR/W. We should never end up in here. */
                 {
-                    /* No WPT event happened. */
-                    uint8_t is_elapsed = 0;
-                    status = ptx_HAL_Tmr_IsElapsed(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1, &is_elapsed);
+                    status = PTX_STATUS_WLC_WPT_TIMEOUT;
+                }
 
-                    if ((PTX_STATUS_SUCCESS == status) && (0 != is_elapsed)) /*< Timeout and no response from PTX2xxR/W. We should never end up in here. */
-                    {
-                        status = PTX_STATUS_WLC_WPT_TIMEOUT;
-                    }
-
-                    if (PTX_STATUS_SUCCESS != status)
-                    {
-                        (void) ptx_RUL_WLC_StopPowerTransfer(ctx, ctx->InitParams.WptPowerLevelMin);
-                        (void) ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
-                    }
+                if (PTX_STATUS_SUCCESS != status)
+                {
+                    (void) ptx_RUL_WLC_StopPowerTransfer(ctx, ctx->InitParams.WptPowerLevelMin);
+                    (void) ptx_HAL_Tmr_Stop(&(ctx->InitParams.Rul->Hal), HAL_Tmr_Id_1);
                 }
             }
         }
@@ -1377,7 +1389,45 @@ ptx_Status_t ptx_RUL_WLC_StateError_ProcessError(ptx_RUL_WLC_t *ctx, ptx_Status_
         if ((State_Error == ctx->State) && (1u == ctx->StateMachineActive))
         {
             /* Process all WLC Status values. */
-            if (PTX_STATUS_WLC_INVALID_STATE == status)
+            if (ptx_RUL_StatusInfoSystem_TxOvD == systemInfo)
+            {
+                /* TX Pin Overvoltage-Event detected, proceed followingly:
+                 *      - If the polling loop is active (NSC RF_DISCOVERY state), the PTX230W automatically restarts the polling loop
+                 *        -> Switch to State_NFCLE_PollListener
+                 *      - For any other state, the RRQ35230 automatically deactivates to NSC RF_IDLE state
+                 *        -> Manually Restart Polling by switching to State_NFCLE_StartPollListener
+                 */
+                if(ptx_NSC_State_Discovery == ctx->InitParams.Rul->Nsc.State)
+                {
+                    /* Polling loop starts automatically, switch back to Discovery/Polling state. */
+                    ctx->State = State_NFCLE_PollListener;
+                }
+                else 
+                {
+                    /* Manually restart polling. */
+                    ctx->State = State_NFCLE_StartPollListener;
+                }
+                
+                ptx_RUL_WLC_NtfCallback(ctx, Notification_Error_SystemStatusInfo, &systemInfo, sizeof(ptx_RUL_StatusInfoSystem_t));
+                status = PTX_STATUS_SUCCESS;
+            }
+            else if (ptx_RUL_StatusInfoSystem_OK != systemInfo)
+            {
+                /* System-Errors-/-Warnings are critical and needs to be resolved at integration-/application-level.
+                 * There can be multiple root causes those errors/warnings, but in most cases they are related
+                 * the Hardware-environment (e.g. PCB, component issues etc.).
+                 * If any System Error happens, the application needs to restart the HW and SW.
+                 */
+                ptx_RUL_WLC_NtfCallback(ctx, Notification_Error_SystemStatusInfo, &systemInfo, sizeof(ptx_RUL_StatusInfoSystem_t));
+
+                /* Exit the state machine if the system information was not cleaned by the callback of the notification. */
+                if (ptx_RUL_StatusInfoSystem_OK != systemInfo)
+                {
+                    ctx->StateMachineActive = 0;
+                }
+
+            }
+            else if (PTX_STATUS_WLC_INVALID_STATE == status)
             {
                 ptx_RUL_WLC_NtfCallback(ctx, Notification_Error_InvalidState, NULL, 0);
 
@@ -1487,22 +1537,6 @@ ptx_Status_t ptx_RUL_WLC_StateError_ProcessError(ptx_RUL_WLC_t *ctx, ptx_Status_
                     ctx->StateMachineActive = 0;
                 }
             }
-            else if (ptx_RUL_StatusInfoSystem_OK != systemInfo)
-            {
-                /* System-Errors-/-Warnings are critical and needs to be resolved at integration-/application-level.
-                 * There can be multiple root causes those errors/warnings, but in most cases they are related
-                 * the Hardware-environment (e.g. PCB, component issues etc.).
-                 * If any System Error happens, the application needs to restart the HW and SW.
-                 */
-                ptx_RUL_WLC_NtfCallback(ctx, Notification_Error_SystemStatusInfo, &systemInfo, sizeof(ptx_RUL_StatusInfoSystem_t));
-
-                /* Exit the state machine if the system information was not cleaned by the callback of the notification. */
-                if (ptx_RUL_StatusInfoSystem_OK != systemInfo)
-                {
-                    ctx->StateMachineActive = 0;
-                }
-
-            }
             else
             {
                 /* In case of any other Status, restart the state machine and deactivate the active listener. */
@@ -1573,18 +1607,21 @@ static ptx_Status_t ptx_RUL_WLC_ResetListenerParameter(ptx_RUL_WLC_t *ctx)
         ctx->SleepRemainingDuration = 0;
         ctx->RecordWlcCtlValid = 0;
 
-        ctx->NdefInitParams.rx = ctx->NdefRxBuffer;
-        ctx->NdefInitParams.rxLen = sizeof(ctx->NdefRxBuffer);
-        ctx->NdefInitParams.tx = ctx->NdefTxBuffer;
-        ctx->NdefInitParams.txLen = sizeof(ctx->NdefTxBuffer);
-        ctx->NdefInitParams.workBuffer = ctx->NdefWorkBuffer;
-        ctx->NdefInitParams.workBufferLen = sizeof(ctx->NdefWorkBuffer);
-        ctx->NdefInitParams.rul = ctx->InitParams.Rul;
+        ctx->NdefInitParams.Rx = ctx->NdefRxBuffer;
+        ctx->NdefInitParams.RxLen = sizeof(ctx->NdefRxBuffer);
+        ctx->NdefInitParams.Tx = ctx->NdefTxBuffer;
+        ctx->NdefInitParams.TxLen = sizeof(ctx->NdefTxBuffer);
+        ctx->NdefInitParams.WorkBuffer = ctx->NdefWorkBuffer;
+        ctx->NdefInitParams.WorkBufferLen = sizeof(ctx->NdefWorkBuffer);
+        ctx->NdefInitParams.Rul = ctx->InitParams.Rul;
         ctx->TxMultiplier = ctx->InitParams.WptPowerLevelInitial;
             
         status = ptx_NDEF_Open(&ctx->NdefComp, &ctx->NdefInitParams);
 
-
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            ctx->NdefComp.TagCtx.T2t.ReadCCVariant = ReadCCVariant_Block_0;
+        }
     }
 
     return status;
@@ -1659,7 +1696,7 @@ static ptx_Status_t ptx_RUL_WLC_WriteNdefMessage(ptx_RUL_WLC_t *ctx, ptx_NDEFRec
     {
         PTX_LOG_V(ctx->Log, "ptx_RUL_WLC_WriteNdefMessage");
 
-        uint32_t len = ctx->NdefComp.txSize;
+        uint32_t len = ctx->NdefComp.TxSize;
 
         /* Create one contiguous NDEF message from individual records and store it in the NDEF message working buffer. */
         status = ptx_NDEFMessage_Create(records, recordsLen, ctx->NdefMsgBuffer, &len);
@@ -2194,7 +2231,7 @@ static ptx_Status_t ptx_RUL_WLC_ComputeRequiredTxMultiplier(ptx_RUL_WLC_t *ctx)
 
                 required_tx_multiplier = (ctx->TxMultiplier + reg_adj);
             }
-            else if(ListenerType_Proprietary == listenerType)
+            else if(IS_PROPRIETARY_WLC_LISTENER(listenerType))
             {
                 /**
                  * The following section contains the regulation calculation for the proprietary power regulation.

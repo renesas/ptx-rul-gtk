@@ -77,11 +77,12 @@ extern "C" {
  */
 typedef struct ptx_NSC_WLC_WptOptions
 {
-    uint8_t  WptAmp;    /**< Amplitude level used for WPT cycle. (Range: 0 - 63) */
-    uint8_t  NfcAmp;    /**< Amplitude level used for communication. (Range: 0 - 63) */
-    uint32_t WptDur;    /**< WPT Duration in milliseconds. */
-    uint8_t  IcdEn;     /**< Enable Impedance Change Detection. (Enabled if not 0) */
-    uint8_t  IcdGt;     /**< Impedance Change Detection guard time. */
+    uint8_t  WptAmp;            /**< Amplitude level used for WPT cycle. (Range: 0 - 63) */
+    uint8_t  NfcAmp;            /**< Amplitude level used for communication. (Range: 0 - 63) */
+    uint32_t WptDur;            /**< WPT Duration in milliseconds. */
+    uint8_t  IcdEn;             /**< Enable Impedance Change Detection. (Enabled if not 0) */
+    uint8_t  IcdGt;             /**< Impedance Change Detection guard time. */
+    uint8_t  RffSyncDuration;   /**< Duration of the RFF sync pulse in the middle of the WPT. */
 } ptx_NSC_WLC_WptOptions_t;
 
 /**

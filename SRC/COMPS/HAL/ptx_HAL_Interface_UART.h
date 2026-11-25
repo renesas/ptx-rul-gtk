@@ -90,17 +90,14 @@ typedef struct ptx_HAL_Interface_UART
  */
 typedef struct ptx_HAL_Interface_UART_InitParams
 {
-    uint8_t                             *InterfaceName;       /**< Device name. */
-    uint32_t                            InterfaceNameLen;     /**< Device name string length. */
-
     ptx_HAL_DRV_Interface_Port_Type_t   PortType;             /**< Implementation Type of the hardware interface port. */
     uint8_t                             PortID;               /**< ID of the hardware interface port implementation. */
 
     uint32_t                            Speed;                /**< Communication interface speed. */
     ptx_Log_t                           *Log;                 /**< Initialised Log Context. */
-    ptx_HAL_GPIO_t                      *Gpio;                /**< Initialized GPIO Context. */
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-    void                                *OS;                  /**< Pointer to initialized Osal context. */
+    struct ptx_HAL_GPIO                 *Gpio;                /**< Initialized GPIO Context. */
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+    void                                *Osal;                /**< Pointer to initialized Osal context. */
 #endif
 } ptx_HAL_Interface_UART_InitParams_t;
 

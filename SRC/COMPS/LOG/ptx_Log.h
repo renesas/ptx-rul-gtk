@@ -83,7 +83,7 @@
     #elif defined(PTX_LOG_LVL_FATAL)
         #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_FATAL         /**< FATAL Log Level */                  
         #define ZF_LOG_LEVEL        ZF_LOG_FATAL         /**< FATA  Log Level */
-    #else                                               
+    #else
         #define ZF_LOG_OUTPUT_LEVEL ZF_LOG_INFO          /**< Default Log Level */
         #define ZF_LOG_LEVEL        ZF_LOG_INFO          /**< Default Log Level */
     #endif

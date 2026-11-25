@@ -70,6 +70,7 @@
 #define PTX_NSC_INIT_NALMOFFSET_DEFAULT             (0x000B237E)    /* NSC INIT NHOST_ALM offset (div_offset) default (fits vco_offset 4720000Hz). */
 #define PTX_NSC_INIT_TEMPERRTRESH_DEFAULT           85              /* NSC INIT Over-temperature protection default */
 #define PTX_NSC_INIT_TXCURLIMGAIN_DEFAULT           0               /* NSC INIT Over-current protection disabled */
+#define PTX_NSC_INIT_TXOVDEN_DEFAULT                0               /* NSC INIT TX Pin Overvoltage Event Detection default */
 
 
 /*
@@ -107,6 +108,7 @@ ptx_Status_t ptx_NSC_System_LoadDefaultParam(ptx_NSC_t *nsc)
         config->NAlmOffset      = PTX_NSC_INIT_NALMOFFSET_DEFAULT;
         config->TempErrTreshold = PTX_NSC_INIT_TEMPERRTRESH_DEFAULT;
         config->TxCurlimGain    = PTX_NSC_INIT_TXCURLIMGAIN_DEFAULT;
+        config->TxOvDEn         = PTX_NSC_INIT_TXOVDEN_DEFAULT;
 
         status = PTX_STATUS_SUCCESS;
     }
@@ -177,6 +179,10 @@ ptx_Status_t ptx_NSC_System_UpdateConfiguration(ptx_NSC_t *nsc, ptx_NSC_SystemCo
 
                     case NSC_SystemConfig_Config_TxCurlimGain:
                         nsc->SysCfg.TxCurlimGain = params[i].Value.TxCurlimGain;
+                        break;
+
+                    case NSC_SystemConfig_Config_TxOvDEn:
+                        nsc->SysCfg.TxOvDEn = params[i].Value.TxOvDEn;
                         break;
 
                     default:

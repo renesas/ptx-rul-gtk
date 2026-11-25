@@ -75,13 +75,6 @@ extern "C" {
  */
 
 /**
- *  \brief Timer procedure function pointer declaration.
- *
- *  \param      timerParam Pointer to timer-specific ("context") storage.
- */
-typedef void (*pptx_OSAL_TimerProc_t)(void *timerParam);
-
-/**
  * \brief Object types
  *
  * Used in API \ref ptx_OSAL_GetUsage to get current number of corresponding Osal items used.

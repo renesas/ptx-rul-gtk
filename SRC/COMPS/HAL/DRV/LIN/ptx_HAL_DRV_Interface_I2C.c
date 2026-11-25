@@ -75,7 +75,7 @@
  * Default I2C device to be used: i2cdev0.0.
  * Default speed: 1Mbps
  */
-#define PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_I2C_DEV(buffer, no)             snprintf(buffer, PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX, "/dev/i2c-%d", no)
+#define PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_I2C_DEV(buffer, no)             snprintf(buffer, PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX, "/dev/i2c-%u", no)
 
 /*
  * GPIO device used on the referent platform. Beside this, the pin number is required to specify a GPIO pin to be used.
@@ -131,8 +131,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {                
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_I2C_Init");
-
         (void)memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I2C_t));
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_I2C_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
         {
@@ -142,10 +140,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Init (ptx_HAL_DRV_Interface_I2C_t *ctx, p
                 ctx->Speed = (0 == initParams->Speed) ? PTX_HAL_DRV_INTERFACE_I2C_SPEED_DEFAULT : initParams->Speed;
                 ctx->BusAddr = (0 == initParams->Address) ? PTX_HAL_DRV_INTERFACE_I2C_ADDRESS_4C : initParams->Address;
                 ctx->Log = initParams->Log;
-                ctx->OS = (ptx_OSAL_t*)initParams->OS;
+                ctx->Osal = (ptx_OSAL_t*)initParams->Osal;
                 ctx->CompId = Comp_HAL;
 
-                status = ptx_OSAL_MutexInit(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+                status = ptx_OSAL_MutexInit(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
                 
 
                 if (PTX_STATUS_SUCCESS == status)
@@ -171,9 +169,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_DeInit");
-
-        status = ptx_OSAL_MutexDeInit(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+        status = ptx_OSAL_MutexDeInit(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
         if (PTX_STATUS_SUCCESS == status)
         {
             memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_I2C_t));
@@ -188,37 +184,42 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_DeInit (ptx_HAL_DRV_Interface_I2C_t *ctx)
 ptx_Status_t ptx_HAL_DRV_Interface_I2C_Open(ptx_HAL_DRV_Interface_I2C_t *ctx)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    int dev = -1;
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Open");
-
-        char dev_name[PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX];
-        memset(dev_name, 0, sizeof(char)*PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX);
+        char dev_name[PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX] = {0};
 
         PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_I2C_DEV(dev_name, ctx->Port->PortNr);
 
-        ctx->Port->Dev = open(dev_name, O_RDWR);
+        dev = open(dev_name, O_RDWR);
 
-        if ((0 <= ctx->Port->Dev) && (PTX_STATUS_SUCCESS == ptx_HAL_DRV_Interface_I2C_ValidateAddr(ctx->BusAddr)))
+        if ((dev >= 0) && (PTX_STATUS_SUCCESS == ptx_HAL_DRV_Interface_I2C_ValidateAddr(ctx->BusAddr)))
         {
-            /* open file successfull now configure and open gpio*/
+            ctx->Port->Dev = dev;
+
             status = ptx_HAL_DRV_Interface_I2C_IRQ_Config(ctx);
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* ownership transferred to ctx */
+                dev = -1;
+            }
         }
         else
         {
-            /* error opening file */
-            (void) close(ctx->Port->Dev);
             status = PTX_STATUS_E_GEN_INTERNAL;
         }
 
+        if (dev >= 0)
+        {
+            (void)close(dev);
+        }
 
-        /* If init failed ensure that Dev contains invalid fd ID */
         if (PTX_STATUS_SUCCESS != status)
         {
             ctx->Port->Dev = -1;
         }
-
     }
 
     return status;
@@ -230,11 +231,24 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Close(ptx_HAL_DRV_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Close");
+        if (ctx->Port->Dev >= 0)
+        {
+            (void)close(ctx->Port->Dev);
+            ctx->Port->Dev = -1;
+        }
 
-        (void)close(ctx->Port->Dev);
-        (void)close(ctx->Port->IrqFd);
-        (void)close(ctx->Port->IrqFdCancel);
+        if (ctx->Port->IrqFd >= 0)
+        {
+            (void)close(ctx->Port->IrqFd);
+            ctx->Port->IrqFd = -1;
+        }
+
+        if (ctx->Port->IrqFdCancel >= 0)
+        {
+            (void)close(ctx->Port->IrqFdCancel);
+            ctx->Port->IrqFdCancel = -1;
+        }
+
         status = PTX_STATUS_SUCCESS;
 
     }
@@ -248,11 +262,9 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Tx");
-
         uint8_t mutex_locked = 0;
 
-        status = ptx_OSAL_MutexLock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+        status = ptx_OSAL_MutexLock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
         if (PTX_STATUS_SUCCESS == status)
         {
             mutex_locked = 1;
@@ -262,7 +274,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
         {
             if (0 == restart)
             {
-                struct i2c_rdwr_ioctl_data msgset[1];
+                struct i2c_rdwr_ioctl_data msgset;
 
                 ctx->Port->Msgs[0].addr = ctx->BusAddr;
                 ctx->Port->Msgs[0].flags = 0;
@@ -270,11 +282,11 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
                 ctx->Port->Msgs[0].buf = txBuf;
                 ctx->Port->Msgs[1].addr = 0x00;
 
-                msgset[0].msgs = ctx->Port->Msgs;
-                msgset[0].nmsgs = 1;
+                msgset.msgs = ctx->Port->Msgs;
+                msgset.nmsgs = 1;
 
                 int error_code = ioctl(ctx->Port->Dev, I2C_RDWR, &msgset);
-                if ((error_code > 0) && (msgset[0].nmsgs == 1))
+                if ((error_code > 0) && (msgset.nmsgs == 1))
                 {
                     /* all msgs were sent */
                     if (ctx->Port->Msgs[0].len == txLen)
@@ -310,7 +322,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Tx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
         if (1 == mutex_locked)
         {
-            ptx_Status_t st = ptx_OSAL_MutexUnlock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+            ptx_Status_t st = ptx_OSAL_MutexUnlock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
 
             /* Keep the error status if previously set. */
             status = (PTX_STATUS_SUCCESS == status) ? st : status;
@@ -331,8 +343,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_Rx");
-
         if (0 == rxLen)
         {
             /*
@@ -350,9 +360,9 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
                 uint8_t mutex_locked = 0;
 
                 uint32_t txLen = 0;
-                struct i2c_rdwr_ioctl_data msgset[1];
+                struct i2c_rdwr_ioctl_data msgset;
 
-                status = ptx_OSAL_MutexLock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+                status = ptx_OSAL_MutexLock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
                 if (PTX_STATUS_SUCCESS == status)
                 {
                     mutex_locked = 1;
@@ -366,15 +376,15 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
                     ctx->Port->Msgs[1].len = (unsigned short) rxLen;
                     ctx->Port->Msgs[1].buf = rxBuf;
 
-                    msgset[0].msgs = ctx->Port->Msgs;
-                    msgset[0].nmsgs = 2;
+                    msgset.msgs = ctx->Port->Msgs;
+                    msgset.nmsgs = 2;
 
                     txLen = ctx->Port->Msgs[0].len;
 
                     error_code = ioctl(ctx->Port->Dev, I2C_RDWR, &msgset);
                 }
 
-                if ((error_code > 0) && (msgset[0].nmsgs == 2))
+                if ((error_code > 0) && (msgset.nmsgs == 2))
                 {
                     /* all msgs were sent */
                     if ((ctx->Port->Msgs[0].len == txLen) && (ctx->Port->Msgs[1].len == rxLen))
@@ -394,7 +404,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_Rx(ptx_HAL_DRV_Interface_I2C_t *ctx, uint
 
                 if (1 == mutex_locked)
                 {
-                    ptx_Status_t st = ptx_OSAL_MutexUnlock(ctx->OS, (ptx_Mutex_t*)&ctx->Mutex);
+                    ptx_Status_t st = ptx_OSAL_MutexUnlock(ctx->Osal, (ptx_Mutex_t*)&ctx->Mutex);
 
                     /* Keep the error status if previously set. */
                     status = (PTX_STATUS_SUCCESS == status) ? st : status;
@@ -425,8 +435,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_RxIrqLevel(ptx_HAL_DRV_Interface_I2C_t *c
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_RxIrqLevel");
-
         uint8_t gpio_pending = 0;
 
         /* Check if the IRQ of the GPIO-pin is already pending i.e. set to 1 */
@@ -446,8 +454,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetParameter(ptx_HAL_DRV_Interface_I2C_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -474,8 +480,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_GetParameter(ptx_HAL_DRV_Interface_I2C_t 
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -507,8 +511,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetSlaveAddress(ptx_HAL_DRV_Interface_I2C
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetSlaveAddress");
-
         ctx->BusAddr = address;
         status = PTX_STATUS_SUCCESS;
     }
@@ -522,8 +524,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed(ptx_HAL_DRV_Interfac
 
     if ((NULL != ctx) && (0 != speed))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_SetTransmissionSpeed");
-
         /*
             Note: There is no way to directly change the clock speed for I2C under Linux through Kernel calls during runtime.
                   To change it update the "config.txt" file in your firmware folder and reboot.
@@ -572,8 +572,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_IRQ_Config (ptx_HAL_DRV_Interface_
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
 
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_IRQ_Config");
-
         int fd;
 
         char buffer[PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_BUFFER_MAX];
@@ -585,7 +583,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_IRQ_Config (ptx_HAL_DRV_Interface_
         * fd is then used for furter gpio access.
         */
         fd = open(buffer, O_RDWR | O_NONBLOCK);
-        if (fd > 0)
+        if (0 <= fd)
         {
             ctx->Port->IrqFd = fd;
             st = ptx_HAL_DRV_Interface_I2C_GpioSetInput(ctx, &fd);
@@ -640,8 +638,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioSetInput (ptx_HAL_DRV_Interfac
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != retFd))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GpioSetInput");
-
         int fd;
         int rv;
         struct gpiohandle_request req;
@@ -688,8 +684,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising (ptx_HAL_DRV_Inte
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != retFd))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising");
-
         int fd, rv;
         struct gpioevent_request req;
 
@@ -703,7 +697,7 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioSetIrqRising (ptx_HAL_DRV_Inte
         }
 
         fd = open(PTX_HAL_DRV_INTERFACE_I2C_WCHARDEV_GPIOCHIP_USED, O_RDWR | O_NONBLOCK);
-        if (0 < fd)
+        if (0 <= fd)
         {
             req.lineoffset = ctx->Port->IrqPin;
             req.handleflags = GPIOHANDLE_REQUEST_INPUT;
@@ -737,8 +731,6 @@ static ptx_Status_t ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ (ptx_HAL_DRV_I
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (ctx->Port->IrqFd > 0) && (NULL != irqPending))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_I2C_GpioCheckPendingIRQ");
-
         int fd;
         int res;
         struct gpiohandle_data data;

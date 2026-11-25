@@ -6,7 +6,7 @@
   
 <!-- Text buffer that contains hard-coded text -->
   <object class="GtkTextBuffer" id="buffer">
-    <property name="text">GTK4 application using the PTX205R and the RUL SDK v1.2.1 reference implementation for the Raspberry Pi and SPI.
+    <property name="text">GTK4 application using the PTX205R and the RUL SDK v1.3.0 reference implementation for the Raspberry Pi and SPI.
 
 Polls for RF-technologies A, B, F, V.
 

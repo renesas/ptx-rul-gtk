@@ -88,7 +88,7 @@ typedef struct ptx_NativeTag_T2T
 {
     ptx_Comps_t             CompId;         /**< Component Id. */
 
-    ptx_RUL_t               *rul;           /**< RUL component. */
+    ptx_RUL_t               *Rul;           /**< RUL component. */
 
     uint8_t                 *TxBuffer;      /**< Internal Tx-Buffer provided by upper layer (may be shared with other components) */
     uint32_t                TxBufferSize;   /**< Tx buffer size */
@@ -100,7 +100,7 @@ typedef struct ptx_NativeTag_T2T
  */
 typedef struct ptx_NativeTag_T2T_InitParams
 {
-    ptx_RUL_t               *rul;           /**< RUL component. */
+    ptx_RUL_t               *Rul;           /**< RUL component. */
 
     uint8_t                 *TxBuffer;      /**< Tx buffer */
     uint32_t                TxBufferSize;   /**< Tx buffer size */

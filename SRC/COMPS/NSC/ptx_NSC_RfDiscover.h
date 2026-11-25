@@ -419,13 +419,6 @@ typedef struct ptx_NSC_RfDiscovery_Cfg
     uint8_t     EnableLPCDNtf;
 
     /**
-     * Enable/disable Error notifications during discovery process.
-     * 0 ... Error notifications disabled
-     * 1 ... Error notifications enabled
-     */
-    uint8_t     EnableErrorNtf;
-
-    /**
      * Idle time.
      * Idle time between two consecutive discovery cycles in 32
      * microsecond units. (3 Bytes)

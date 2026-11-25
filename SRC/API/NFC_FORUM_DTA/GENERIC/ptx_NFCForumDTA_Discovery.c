@@ -48,6 +48,7 @@
  */
 
 #include "ptx_NFCForumDTA_Discovery.h"
+#include "ptx_NFCForumDTA_Configuration.h"
 /*
  * ####################################################################################################################
  * DEFINES / TYPES
@@ -75,11 +76,11 @@
  *
  *  dta         NFC Forum DTA Component
  *  testCfg     Test Configuration parameters.
- *  discCfg     Discovery Configuration to edit
+ *  DiscCfg     Discovery Configuration to edit
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
 */
-static ptx_Status_t ptx_NFCForumDTA_ConfigureDiscParameters(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_Test_Config_t *testCfg, ptx_RUL_DiscoverConfig_t *discCfg);
+static ptx_Status_t ptx_NFCForumDTA_ConfigureDiscParameters(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_Test_Config_t *testCfg, ptx_RUL_DiscoverConfig_t *DiscCfg);
 
 /*
  * Check for any system errors
@@ -122,14 +123,14 @@ ptx_Status_t ptx_NFCForumDTA_Start_RF_Discovery(ptx_NFCForumDTA_t *dta, ptx_NFCF
 
     if (PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA) && (NULL != testCfg))
     {
-        ptx_RUL_DiscoverConfig_t discCfg;
-        memset(&discCfg, 0, sizeof(ptx_RUL_DiscoverConfig_t));
+        ptx_RUL_DiscoverConfig_t DiscCfg;
+        memset(&DiscCfg, 0, sizeof(ptx_RUL_DiscoverConfig_t));
 
-        status = ptx_NFCForumDTA_ConfigureDiscParameters(dta, testCfg, &discCfg);
+        status = ptx_NFCForumDTA_ConfigureDiscParameters(dta, testCfg, &DiscCfg);
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            status = ptx_RUL_InitiateDiscovery(dta->rul, &discCfg);
+            status = ptx_RUL_InitiateDiscovery(dta->Rul, &DiscCfg);
         }
 
 
@@ -154,43 +155,43 @@ ptx_Status_t ptx_NFCForumDTA_Deactivate(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_
             case ptx_NFCForumDTA_State_DEACTIVATE_DISCOVER:
                 params.Type = ptx_RUL_DeactivateType_Generic;
                 params.State = ptx_RUL_DeactivateState_DiscoveryRfReset;
-                status = ptx_RUL_Deactivate(dta->rul, &params);
+                status = ptx_RUL_Deactivate(dta->Rul, &params);
                 break;
 
             case ptx_NFCForumDTA_State_DEACTIVATE_IDLE:
                 params.Type = ptx_RUL_DeactivateType_Generic;
                 params.State = ptx_RUL_DeactivateState_Idle;
-                status = ptx_RUL_Deactivate(dta->rul, &params);
+                status = ptx_RUL_Deactivate(dta->Rul, &params);
                 break;
 
             case ptx_NFCForumDTA_State_DEACTIVATE_SLEEP:
                 params.Type = ptx_RUL_DeactivateType_Specific;
                 params.State = ptx_RUL_DeactivateState_Idle;
-                status = ptx_RUL_Deactivate(dta->rul, &params);
+                status = ptx_RUL_Deactivate(dta->Rul, &params);
                 break;
 
             case ptx_NFCForumDTA_State_DEACTIVATE_RELEASE:
                 params.Type = ptx_RUL_DeactivateType_Specific;
                 params.State = ptx_RUL_DeactivateState_Idle;
-                status = ptx_RUL_Deactivate(dta->rul, &params);
+                status = ptx_RUL_Deactivate(dta->Rul, &params);
                 break;
 
             case ptx_NFCForumDTA_State_DEACTIVATE_DESLECT:
                 params.Type = ptx_RUL_DeactivateType_Specific;
                 params.State = ptx_RUL_DeactivateState_Poll;
-                status = ptx_RUL_Deactivate(dta->rul, &params);
+                status = ptx_RUL_Deactivate(dta->Rul, &params);
                 if (PTX_STATUS_SUCCESS == status)
                 {
                     params.Type = ptx_RUL_DeactivateType_Generic;
                     params.State = ptx_RUL_DeactivateState_Idle;
-                    status = ptx_RUL_Deactivate(dta->rul, &params);
+                    status = ptx_RUL_Deactivate(dta->Rul, &params);
                 }
                 break;
 
             case ptx_NFCForumDTA_State_DEACTIVATE_LISTEN_SLEEP:
                 params.Type = ptx_RUL_DeactivateType_Generic;
                 params.State = ptx_RUL_DeactivateState_ListenSleep;
-                status =  ptx_RUL_Deactivate(dta->rul, &params);
+                status =  ptx_RUL_Deactivate(dta->Rul, &params);
                 break;
 
             default:
@@ -258,7 +259,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessDiscovery(ptx_NFCForumDTA_t *dta, ptx_NFCFor
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_RUL_Sleep(dta->rul, PTX_NFCFORUMDTA_DISCOVERY_SLEEP_DELAY);
+                status = ptx_RUL_Sleep(dta->Rul, PTX_NFCFORUMDTA_DISCOVERY_SLEEP_DELAY);
                 discovery_len += PTX_NFCFORUMDTA_DISCOVERY_SLEEP_DELAY;
 
                 // Determine if discovery has timed out
@@ -290,41 +291,41 @@ ptx_Status_t ptx_NFCForumDTA_ProcessDiscovery(ptx_NFCForumDTA_t *dta, ptx_NFCFor
  * ####################################################################################################################
  */
 
-static ptx_Status_t ptx_NFCForumDTA_ConfigureDiscParameters(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_Test_Config_t *testCfg, ptx_RUL_DiscoverConfig_t *discCfg)
+static ptx_Status_t ptx_NFCForumDTA_ConfigureDiscParameters(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_Test_Config_t *testCfg, ptx_RUL_DiscoverConfig_t *DiscCfg)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA) && (NULL != testCfg) && (NULL != discCfg))
+    if (PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA) && (NULL != testCfg) && (NULL != DiscCfg))
     {
         status = PTX_STATUS_SUCCESS;
 
         //Poll Parameters
-        discCfg->EnablePolling = 1;
-        discCfg->PollMode = ptx_RUL_PollMode_NfcForum;
-        discCfg->IdleTime = 100;
-        discCfg->EnableDDPC = testCfg->EnableDDPC == 0 ? 0 : 1;
+        DiscCfg->EnablePolling = 1;
+        DiscCfg->PollMode = ptx_RUL_PollMode_NfcForum;
+        DiscCfg->IdleTime = 100;
+        DiscCfg->EnableDDPC = testCfg->EnableDDPC == 0 ? 0 : 1;
 
-        discCfg->DisablePollIsoDep = 0;
-        discCfg->PollIsoDepHbr = ptx_RUL_PollIsoDepHBR_Standard;
+        DiscCfg->DisablePollIsoDep = 0;
+        DiscCfg->PollIsoDepHbr = ptx_RUL_PollIsoDepHBR_Standard;
 
         if (dta->DTAConfiguration.CON_GB)
         {
-            discCfg->DisableNfcDepProtocol = 0;
-            discCfg->PollNfcDepAtrReqLen = PTX_LLCP_GENERAL_BYTES_MAX_LEN;
-            ptx_RUL_LLCP_GenerateDefaultGeneralBytes(&dta->llcp, discCfg->PollNfcDepAtrReq, &discCfg->PollNfcDepAtrReqLen);
+            DiscCfg->DisableNfcDepProtocol = 0;
+            DiscCfg->PollNfcDepAtrReqLen = PTX_LLCP_GENERAL_BYTES_MAX_LEN;
+            ptx_RUL_LLCP_GenerateDefaultGeneralBytes(&dta->llcp, DiscCfg->PollNfcDepAtrReq, &DiscCfg->PollNfcDepAtrReqLen);
         }
 
         switch (dta->DTAConfiguration.CON_BITR_NFC_DEP)
         {
             case 0x00: /* Fall Through */
             case 0x01:
-                discCfg->PollNfcDepHbr = ptx_RUL_PollNfcDepHBR_Standard;
+                DiscCfg->PollNfcDepHbr = ptx_RUL_PollNfcDepHBR_Standard;
                 break;
             case 0x02:
-                discCfg->PollNfcDepHbr = ptx_RUL_PollNfcDepHBR_212;
+                DiscCfg->PollNfcDepHbr = ptx_RUL_PollNfcDepHBR_212;
                 break;
             case 0x03:
-                discCfg->PollNfcDepHbr = ptx_RUL_PollNfcDepHBR_424;
+                DiscCfg->PollNfcDepHbr = ptx_RUL_PollNfcDepHBR_424;
                 break;
             default:
                 status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -333,30 +334,30 @@ static ptx_Status_t ptx_NFCForumDTA_ConfigureDiscParameters(ptx_NFCForumDTA_t *d
 
         if (dta->DTAConfiguration.CON_POLL_A)
         {
-            discCfg->PollTypeA = 1;
-            discCfg->PollTypeADeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_A;
-            discCfg->PollTypeAPollFrequency = 1;
+            DiscCfg->PollTypeA = 1;
+            DiscCfg->PollTypeADeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_A;
+            DiscCfg->PollTypeAPollFrequency = 1;
         }
 
         if (dta->DTAConfiguration.CON_POLL_B)
         {
-            discCfg->PollTypeB = 1;
-            discCfg->PollTypeBDeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_B;
-            discCfg->PollTypeBPollFrequency = 1;
+            DiscCfg->PollTypeB = 1;
+            DiscCfg->PollTypeBDeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_B;
+            DiscCfg->PollTypeBPollFrequency = 1;
         }
 
         if (dta->DTAConfiguration.CON_POLL_F)
         {
-            discCfg->PollTypeFDeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_F;
-            discCfg->PollTypeFPollFrequency = 1;
+            DiscCfg->PollTypeFDeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_F;
+            DiscCfg->PollTypeFPollFrequency = 1;
 
             switch (dta->DTAConfiguration.CON_BITR)
             {
                 case 0x02:
-                    discCfg->PollTypeF212 = 1;
+                    DiscCfg->PollTypeF212 = 1;
                     break;
                 case 0x03:
-                    discCfg->PollTypeF424 = 1;
+                    DiscCfg->PollTypeF424 = 1;
                     break;
                 default:
                     status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -366,27 +367,27 @@ static ptx_Status_t ptx_NFCForumDTA_ConfigureDiscParameters(ptx_NFCForumDTA_t *d
 
         if (dta->DTAConfiguration.CON_POLL_V)
         {
-            discCfg->PollTypeV = 1;
-            discCfg->PollTypeVDeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_V;
-            discCfg->PollTypeVPollFrequency = 1;
+            DiscCfg->PollTypeV = 1;
+            DiscCfg->PollTypeVDeviceLimit = dta->DTAConfiguration.CON_DEVICES_LIMIT_V;
+            DiscCfg->PollTypeVPollFrequency = 1;
         }
 
         if (ptx_NFCForumDTA_DevType_Universal == testCfg->DeviceType)
         {
             if (dta->DTAConfiguration.CON_POLL_ACM)
             {
-                discCfg->PollACM = 1;
+                DiscCfg->PollACM = 1;
 
                 switch (dta->DTAConfiguration.CON_BITR_ACM)
                 {
                     case 0x01:
-                        discCfg->PollAcmBitRate = 0;
+                        DiscCfg->PollAcmBitRate = 0;
                         break;
                     case 0x02:
-                        discCfg->PollAcmBitRate = 1;
+                        DiscCfg->PollAcmBitRate = 1;
                         break;
                     case 0x03:
-                        discCfg->PollAcmBitRate = 2;
+                        DiscCfg->PollAcmBitRate = 2;
                         break;
                     default:
                         status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
@@ -397,25 +398,25 @@ static ptx_Status_t ptx_NFCForumDTA_ConfigureDiscParameters(ptx_NFCForumDTA_t *d
 #if !defined(PTX_DISABLE_LISTEN_MODE)
             // Listen Parameters
             uint8_t listenTypeFRequestData[ptx_NFCForumDTA_LISTEN_NFC_F_RD_LEN] = ptx_NFCForumDTA_LISTEN_NFC_F_RD;
-            discCfg->ListenMode = 1;
-            discCfg->ListenTypeA = 1;
-            discCfg->ListenTypeB = 1;
-            discCfg->ListenIsoDep = 3;
-            discCfg->ListenNfcDep = 1;
-            discCfg->ListenNfcDepAtrRes[PTX_LLCP_DEFAULT_ATRRES_WT_INDEX] = PTX_LLCP_DEFAULT_ATRRES_WT_VALUE;
-            discCfg->ListenNfcDepAtrRes[PTX_LLCP_DEFAULT_ATRRES_PP_INDEX] = PTX_LLCP_DEFAULT_ATRRES_PP_VALUE;
-            discCfg->ListenNfcDepAtrResLen = PTX_LLCP_GENERAL_BYTES_MAX_LEN;
-            ptx_RUL_LLCP_GenerateDefaultGeneralBytes(&dta->llcp, &discCfg->ListenNfcDepAtrRes[PTX_LLCP_DEFAULT_ATRRES_GEN_BYTES_OFFSET], &discCfg->ListenNfcDepAtrResLen);
-            discCfg->ListenNfcDepAtrResLen = discCfg->ListenNfcDepAtrResLen + PTX_LLCP_DEFAULT_ATRRES_GEN_BYTES_OFFSET;
+            DiscCfg->ListenMode = 1;
+            DiscCfg->ListenTypeA = 1;
+            DiscCfg->ListenTypeB = 1;
+            DiscCfg->ListenIsoDep = 3;
+            DiscCfg->ListenNfcDep = 1;
+            DiscCfg->ListenNfcDepAtrRes[PTX_LLCP_DEFAULT_ATRRES_WT_INDEX] = PTX_LLCP_DEFAULT_ATRRES_WT_VALUE;
+            DiscCfg->ListenNfcDepAtrRes[PTX_LLCP_DEFAULT_ATRRES_PP_INDEX] = PTX_LLCP_DEFAULT_ATRRES_PP_VALUE;
+            DiscCfg->ListenNfcDepAtrResLen = PTX_LLCP_GENERAL_BYTES_MAX_LEN;
+            ptx_RUL_LLCP_GenerateDefaultGeneralBytes(&dta->llcp, &DiscCfg->ListenNfcDepAtrRes[PTX_LLCP_DEFAULT_ATRRES_GEN_BYTES_OFFSET], &DiscCfg->ListenNfcDepAtrResLen);
+            DiscCfg->ListenNfcDepAtrResLen = DiscCfg->ListenNfcDepAtrResLen + PTX_LLCP_DEFAULT_ATRRES_GEN_BYTES_OFFSET;
 
-            discCfg->ListenTypeF212 = 1;
-            discCfg->ListenTypeF424 = 1;
-            discCfg->ListenTypeFRequestDataLen = ptx_NFCForumDTA_LISTEN_NFC_F_RD_LEN;
-            memcpy(discCfg->ListenTypeFRequestData, listenTypeFRequestData, ptx_NFCForumDTA_LISTEN_NFC_F_RD_LEN);
+            DiscCfg->ListenTypeF212 = 1;
+            DiscCfg->ListenTypeF424 = 1;
+            DiscCfg->ListenTypeFRequestDataLen = ptx_NFCForumDTA_LISTEN_NFC_F_RD_LEN;
+            memcpy(DiscCfg->ListenTypeFRequestData, listenTypeFRequestData, ptx_NFCForumDTA_LISTEN_NFC_F_RD_LEN);
 
             if (dta->DTAConfiguration.CON_LISTEN_DEP_F)
             {
-                discCfg->ListenNfcDep = 3;
+                DiscCfg->ListenNfcDep = 3;
             }
 #endif // PTX_DISABLE_LISTEN_MODE
         }
@@ -436,37 +437,49 @@ static ptx_Status_t ptx_NFCForumDTA_CheckSystemStatus(ptx_NFCForumDTA_t *dta)
         statusParams.Type = ptx_RUL_StatusType_System;
 
         // Get discovery status
-        status = ptx_RUL_GetStatusInfo(dta->rul, &statusParams);
+        status = ptx_RUL_GetStatusInfo(dta->Rul, &statusParams);
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            status = PTX_STATUS_SUCCESS;
-
             /* System-Errors-/-Warnings are critical and needs to be resolved at integration-/application-level.
              * There can be multiple root causes those errors/warnings, but in most cases they are related
              * the Hardware-environment (e.g. PCB, component issues etc.).
              */
             if (ptx_RUL_StatusInfoSystem_ErrorOvercurrent == statusParams.Info.System)
             {
-                PTX_LOG_I(&(dta->rul->Log), "WARNING - Overcurrent Limiter activated!\n");
+                PTX_LOG_I(&(dta->Rul->Log), "WARNING - Overcurrent Limiter activated!\n");
                 dta->quitDTA = 1u;
+            }
+
+            if (ptx_RUL_StatusInfoSystem_TxOvD == statusParams.Info.System)
+            {
+                PTX_LOG_I(&(dta->Rul->Log), "WARNING - TX Pin Overvoltage Event detected!\n");
+
+                if(ptx_NSC_State_Discovery == dta->Rul->Nsc.State)
+                {
+                    dta->State = ptx_NFCForumDTA_State_WAIT_4_ACTIVATION;
+                }
+                else 
+                {
+                    dta->State = ptx_NFCForumDTA_State_START_RF_DISCOVERY;
+                }
             }
 
             if (ptx_RUL_StatusInfoSystem_ErrorTemperature == statusParams.Info.System)
             {
-                PTX_LOG_I(&(dta->rul->Log), "WARNING - Temperature Limiter activated!\n");
+                PTX_LOG_I(&(dta->Rul->Log), "WARNING - Temperature Limiter activated!\n");
                 dta->State = ptx_NFCForumDTA_State_RESTART_SYSTEM;
             }
 
             if (ptx_RUL_StatusInfoSystem_ErrorOutOfMemory == statusParams.Info.System)
             {
-                PTX_LOG_I(&(dta->rul->Log), "WARNING - Out of Memory!\n");
+                PTX_LOG_I(&(dta->Rul->Log), "WARNING - Out of Memory!\n");
                 dta->State = ptx_NFCForumDTA_State_RESTART_SYSTEM;
             }
 
             if (ptx_RUL_StatusInfoSystem_NSCReset == statusParams.Info.System)
             {
-                PTX_LOG_I(&(dta->rul->Log), "WARNING - Unexpected System Reset - exiting Application!\n");
+                PTX_LOG_I(&(dta->Rul->Log), "WARNING - Unexpected System Reset - exiting Application!\n");
                 dta->quitDTA = 1u;
             }
         }
@@ -493,7 +506,7 @@ static ptx_Status_t ptx_NFCForumDTA_CheckPollActivity(ptx_NFCForumDTA_t *dta)
         statusParams.Type = ptx_RUL_StatusType_Discover;
 
         // Get discovery status
-        status = ptx_RUL_GetStatusInfo(dta->rul, &statusParams);
+        status = ptx_RUL_GetStatusInfo(dta->Rul, &statusParams);
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -503,9 +516,9 @@ static ptx_Status_t ptx_NFCForumDTA_CheckPollActivity(ptx_NFCForumDTA_t *dta)
                 // Proceed to select procedure if multiple cards are detected
                 dta->State = ptx_NFCForumDTA_State_POLL_SELECT_DEVICE;
             }
-            else if ((statusParams.Info.Discover == ptx_RUL_StatusInfoDiscover_Active) && (dta->rul->CardRegistry.CardsCnt > 0))
+            else if ((statusParams.Info.Discover == ptx_RUL_StatusInfoDiscover_Active) && (dta->Rul->CardRegistry.CardsCnt > 0))
             {
-                if (dta->rul->CardRegistry.Cards[0].State == ptx_RUL_CardRfState_Active)
+                if (dta->Rul->CardRegistry.Cards[0].State == ptx_RUL_CardRfState_Active)
                 {
                     // A single card was activated. Proceed with data exchange
                     dta->State = ptx_NFCForumDTA_State_POLL_DATA_EXCHANGE;

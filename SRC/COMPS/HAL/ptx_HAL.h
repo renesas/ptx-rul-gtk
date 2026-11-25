@@ -106,8 +106,6 @@ typedef struct ptx_HAL
  */
 typedef struct ptx_HAL_InitParams
 {
-    uint8_t                             *InterfaceName;         /**< Pointer to the hardware interface name. */
-    uint32_t                            InterfaceNameLen;       /**< Length of the hardware interface name. */
     ptx_HAL_Interface_Type_t            InterfaceType;          /**< Type of the hardware interface. */
     ptx_HAL_DRV_Interface_Port_Type_t   InterfacePortType;      /**< Implementation Type of the hardware interface port. */
     uint8_t                             InterfacePortID;        /**< ID of the port for the hardware interface. */
@@ -117,7 +115,7 @@ typedef struct ptx_HAL_InitParams
     uint8_t                             NumberOfTimers;         /**< Number of requested Timers. */
 
     ptx_Log_t                           *Log;                   /**< Logger context. */
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
     void                                *Osal;                  /**< OSAL context */
 #endif
 } ptx_HAL_InitParams_t;

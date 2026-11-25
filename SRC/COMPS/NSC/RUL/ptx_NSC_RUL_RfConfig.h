@@ -71,7 +71,8 @@ extern "C" {
  * \name Supported NSC RF Configuration file version.
  * @{
  */
-#define PTX_NSC_RFCONFIG_VERSION        (43u)   /**< This version is supported */
+#define PTX_NSC_RFCONFIG_MAJOR_VERSION    (43u)  /**< This major version is supported */
+#define PTX_NSC_RFCONFIG_MINOR_VERSION    (0u)   /**< This minor version is supported */
 /** @} */
 
 

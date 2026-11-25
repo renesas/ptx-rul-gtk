@@ -284,7 +284,7 @@ typedef struct ptx_HAL_Interface_InitParams
 
     ptx_Log_t                                   *Log;                   /**< Initialised Log Context */
     ptx_HAL_GPIO_t                              *Gpio;                  /**< Initialized GPIO Context. */
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
     void                                        *Osal;                  /**< Pointer to OSAL context */
 #endif
 } ptx_HAL_Interface_InitParams_t;

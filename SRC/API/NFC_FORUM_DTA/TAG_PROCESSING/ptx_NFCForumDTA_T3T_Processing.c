@@ -113,7 +113,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessT3T(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_
                 tsn = 0;
                 uint8_t rx[PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE];
                 uint32_t rxLen = PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE;
-                status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+                status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
                 (void)rxLen;
                 break;
         }
@@ -219,11 +219,11 @@ static ptx_Status_t ptx_NFCForumDTA_Loopback(ptx_NFCForumDTA_t *dta)
         uint8_t rx[PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE];
         uint32_t rxLen = PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE;
 
-        status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+        status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
 
         /*if (0 == rxLen)
         {
-            status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+            status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
         }*/
 
         if (PTX_STATUS_SUCCESS == status)
@@ -244,7 +244,7 @@ static ptx_Status_t ptx_NFCForumDTA_Loopback(ptx_NFCForumDTA_t *dta)
                 do
                 {
                     rxLen = PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE;
-                    status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+                    status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
 
                     if (NULL != dta->applicationCallback)
                     {
@@ -275,7 +275,7 @@ static ptx_Status_t ptx_NFCForumDTA_SysCapabilityDetection(ptx_NFCForumDTA_t *dt
         uint8_t rx[PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE];
         uint32_t rxLen = PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE;
 
-        status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+        status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
 
         if ((PTX_STATUS_SUCCESS == status) && (0 != rxLen))
         {
@@ -291,7 +291,7 @@ static ptx_Status_t ptx_NFCForumDTA_SysCapabilityDetection(ptx_NFCForumDTA_t *dt
                 sysCode = 0x12FC;
                 rc = 0;
                 tsn = 0;
-                status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+                status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
             }
             else if (0 == memcmp(RDCode, option2, PTX_NFCFORUMDTA_T3T_RDCODE_SIZE))
             {
@@ -299,7 +299,7 @@ static ptx_Status_t ptx_NFCForumDTA_SysCapabilityDetection(ptx_NFCForumDTA_t *dt
                 sysCode = 0x8EFC;
                 rc = 0;
                 tsn = 0;
-                status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+                status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
             }
 
             if (PTX_STATUS_SUCCESS == status)
@@ -321,7 +321,7 @@ static ptx_Status_t ptx_NFCForumDTA_SysCapabilityDetection(ptx_NFCForumDTA_t *dt
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    status = ptx_RUL_Exchange(dta->rul, payload, PTX_NFCFORUMDTA_T3T_LOOPBACK_PAYLOAD_SIZE, payload_rx, &payload_rx_len, PTX_T3T_DEFAULT_TIMEOUT_MS);
+                    status = ptx_RUL_Exchange(dta->Rul, payload, PTX_NFCFORUMDTA_T3T_LOOPBACK_PAYLOAD_SIZE, payload_rx, &payload_rx_len, PTX_T3T_DEFAULT_TIMEOUT_MS);
                 }
 
                 if ((PTX_STATUS_SUCCESS == status) &&
@@ -330,7 +330,7 @@ static ptx_Status_t ptx_NFCForumDTA_SysCapabilityDetection(ptx_NFCForumDTA_t *dt
                     (0 == memcmp(&payload[3], &payload_rx[3], sizeof(uint8_t) * PTX_NFCFORUMDTA_T3T_LOOPBACK_PAYLOAD_SIZE - 3)))
                 {
                     payload_rx_len = 300;
-                    status = ptx_RUL_Exchange(dta->rul, payload, PTX_NFCFORUMDTA_T3T_LOOPBACK_PAYLOAD_SIZE, payload_rx, &payload_rx_len, PTX_T3T_DEFAULT_TIMEOUT_MS);
+                    status = ptx_RUL_Exchange(dta->Rul, payload, PTX_NFCFORUMDTA_T3T_LOOPBACK_PAYLOAD_SIZE, payload_rx, &payload_rx_len, PTX_T3T_DEFAULT_TIMEOUT_MS);
                 }
 
 
@@ -354,7 +354,7 @@ static ptx_Status_t ptx_NFCForumDTA_ServiceIndepApplication(ptx_NFCForumDTA_t *d
         uint8_t rx[PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE];
         uint32_t rxLen = PTX_NFCFORUMDTA_T3T_SENSFRES_SIZE;
 
-        status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+        status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
 
         if ((PTX_STATUS_SUCCESS == status) && (0 != rxLen))
         {
@@ -373,7 +373,7 @@ static ptx_Status_t ptx_NFCForumDTA_ServiceIndepApplication(ptx_NFCForumDTA_t *d
 
             rc = 0;
             tsn = 0;
-            status = ptx_RUL_T3T_SensFReq(dta->rul, sysCode, rc, tsn, rx, &rxLen);
+            status = ptx_RUL_T3T_SensFReq(dta->Rul, sysCode, rc, tsn, rx, &rxLen);
 
         }
     }

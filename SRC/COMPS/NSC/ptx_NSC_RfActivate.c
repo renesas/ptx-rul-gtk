@@ -70,6 +70,8 @@
 #define PTX_NSC_RF_ACTIVATE_ATRREQ_BR_MASK                  (0xF0)          /* Mask for BR values in BRS byte*/
 #define PTX_NSC_RF_ACTIVATE_ATRREQ_BS_MASK                  (0x0F)          /* Mask for BS values in BRS byte */
 
+#define PTX_NSC_RF_ACTIVATE_ATRRES_PP_IDX                   (17u)           /* NSC ATR_RES PP byte index */
+
 #define PTX_NSC_RF_ACTIVATE_SENSBRES_LEN                    (13U)           /* NSC Type B SENSRES length */
 #define PTX_NSC_RF_ACTIVATE_SENSFRES_LEN_1                  (18U)           /* NSC Type F SENSRES NTF parameter length */
 #define PTX_NSC_RF_ACTIVATE_SENSFRES_LEN_2                  (20U)           /* NSC Type F SENSRES NTF parameter length */
@@ -97,16 +99,20 @@
  * ####################################################################################################################
  */
 
+static ptx_Status_t ptx_NSC_RfActivate_ParseFSCI(ptx_NSC_t *nsc, uint8_t fsci);
+static ptx_Status_t ptx_NSC_RfActivate_ParseFSDI(ptx_NSC_t *nsc, uint8_t fsdi);
+static ptx_Status_t ptx_NSC_RfActivate_ParseLR(ptx_NSC_t *nsc, uint8_t lr);
+
 static ptx_Status_t ptx_NSC_RfActivateNtf_CheckProtLen (uint8_t *buffer, uint32_t bufferLen, uint8_t curIdx, ptx_NSC_RfActivate_Ntf_t *ntf);
 static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams_IsoDep (uint8_t *buffer, uint32_t bufferLen, uint8_t *curIdx, ptx_NSC_RfActivate_Ntf_t *ntf);
 static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams_NfcDep (uint8_t *buffer, uint32_t bufferLen, uint8_t *curIdx, ptx_NSC_RfActivate_Ntf_t *ntf);
 static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams (uint8_t *buffer, uint32_t bufferLen, uint8_t *curIdx, ptx_NSC_RfActivate_Ntf_t *ntf);
 static ptx_Status_t ptx_NSC_RfActivateNtf_ParseTechParams (uint8_t *buffer, uint8_t *curIdx, ptx_NSC_RfActivate_Ntf_t *ntf);
 
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp(uint8_t *buffer, uint32_t bufferLen, uint8_t tech, ptx_NSC_RfProtocol_t RfProt, ptx_NSC_RfAct_ProtParam_t *data);
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data);
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepB (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data);
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data);
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp(ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, uint8_t tech, ptx_NSC_RfProtocol_t RfProt, ptx_NSC_RfTech_Param_t *RfTechParam, ptx_NSC_RfAct_ProtParam_t *data);
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data);
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepB (ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfTech_Param_t *RfTechParam, ptx_NSC_RfAct_ProtParam_t *data);
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data);
 
 static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, ptx_NSC_RfAct_ProtParam_t *data);
 
@@ -192,13 +198,12 @@ ptx_Status_t ptx_NSC_RfActivate(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, pt
     return status;
 }
 
-ptx_Status_t ptx_NSC_ProcessRfActivateNtf (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfActivate_Ntf_t *ntf)
+ptx_Status_t ptx_NSC_ProcessRfActivateNtf (ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfActivate_Ntf_t *ntf)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ( (NULL != buffer) && (0 != bufferLen) && (NULL != ntf) )
+    if (PTX_COMP_CHECK(nsc, Comp_NSC) && (NULL != buffer) && (0 != bufferLen) && (NULL != ntf))
     {
-
         uint8_t idx = 0;
 
         /* Get RF-Tech ID. */
@@ -244,6 +249,50 @@ ptx_Status_t ptx_NSC_ProcessRfActivateNtf (uint8_t *buffer, uint32_t bufferLen, 
                 status = PTX_STATUS_E_NSC_PROTOCOL;
             }
         }
+
+        if (PTX_STATUS_SUCCESS == status)
+        {
+            if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Poll_A == ntf->RfTech))
+            {
+                status = ptx_NSC_RfActivate_ParseFSCI(nsc, ntf->RfProtParams.IsoDep.PollA.FSCI);
+            }
+            else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Poll_B == ntf->RfTech))
+            {
+                status = ptx_NSC_RfActivate_ParseFSCI(nsc, (ntf->RfTechParams.PollB.SensBRes[PTX_NSC_RF_DISCOVER_PROTINFO1_OFFSET] & PTX_NSC_RF_DISCOVER_PINFO1_FSCI_MASK) >> 4);
+            }
+            else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech))
+            {
+                status = ptx_NSC_RfActivate_ParseFSDI(nsc, (ntf->RfProtParams.IsoDep.ListenA.Rats & PTX_NSC_RF_DISCOVER_RATS_FSDI_MASK) >> 4);
+            }
+            else if ((ptx_NSC_RfProtocol_IsoDep == ntf->RfProt) && (ptx_NSC_RfTech_Passive_Listen_B == ntf->RfTech))
+            {
+                status = ptx_NSC_RfActivate_ParseFSDI(nsc, ntf->RfProtParams.IsoDep.ListenB.Attrib[PTX_NSC_RF_DISCOVER_PARAM2_OFFSET] & PTX_NSC_RF_DISCOVER_ATRRIB_FSDI_MASK);
+            }
+            else if (ptx_NSC_RfProtocol_NfcDep == ntf->RfProt)
+            {
+                /* Setting MTU size depending on the RF tech */
+
+                uint8_t lr = 0x00;
+                if ((ptx_NSC_RfTech_Active_Poll == ntf->RfTech) || (ptx_NSC_RfTech_Passive_Poll_A == ntf->RfTech) || (ptx_NSC_RfTech_Passive_Poll_F == ntf->RfTech))
+                {
+                    lr = (ntf->RfProtParams.NfcDep.PollAF.AtrRes[PTX_NSC_RF_ACTIVATE_ATRRES_PP_IDX] & PTX_NSC_RF_DISCOVER_ATR_RES_PP_LR_MASK) >> PTX_NSC_RFACTIVATE_ATR_RES_PP_LR_OFFSET;
+                }
+                else if ((ptx_NSC_RfTech_Active_Listen == ntf->RfTech) || (ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) || (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech))
+                {
+                    lr = ntf->RfProtParams.NfcDep.ListenAF.Lr;
+                }
+                else
+                {
+                    lr = PTX_NSC_RFACTIVATE_LR_VAL_3;
+                }
+
+                status = ptx_NSC_RfActivate_ParseLR(nsc, lr);
+            }
+            else
+            {
+                nsc->MtU = PTX_NSC_MAX_TRANSFER_UNIT_SIZE;
+            }
+        }
     }
 
     return status;
@@ -255,6 +304,129 @@ ptx_Status_t ptx_NSC_ProcessRfActivateNtf (uint8_t *buffer, uint32_t bufferLen, 
  * INTERNAL FUNCTIONS / CALLBACK
  * ####################################################################################################################
  */
+
+static ptx_Status_t ptx_NSC_RfActivate_ParseFSCI(ptx_NSC_t *nsc, uint8_t fsci)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if (PTX_COMP_CHECK(nsc, Comp_NSC))
+    {
+        status = PTX_STATUS_SUCCESS;
+
+        switch (fsci)
+        {
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_0:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_0;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_1:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_1;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_2:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_2;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_3:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_3;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_4:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_4;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_5:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_5;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_6:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_6;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_7:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_7;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSCI_VAL_8:
+            /* FALLTHROUGH */
+            default:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_MAX;
+                break;
+        }
+    }
+    
+    return status;
+}
+
+static ptx_Status_t ptx_NSC_RfActivate_ParseFSDI(ptx_NSC_t *nsc, uint8_t fsdi)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if (PTX_COMP_CHECK(nsc, Comp_NSC))
+    {
+        status = PTX_STATUS_SUCCESS;
+
+        switch (fsdi)
+        {
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_0:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_0;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_1:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_1;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_2:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_2;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_3:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_3;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_4:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_4;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_5:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_5;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_6:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_6;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_7:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_7;
+                break;
+            case PTX_NSC_RFPROT_PARAMS_FSDI_VAL_8:
+            /* FALLTHROUGH */
+            default:
+                nsc->MtU = PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_MAX;
+                break;
+        }
+    }
+    
+    return status;
+}
+
+static ptx_Status_t ptx_NSC_RfActivate_ParseLR(ptx_NSC_t *nsc, uint8_t lr)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if (PTX_COMP_CHECK(nsc, Comp_NSC))
+    {
+        status = PTX_STATUS_SUCCESS;
+
+        switch (lr)
+        {
+            case PTX_NSC_RFACTIVATE_LR_VAL_0:
+                nsc->MtU = PTX_NSC_RFACTIVATE_CALC_MTU_SIZE(PTX_NSC_RFACTIVATE_LR_SIZE_64);
+                break;
+
+            case PTX_NSC_RFACTIVATE_LR_VAL_1:
+                nsc->MtU = PTX_NSC_RFACTIVATE_CALC_MTU_SIZE(PTX_NSC_RFACTIVATE_LR_SIZE_128);
+                break;
+
+            case PTX_NSC_RFACTIVATE_LR_VAL_2:
+                nsc->MtU = PTX_NSC_RFACTIVATE_CALC_MTU_SIZE(PTX_NSC_RFACTIVATE_LR_SIZE_192);
+                break;
+
+            case PTX_NSC_RFACTIVATE_LR_VAL_3:
+            /* FALLTHROUGH */
+            default:
+                nsc->MtU = PTX_NSC_RFACTIVATE_CALC_MTU_SIZE(PTX_NSC_RFACTIVATE_LR_SIZE_MAX);
+                break;
+        }
+    }
+    
+    return status;
+}
 
 static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Param_t *param, ptx_NSC_RfAct_ProtParam_t *data)
 {
@@ -282,7 +454,7 @@ static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Par
         /* Add RF technology specific parameters. */
         case ptx_NSC_RfTech_Passive_Poll_A:
         {
-            *nsc_buf_pos = param->RfTechParams.RfAct_A.RfState;
+            *nsc_buf_pos = (uint8_t)param->RfTechParams.RfAct_A.RfState;
             nsc_buf_pos++;
 
             uint8_t nfc_id1_len = param->RfTechParams.RfAct_A.NfcId1Len;
@@ -306,7 +478,7 @@ static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Par
 
         case ptx_NSC_RfTech_Passive_Poll_B:
         {
-            *nsc_buf_pos = param->RfTechParams.RfAct_B.RfState;
+            *nsc_buf_pos = (uint8_t)param->RfTechParams.RfAct_B.RfState;
             nsc_buf_pos++;
 
             const uint8_t rf_tech_params_len = PTX_NSC_RF_DISCOVER_SENSBRES_LEN;
@@ -322,7 +494,7 @@ static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Par
             *nsc_buf_pos = (uint8_t)param->RfTechParams.RfAct_F.BitRate;
             nsc_buf_pos++;
 
-            *nsc_buf_pos = param->RfTechParams.RfAct_F.RfState;
+            *nsc_buf_pos = (uint8_t)param->RfTechParams.RfAct_F.RfState;
             nsc_buf_pos++;
 
             const uint8_t rf_tech_params_len = PTX_NSC_NFCID2_LEN;
@@ -349,7 +521,7 @@ static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Par
 
     if ( PTX_STATUS_SUCCESS == status )
     {
-        *nsc_buf_pos = param->RfProt;
+        *nsc_buf_pos = (uint8_t)param->RfProt;
         nsc_buf_pos++;
 
         switch (param->RfProt)
@@ -431,7 +603,7 @@ static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Par
         if (PTX_STATUS_SUCCESS == status)
         {
             /* RF Activate RSP successfully received. Check protocol specific parameters, if any. */
-            status = ptx_NSC_RfActivate_ParseRsp(nsc_rsp, nsc_rsp_len, param->RfTech, param->RfProt, data);
+            status = ptx_NSC_RfActivate_ParseRsp(nsc, nsc_rsp, nsc_rsp_len, param->RfTech, param->RfProt, &param->RfTechParams, data);
         }
 
         if ((PTX_STATUS_SUCCESS == status) && (ptx_NSC_State_Poll_Dep == pending_state) &&
@@ -445,7 +617,7 @@ static ptx_Status_t ptx_NSC_RfActivate_Process(ptx_NSC_t *nsc, ptx_NSC_RfAct_Par
     return status;
 }
 
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data)
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data)
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
@@ -471,13 +643,16 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_NfcDep (uint8_t *buffer, uint32_
             memcpy(&data->NfcDep.PollAF.AtrRes[0], &buffer[idx], atr_res_len);
             idx = (uint8_t)(idx + atr_res_len);
             data->NfcDep.PollAF.Brs = buffer[idx];
+            
+            uint8_t lr = (data->NfcDep.PollAF.AtrRes[PTX_NSC_RF_ACTIVATE_ATRRES_PP_IDX] & PTX_NSC_RF_DISCOVER_ATR_RES_PP_LR_MASK) >> PTX_NSC_RFACTIVATE_ATR_RES_PP_LR_OFFSET;
+            status = ptx_NSC_RfActivate_ParseLR(nsc, lr);
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data)
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data)
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
@@ -508,6 +683,8 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (uint8_t *buffer, uint32
 
                 /* 'Empty' ATS, use default values. */
                 data->IsoDep.PollA.FSCI = PTX_NSC_RFACTIVATE_ATS_FSCI_DEFAULT;
+
+                status = ptx_NSC_RfActivate_ParseFSCI(nsc, data->IsoDep.PollA.FSCI);
             }
             else if ( (PTX_NSC_RFACTIVATE_ATS_MIN_LEN < ats_len)
                     && (PTX_NSC_RFACTIVATE_POLLA_ATS_LEN >= ats_len) )
@@ -519,9 +696,10 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (uint8_t *buffer, uint32
                 idx = (uint8_t)(idx + ats_len);
 
                 data->IsoDep.PollA.PPS1 = buffer[idx];
-                idx++;
 
                 data->IsoDep.PollA.FSCI = data->IsoDep.PollA.ATS[PTX_NSC_RFACTIVATE_ATS_T0_IDX] & PTX_NSC_RF_ACTIVATE_ATS_FSCI_MASK;
+
+                status = ptx_NSC_RfActivate_ParseFSCI(nsc, data->IsoDep.PollA.FSCI);
             }
             else
             {
@@ -533,7 +711,7 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepA (uint8_t *buffer, uint32
     return status;
 }
 
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepB (uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfAct_ProtParam_t *data)
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepB (ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, ptx_NSC_RfTech_Param_t *RfTechParam, ptx_NSC_RfAct_ProtParam_t *data)
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
@@ -567,13 +745,16 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp_IsoDepB (uint8_t *buffer, uint32
             data->IsoDep.PollB.AttribResLen = attrib_res_len;
             idx++;
             (void)memcpy(&data->IsoDep.PollB.AttribRes[0], &buffer[idx], attrib_res_len);
+
+
+            status = ptx_NSC_RfActivate_ParseFSCI(nsc, (RfTechParam->RfAct_B.SensBRes[PTX_NSC_RF_DISCOVER_PROTINFO1_OFFSET] & PTX_NSC_RF_DISCOVER_PINFO1_FSCI_MASK) >> PTX_NSC_RF_DISCOVER_PINFO1_FSCI_OFFSET);
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NSC_RfActivate_ParseRsp(uint8_t *buffer, uint32_t bufferLen, uint8_t tech, ptx_NSC_RfProtocol_t RfProt, ptx_NSC_RfAct_ProtParam_t *data)
+static ptx_Status_t ptx_NSC_RfActivate_ParseRsp(ptx_NSC_t *nsc, uint8_t *buffer, uint32_t bufferLen, uint8_t tech, ptx_NSC_RfProtocol_t RfProt, ptx_NSC_RfTech_Param_t *RfTechParam, ptx_NSC_RfAct_ProtParam_t *data)
 {
     ptx_Status_t status = PTX_STATUS_E_NSC_PROTOCOL;
 
@@ -585,11 +766,11 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp(uint8_t *buffer, uint32_t buffer
             case ptx_NSC_RfProtocol_IsoDep:
                 if (ptx_NSC_RfTech_Passive_Poll_A == tech)
                 {
-                    status = ptx_NSC_RfActivate_ParseRsp_IsoDepA(buffer, bufferLen, data);
+                    status = ptx_NSC_RfActivate_ParseRsp_IsoDepA(nsc, buffer, bufferLen, data);
                 }
                 else if (ptx_NSC_RfTech_Passive_Poll_B == tech)
                 {
-                    status = ptx_NSC_RfActivate_ParseRsp_IsoDepB(buffer, bufferLen, data);
+                    status = ptx_NSC_RfActivate_ParseRsp_IsoDepB(nsc, buffer, bufferLen, RfTechParam, data);
                 }
                 else
                 {
@@ -597,13 +778,15 @@ static ptx_Status_t ptx_NSC_RfActivate_ParseRsp(uint8_t *buffer, uint32_t buffer
                 }
                 break;
             case ptx_NSC_RfProtocol_NfcDep:
-                status = ptx_NSC_RfActivate_ParseRsp_NfcDep(buffer, bufferLen, data);
+                status = ptx_NSC_RfActivate_ParseRsp_NfcDep(nsc, buffer, bufferLen, data);
                 break;
             default:
                 /* For all other protocols, protocol specific parameters shall be omitted. */
                 if (PTX_NSC_CMD_PROCESSOR_RFACTIVATE_RSPLEN == bufferLen)
                 {
                     status = PTX_STATUS_SUCCESS;
+
+                    nsc->MtU = PTX_NSC_MAX_TRANSFER_UNIT_SIZE;
                 }
                 break;
         }
@@ -635,13 +818,12 @@ static ptx_Status_t ptx_NSC_RfActivateNtf_CheckProtLen (uint8_t *buffer, uint32_
             }
             else if (ptx_NSC_RfTech_Passive_Poll_B == ntf->RfTech)
             {
-                uint8_t attrib_res_len = 0;
                 /* Count in ATTRIB_PARAM1 (1By) + ATTRIB_PARAM2 (1By) + ATTRIB_RES_LEN (1By) */
                 total_len += 3u;
                 if (total_len <= bufferLen)
                 {
                     /* Index of ATTRIB_RES_LENGTH */
-                    attrib_res_len = buffer[idx + 2];
+                    uint8_t attrib_res_len = buffer[idx + 2];
                     total_len += attrib_res_len;
                     if (total_len <= bufferLen)
                     {
@@ -884,9 +1066,9 @@ static ptx_Status_t ptx_NSC_RfActivateNtf_ParseProtParams_NfcDep (uint8_t *buffe
                         ntf->RfProtParams.NfcDep.ListenAF.Lr = buffer[idx];
                         idx++;
 
-                        if (0xFF == ntf->RfProtParams.NfcDep.ListenAF.Lr)
+                        if (PTX_NSC_RFACTIVATE_LISTEN_LR_INVALID == ntf->RfProtParams.NfcDep.ListenAF.Lr)
                         {
-                            ntf->RfProtParams.NfcDep.ListenAF.Lr = ntf->RfProtParams.NfcDep.ListenAF.AtrReq[PTX_NSC_RF_ACTIVATE_ATRREQ_PP_IDX];
+                            ntf->RfProtParams.NfcDep.ListenAF.Lr = (ntf->RfProtParams.NfcDep.ListenAF.AtrReq[PTX_NSC_RF_ACTIVATE_ATRREQ_PP_IDX] & PTX_NSC_RF_DISCOVER_ATR_REQ_PP_LR_MASK) >> PTX_NSC_RFACTIVATE_ATR_REQ_PP_LR_OFFSET;
                         }
 
                         status = PTX_STATUS_SUCCESS;

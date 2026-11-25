@@ -109,16 +109,16 @@ typedef enum ptx_NDEF_T5T_Modes
 typedef union ptx_NDEF_Tag_Ctx
 {
 #if !defined(PTX_DISABLE_NDEF_T2T)
-    ptx_NDEF_T2T_t t2t;                 /**< Tag Type 2 Context */
+    ptx_NDEF_T2T_t T2t;                 /**< Tag Type 2 Context */
 #endif
 #if !defined(PTX_DISABLE_NDEF_T3T)
-    ptx_NDEF_T3T_t t3t;                 /**< Tag Type 3 Context */
+    ptx_NDEF_T3T_t T3t;                 /**< Tag Type 3 Context */
 #endif
 #if !defined(PTX_DISABLE_NDEF_T4T)
-    ptx_NDEF_T4T_t t4t;                 /**< Tag Type 4 Context */
+    ptx_NDEF_T4T_t T4t;                 /**< Tag Type 4 Context */
 #endif
 #if !defined(PTX_DISABLE_NDEF_T5T)
-    ptx_NDEF_T5T_t t5t;                 /**< Tag Type 5 Context */
+    ptx_NDEF_T5T_t T5t;                 /**< Tag Type 5 Context */
 #endif
 } ptx_NDEF_Tag_Ctx_t;
 
@@ -131,19 +131,19 @@ typedef struct ptx_NDEF
 {
     ptx_Comps_t                 CompId;                             /**< Component Id */
 
-    ptx_RUL_CardProtocolType_t  type;                               /**< Active Tag type. */
-    ptx_NDEF_Tag_Ctx_t          tagCtx;                             /**< Active Tag context. */
+    ptx_RUL_CardProtocolType_t  Type;                               /**< Active Tag type. */
+    ptx_NDEF_Tag_Ctx_t          TagCtx;                             /**< Active Tag context. */
 
-    uint8_t                     *rxBuffer;                          /**< Internal rx buffer. */
-    uint32_t                    rxLen;                              /**< Internal rx buffer length. */
-    uint8_t                     *txBuffer;                          /**< Internal tx buffer. */
-    uint32_t                    txLen;                              /**< Internal tx buffer length. */
-    uint8_t                     *workBuffer;                        /**< Internal work buffer. */
-    uint32_t                    workBufferLen;                      /**< Internal work buffer length. */
-    uint32_t                    rxSize;                             /**< Internal rx buffer maximum length. */
-    uint32_t                    txSize;                             /**< Internal tx buffer maximum length. */
+    uint8_t                     *RxBuffer;                          /**< Internal rx buffer. */
+    uint32_t                    RxLen;                              /**< Internal rx buffer length. */
+    uint8_t                     *TxBuffer;                          /**< Internal tx buffer. */
+    uint32_t                    TxLen;                              /**< Internal tx buffer length. */
+    uint8_t                     *WorkBuffer;                        /**< Internal work buffer. */
+    uint32_t                    WorkBufferLen;                      /**< Internal work buffer length. */
+    uint32_t                    RxSize;                             /**< Internal rx buffer maximum length. */
+    uint32_t                    TxSize;                             /**< Internal tx buffer maximum length. */
 
-    ptx_RUL_t                   *rul;                               /**< Pointer to initialized RUL component. */
+    ptx_RUL_t                   *Rul;                               /**< Pointer to initialized RUL component. */
 } ptx_NDEF_t;
 
 /**
@@ -151,15 +151,15 @@ typedef struct ptx_NDEF
  */
 typedef struct ptx_NDEF_InitParams
 {
-    uint8_t                     *rx;                                /**< Internal rx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
-    uint32_t                    rxLen;                              /**< Internal rx buffer length. */
-    uint8_t                     *tx;                                /**< Internal tx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
-    uint32_t                    txLen;                              /**< Internal tx buffer length. */
-    uint8_t                     *workBuffer;                        /**< Internal work buffer. Used to store intermediate information (Recommended size: 256 bytes) */
-    uint32_t                    workBufferLen;                      /**< Internal work buffer length. */
-    ptx_RUL_t                   *rul;                               /**< Pointer to initialized RUL component. */
+    uint8_t                     *Rx;                                /**< Internal rx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
+    uint32_t                    RxLen;                              /**< Internal rx buffer length. */
+    uint8_t                     *Tx;                                /**< Internal tx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
+    uint32_t                    TxLen;                              /**< Internal tx buffer length. */
+    uint8_t                     *WorkBuffer;                        /**< Internal work buffer. Used to store intermediate information (Recommended size: 256 bytes) */
+    uint32_t                    WorkBufferLen;                      /**< Internal work buffer length. */
+    ptx_RUL_t                   *Rul;                               /**< Pointer to initialized RUL component. */
 
-    ptx_NDEF_T5T_Modes_t        t5tMode;                            /**< T5T communication mode to use. */
+    ptx_NDEF_T5T_Modes_t        T5tMode;                            /**< T5T communication mode to use. */
 } ptx_NDEF_InitParams_t;
 
 

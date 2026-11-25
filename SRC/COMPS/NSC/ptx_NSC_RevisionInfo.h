@@ -75,10 +75,10 @@ extern "C" {
  */
 
 #define PTX_STACK_REVISION_MAJOR        1       /**< Stack Revision Major Version Number */
-#define PTX_STACK_REVISION_MINOR        2       /**< Stack Revision Minor Version Number */
-#define PTX_STACK_REVISION_PATCH        1       /**< Stack Revision Patch Version Number */
+#define PTX_STACK_REVISION_MINOR        3       /**< Stack Revision Minor Version Number */
+#define PTX_STACK_REVISION_PATCH        0       /**< Stack Revision Patch Version Number */
 
-#define PTX_PLATFORM_REVISION           ((uint64_t)0x9fe846580)   /**< Revision number of the stack */
+#define PTX_PLATFORM_REVISION           ((uint64_t)0x1f7d68f71)   /**< Revision number of the stack */
 #define PTX_PLATFORM_LOCAL_CHANGES      0       /**< Local changes in the stack */
 
 /** @} */

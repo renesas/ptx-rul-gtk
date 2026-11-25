@@ -84,7 +84,7 @@ extern "C" {
 /**
  * \brief HAL Forward declaration.
  */
-typedef struct ptx_HAL ptx_HAL_t;
+struct ptx_HAL;
 
 
 /**
@@ -113,7 +113,7 @@ typedef struct ptx_HIP
  */
 typedef struct ptx_HIP_InitParams
 {
-    ptx_HAL_t                       *Hal;               /**< Pointer to HAL */
+    struct ptx_HAL                  *Hal;               /**< Pointer to HAL */
     ptx_Log_t                       *Log;               /**< Pointer to logger context. */
 
 } ptx_HIP_InitParams_t;

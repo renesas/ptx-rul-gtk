@@ -82,7 +82,7 @@ extern "C" {
 #define PTX_NSC_SYSTEM_CONFIG_NALM_MIN_LEN          (4u)        /**< NSC System Config Minimum NALM value length. */
 #define PTX_NSC_SYSTEM_CONFIG_XTAL_TRIM_LEN         (1u)        /**< NSC System Config XTAL trimming value length. */
 #define PTX_NSC_SYSTEM_CONFIG_TX_CURLIMGAIN_LEN     (1u)        /**< NSC System Config TxCurlimGain value length. */
-#define PTX_NSC_SYSTEM_CONFIG_PARAM_ID_MAX_PARAMID  (11u)       /**< NSC System Config sets of parameters currently implemented */
+#define PTX_NSC_SYSTEM_CONFIG_PARAM_ID_MAX_PARAMID  (13u)       /**< NSC System Config sets of parameters currently implemented */
 /** @} */
 
 /*
@@ -122,6 +122,7 @@ typedef enum ptx_NSC_SystemConfig_Type
     NSC_SystemConfig_Config_XtalTrim,       /*< XTAL trimming value. */
     NSC_SystemConfig_Config_TempErrTresh,   /*< Over-temperature error treshold. */
     NSC_SystemConfig_Config_TxCurlimGain,   /*< Over-current gain selection. */
+    NSC_SystemConfig_Config_TxOvDEn,        /*< TX Pin Overvoltage Event detection enable. */
     NSC_SystemConfig_Config_MAX             /*< Maximum enumeration Value */
 } ptx_NSC_SystemConfig_Type_t;
 
@@ -142,6 +143,7 @@ typedef union ptx_NSC_SystemConfig_Value
     uint8_t     XtalTrim;           /**< XTAL trimming value. */
     uint8_t     TempErrTresh;       /**< Over-temperature error treshold value. */
     uint8_t     TxCurlimGain;       /**< Over-current error gain selection. */
+    uint8_t     TxOvDEn;           /**< TX Pin Overvoltage Event detection enable. */
 } ptx_NSC_SystemConfig_Value_t;
 
 /**
@@ -176,6 +178,9 @@ typedef struct ptx_NSC_SystemConfig
     uint8_t     TxCurlimGain;                           /**< Over-current error gain selection.
                                                              Value:  0 - over-current protection disabled,
                                                                      1 - 12.5 (100mOhm resistor), 2 - 25 (50mOhm resistor). */
+    uint8_t     TxOvDEn;                                /**< TX Pin Overvoltage Event detection. 
+                                                             Value: 0 - TX Pin Overvoltage Event detection disabled.
+                                                                    others - TX Pin Overvoltage Event detection enabled. */
     ptx_NSC_SystemConfig_LoadParamCb_t LoadSystemParam; /**< System Parameter load callback. */
 } ptx_NSC_SystemConfig_t;
 

@@ -75,12 +75,13 @@ extern "C" {
  * \name Internal defines and limits.
  * @{
  */
-#define PTX_T2T_DEFAULT_TIMEOUT_MS          (uint32_t)100  /**< T2T Tag specific default timeout. */
+#define PTX_T2T_DEFAULT_TIMEOUT_MS          (uint32_t)15   /**< T2T Tag specific default timeout. */
 #define PTX_T2T_SUPPORTED_VERSION           (uint8_t)0x11  /**< T2T Tag specific default supported version. */
 #define PTX_T2T_MAX_NUMBER_LOCK_CONTROL     (uint8_t)3u    /**< T2T Tag specific default max number of lock controls. */
 #define PTX_T2T_MAX_NUMBER_MEMORY_CONTROL   (uint8_t)3u    /**< T2T Tag specific default max number of memory controls. */
-#define PTX_T2T_MAX_NUMBER_NDEFTLVS         (uint8_t)3u    /**< T2T NDEF Operations Maximum NDEF TLVs to be handled. */
+#define PTX_T2T_MAX_NUMBER_NDEFTLVS         (uint8_t)1u    /**< T2T NDEF Operations Maximum NDEF TLVs to be handled. */
 #define PTX_T2T_BLOCKSIZE                   (uint8_t)4u    /**< T2T block size. */
+#define PTX_T2T_INTERNAL_BYTES_LENGTH       (uint8_t)10u   /**< Length of the "Internal Bytes" in the T2T memory. */
 /** @} */
 /*
  * ####################################################################################################################
@@ -88,6 +89,14 @@ extern "C" {
  * ####################################################################################################################
  */
 
+/**
+ * \brief Variant which block(s) to read first to get the Capability Container CC.
+ */
+typedef enum ptx_NDEF_T2T_ReadCCVariant
+{
+    ReadCCVariant_Block_3_Default,                              /**< Reading CC-Block starts at Block 3 (default) */
+    ReadCCVariant_Block_0,                                      /**< Reading CC-Block starts at Block 0 */
+} ptx_NDEF_T2T_ReadCCVariant_t;
 
 /**
  * \brief T2T NDEF OP Capability Container Parameters
@@ -103,9 +112,10 @@ typedef struct ptx_NDEF_T2T_CC
     uint8_t                         WriteAccess;                 /**< Write permission */
     uint8_t                         VersionMajor;                /**< Major Version */
     uint8_t                         VersionMinor;                /**< Minor Version */
-    uint16_t                        Size;                        /**< Size in bytes */
+    uint32_t                        Size;                        /**< Size in bytes */
     uint16_t                        NumberOfBlocks;              /**< Number of Blocks each containing 4 bytes */
 
+    uint8_t                         InternalBytes[PTX_T2T_INTERNAL_BYTES_LENGTH];  /**< Contains the first 10 bytes of the T2T information if ReadCCVariant is set to ReadCCVariant_Block_0. */
 } ptx_NDEF_T2T_CC_t;
 
 /**
@@ -113,35 +123,21 @@ typedef struct ptx_NDEF_T2T_CC
  */
 typedef struct ptx_NDEF_T2T_NDEF_TLV
 {
-    uint16_t                        ByteAddress;                                /**< Byte address of T byte */
+    uint32_t                        ByteAddress;                                /**< Byte address of T byte */
     uint16_t                        Length;                                     /**< Length in byte */
-    uint8_t                         LengthBlock[PTX_T2T_BLOCKSIZE * 2u];        /**< Length blocks cache of NDEF TLV, can be up to two blocks if split. */
-    uint8_t                         LengthByteOffset;                           /**< Offset in length-block. */
-    uint16_t                        ValueStartByteAddress;                      /**< Byte address of first V byte */
-
+    uint32_t                        ValueByteAddress;                           /**< Byte Address of start of Value */
 } ptx_NDEF_T2T_NDEF_TLV_t;
-
-/**
- * \brief T2T Terminator TLV position
- */
-typedef struct ptx_NDEF_T2T_TERMINATOR_TLV
-{
-    uint16_t                        ByteAddress;                 /**< Byte address of T byte */
-    uint8_t                         TerminatorTLVFound;          /**< Terminator TLV found check, only one needed */
-
-} ptx_NDEF_T2T_TERMINATOR_TLV_t;
 
 /**
  * \brief T2T Lock Control TLV positions and counter
  */
 typedef struct ptx_NDEF_T2T_LOCK_CONTROL_TLV
 {
-    uint16_t                        ByteAddress;                 /**< Byte addresses of T byte */
-    uint16_t                        LockArea[2];                 /**< begin and end byte address of areas [begin,end] */
+    uint32_t                        ByteAddress;                 /**< Byte addresses of T byte */
+    uint32_t                        LockArea[2];                 /**< begin and end byte address of areas [begin,end] */
     uint8_t                         NbrReservedBits;             /**< Reserved Bits for not completely lock-bit-filled bytes */
     uint8_t                         BytesLockedPerLockBit;       /**< Bytes Locked per Lock Bit */
-    uint16_t                        InternalArea[2];             /**< Internal Bytes beginning and end. End is always at least the same as LockArea end. */
-
+    uint32_t                        InternalArea[2];             /**< Internal Bytes beginning and end. End is always at least the same as LockArea end. */
 } ptx_NDEF_T2T_LOCK_CONTROL_TLV_t;
 
 /**
@@ -149,9 +145,8 @@ typedef struct ptx_NDEF_T2T_LOCK_CONTROL_TLV
  */
 typedef struct ptx_NDEF_T2T_MEMORY_CONTROL_TLV
 {
-    uint16_t                        ByteAddress;                 /**< Byte addresses of T byte */
-    uint16_t                        RsvdArea[2];                 /**< begin and end byte address of areas [begin,end] */
-
+    uint32_t                        ByteAddress;                 /**< Byte addresses of T byte */
+    uint32_t                        RsvdArea[2];                 /**< begin and end byte address of areas [begin,end] */
 } ptx_NDEF_T2T_MEMORY_CONTROL_TLV_t;
 
 /**
@@ -159,15 +154,14 @@ typedef struct ptx_NDEF_T2T_MEMORY_CONTROL_TLV
  */
 typedef struct ptx_NDEF_T2T_TLV
 {
-    ptx_NDEF_T2T_TERMINATOR_TLV_t                      TerminatorTLV;                                        /**< Terminator TLV */
+    uint8_t                                            TerminatorTLVFound;                                   /**< Terminator TLV */
     ptx_NDEF_T2T_NDEF_TLV_t                            NDEFTLV[PTX_T2T_MAX_NUMBER_NDEFTLVS];                 /**< NDEF TLV */
     uint8_t                                            NumberOfNdefTLVs;                                     /**< Number of NDEF TLVs */
     ptx_NDEF_T2T_LOCK_CONTROL_TLV_t                    LockControlTLVs[PTX_T2T_MAX_NUMBER_LOCK_CONTROL];     /**< Lock control TLV */
     uint8_t                                            NumberOfLockTLVs;                                     /**< Number of Lock Control TLVs */
     ptx_NDEF_T2T_MEMORY_CONTROL_TLV_t                  MemoryControlTLVs[PTX_T2T_MAX_NUMBER_MEMORY_CONTROL]; /**< Memory control TLV */
     uint8_t                                            NumberOfMemoryTLVs;                                   /**< Number of Memory Control TLVs */
-    uint16_t                                           AvailableNdefLength;                                  /**< Available length in byte, not including other TLVs and DLAs/RAs */
-
+    uint32_t                                           LogicalEndAddress;                                    /**< Available length in byte, not including other TLVs and DLAs/RAs */
 } ptx_NDEF_T2T_TLV_t;
 
 /**
@@ -175,40 +169,42 @@ typedef struct ptx_NDEF_T2T_TLV
  */
 typedef struct ptx_NDEF_T2T_Sector
 {
-    uint8_t                                            CurrentSector;                              /**< Current sector */
-    uint8_t                                            NumberOfSectors;                            /**< Number of Sectors */
-
+    uint8_t                                            CurrentSector;                           /**< Current sector */
 } ptx_NDEF_T2T_Sector_t;
-
 
 /**
  * \brief Main Component Structure
  */
 typedef struct ptx_NDEF_T2T
 {
-    ptx_Comps_t                     CompId;                /**< Component Id */
+    ptx_Comps_t                     CompId;                                                     /**< Component Id */
+    ptx_NativeTag_T2T_t             T2t;                                                        /**< Native Tag component. */
+    ptx_NDEF_TagLifeCycle_t         LifeCycle;                                                  /**< Tag Life-Cycle */
 
-    ptx_NativeTag_T2T_t             t2t;                   /**< Native Tag component. */
+    uint8_t                         *RxBuffer;                                                  /**< Internal Rx-Buffer provided by upper layer (may be shared with other components) */
+    uint32_t                        RxBufferSize;                                               /**< Internal Maximum Rx-Buffer size */
+    uint32_t                        RxLen;                                                      /**< Internal Current RxLen */
 
-    ptx_NDEF_TagLifeCycle_t         LifeCycle;             /**< Tag Life-Cycle */
-    uint8_t                         *RxBuffer;             /**< Internal Rx-Buffer provided by upper layer (may be shared with other components) */
-    uint32_t                        RxBufferSize;          /**< Internal Maximum Rx-Buffer size */
-    uint32_t                        RxLen;                 /**< Internal Current RxLen */
-    uint8_t                         *WorkBuffer;           /**< Internal Work-Buffer */
-    uint32_t                        WorkBufferSize;        /**< Internal Work-Buffer Size. */
+    uint8_t                         ReadCache[PTX_T2T_READ_RSP_MAX_PAYLOAD_LEN];                /**< Cached blocks of the last read operation. */
+    uint32_t                        ReadCacheAddress;                                           /**< Byte address of the first byte of the read cache. */
+    uint8_t                         ReadCacheValid;                                             /**< Whether the read cache contains valid blocks. */
+
+    uint32_t                        LogicalOffsetCache;                                         /**< Cached logical offset to byte address mapping. */
+    uint32_t                        AddressCache;                                               /**< Cached byte address to logical offset mapping. */
+
+    uint8_t                         WriteCache[PTX_T2T_BLOCKSIZE];                              /**< Current cached block ready to be written. */
+    uint8_t                         WriteCacheValid;                                            /**< Whether the block currently in the write cache is valid. */ 
+    uint8_t                         WriteCacheDirty;                                            /**< Whether the write cache is dirty */
+    uint32_t                        WriteCacheAddress;                                          /**< Byte address of the first byte of the write cache */
+
     /* Tag Type specific members */
-    ptx_NDEF_T2T_CC_t               CCParams;              /**< T2T CC Parameters */
-    ptx_NDEF_T2T_TLV_t              TLVs;                  /**< T2T TLVs */
-    ptx_NDEF_T2T_Sector_t           SectorParams;          /**< T2T Sector Parameters */
-
-    /* Position Tracking within the T2T Memory. */
-    uint8_t                         CurrentBlock;          /**< Current Block in Memory. */
-    uint16_t                        CurrentBlockAddress;   /**< Current Block Address in Memory. */
-    uint16_t                        CurrentByteAddress;    /**< Current Byte Address in Memory. */
+    ptx_NDEF_T2T_CC_t               CCParams;                                                   /**< T2T CC Parameters */
+    ptx_NDEF_T2T_ReadCCVariant_t    ReadCCVariant;                                              /**< Reading initial NDEF-Content/CC-Block starting at Block 0 or 3 */
+    ptx_NDEF_T2T_TLV_t              TLVs;                                                       /**< T2T TLVs */
+    ptx_NDEF_T2T_Sector_t           SectorParams;                                               /**< T2T Sector Parameters */
 
     /* General Info and / or Greedy Collecting related Parameters */
-    uint8_t                         LastOperationCheck;    /**< Flag whether the last operation we did was a CheckMsg. */
-
+    uint8_t                         LastOperationCheck;                                         /**< Flag whether the last operation we did was a CheckMsg. */
 } ptx_NDEF_T2T_t;
 
 /**
@@ -216,14 +212,12 @@ typedef struct ptx_NDEF_T2T
  */
 typedef struct ptx_NDEF_T2T_InitParams
 {
-    ptx_RUL_t               *rul;               /**< RUL component. */
-    uint8_t                 *TxBuffer;          /**< Internal tx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
-    uint32_t                TxBufferSize;       /**< Tx buffer size */
-    uint8_t                 *RxBuffer;          /**< Internal rx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
-    uint32_t                RxBufferSize;       /**< Internal Rx-Buffer size */
-    uint8_t                 *WorkBuffer;        /**< Internal work buffer. Used to store intermediate information (Recommended size: 256 bytes) */
-    uint32_t                WorkBufferSize;     /**< Internal Work-Buffer Size. */
-
+    ptx_RUL_t                    *Rul;               /**< RUL component. */
+    uint8_t                      *TxBuffer;          /**< Internal tx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
+    uint32_t                     TxBufferSize;       /**< Tx buffer size */
+    uint8_t                      *RxBuffer;          /**< Internal rx buffer. Used for component internal exchanges (Recommended size: 256 bytes) */
+    uint32_t                     RxBufferSize;       /**< Internal Rx-Buffer size */
+    ptx_NDEF_T2T_ReadCCVariant_t ReadCCVariant;      /**< Reading initial NDEF-Content/CC-Block starting at Block 0 or 3 */
 } ptx_NDEF_T2T_InitParams_t;
 
 /*

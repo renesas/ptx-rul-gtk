@@ -258,17 +258,7 @@ static ptx_Status_t ptx_NFCForumDTA_Listen_Processing_CommandProcess_NFCDEP (ptx
 
             //uint32_t rwt = (303 * 1024) / 1000;
 
-            if (ptx_NSC_RfTech_Active_Listen == dta->hce.ActiveTech)
-            {
-                status = ptx_RUL_Sleep(dta->rul, PTX_NFCFORUMDTA_LISTEN_WAIT_CMD_RWT_P2PACM);
-            }
-            else
-            {
-                status = ptx_RUL_Sleep(dta->rul, PTX_NFCFORUMDTA_LISTEN_WAIT_CMD_RWT);
-            }
-
-
-
+            status = ptx_RUL_Sleep(dta->Rul, PTX_NFCFORUMDTA_LISTEN_WAIT_CMD_RWT);
 
             if (PTX_STATUS_SUCCESS == status)
             {

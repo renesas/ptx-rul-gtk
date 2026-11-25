@@ -91,7 +91,7 @@ extern "C" {
 /**
  * \brief HAL Forward declaration.
  */
-typedef struct ptx_HAL ptx_HAL_t;
+struct ptx_HAL;
 
 struct ptx_HIP_Frame;
 
@@ -158,7 +158,7 @@ typedef struct ptx_HIP_Frame
 {
     ptx_Comps_t                 CompId;                                     /**< Component ID */
 
-    ptx_HAL_t                   *Hal;                                       /**< Hardware Abstraction Layer, required for communication */
+    struct ptx_HAL              *Hal;                                       /**< Hardware Abstraction Layer, required for communication */
 
     ptx_HIP_Frame_EncodeCb_t    Encode;                                     /**< Interface function for the encoding of a frame */
 
@@ -176,7 +176,7 @@ typedef struct ptx_HIP_Frame
  */
 typedef struct ptx_HIP_Frame_InitParams
 {
-    ptx_HAL_t                   *Hal;             /**< Pointer to an initialised HAL instance */
+    struct ptx_HAL              *Hal;             /**< Pointer to an initialised HAL instance */
 
     ptx_HIP_Frame_EncodeCb_t    EncodeCb;         /**< Pointer to Encode function */
     ptx_Log_t                  *Log;              /**< Pointer to logger context. */

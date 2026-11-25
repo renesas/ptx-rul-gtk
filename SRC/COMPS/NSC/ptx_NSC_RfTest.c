@@ -421,7 +421,7 @@ static ptx_Status_t ptx_NSC_RfTest_PRBS(ptx_NSC_t* nsc, ptx_NSC_RfTest_Params_PR
             if (PTX_NSC_RFTEST_DISAB_SOFEOF_B == inParams->EnabSofEof)
             {
                 /* set bit to 1 to disable */
-                rf_frame_config = rf_frame_config | ((uint8_t) 1 << (uint8_t) PTX_NSC_RF_TEST_FRAME_CFG_SOF_EOF);
+                rf_frame_config = ((uint8_t) 1 << (uint8_t) PTX_NSC_RF_TEST_FRAME_CFG_SOF_EOF);
             }
 
             if (PTX_NSC_RFTEST_DISAB_STARTSTOP_B == inParams->EnabStartStopBits)

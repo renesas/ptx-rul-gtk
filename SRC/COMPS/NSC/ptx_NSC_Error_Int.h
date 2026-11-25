@@ -71,7 +71,8 @@ extern "C" {
  */
 #define PTX_NSC_ERROR_NTF_PARAMLENGTH   (1u)    /**< Error NTF parameter length. */
 #define PTX_NSC_ERROR_NTF_ERROR_INDEX   (0u)    /**< Error byte index. */
-#define PTX_NSC_ERROR_NTF_RF_ERROR_MASK (0x10u) /**< Bit-mask indicating that occurred error is an RF-Error. */
+#define PTX_NSC_ERROR_NTF_RF_ERROR_MASK (0x10u) /**< Bit-mask for the high nibble of the error code, indicating that occurred error is an RF-Error. */
+#define PTX_NSC_ERROR_NTF_HIGH_NIBBLE   (0xF0)  /**< High nibble of the NSC Error NTF code, used to identify the error type. */
 /** @} */
 
 /*
@@ -98,6 +99,7 @@ typedef enum ptx_NSC_ErrorCodes
     NSC_ErrorCode_VddTx                     = 0x33u,      /**< VDD Tx error. */
     NSC_ErrorCode_OTPConfig                 = 0x34u,      /**< OTP configuration error. */
     NSC_ErrorCode_OutOfMemory               = 0x35u,      /**< Device ran out of memory (e.g. Data from NFC-HW not read fast enough by Host/Application). */
+    NSC_ErrorCode_TxOvervoltage             = 0x37u,      /**< TX Pin Overvoltage Event detected. */
     NSC_ErrorCode_UnknownError              = 0xFFu,      /**< Unknown error. */
 } ptx_NSC_ErrorCodes_t;
 

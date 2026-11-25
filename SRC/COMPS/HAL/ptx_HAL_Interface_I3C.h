@@ -100,9 +100,9 @@ extern "C" {
 
    uint32_t                            Speed;          /**< Communication Interface Speed */
    ptx_Log_t                           *Log;           /**< Initialised Logger Context */
-   ptx_HAL_GPIO_t                      *Gpio;          /**< Initialized GPIO Context. */
+   struct ptx_HAL_GPIO                 *Gpio;          /**< Initialized GPIO Context. */
 #if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
-    void                                *OS;            /**< Pointer to initialized Osal context. */
+    void                                *Osal;          /**< Pointer to initialized Osal context. */
 #endif
  } ptx_HAL_Interface_I3C_InitParams_t;
  

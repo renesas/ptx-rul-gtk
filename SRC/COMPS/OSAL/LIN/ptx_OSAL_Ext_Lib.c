@@ -98,6 +98,7 @@ ptx_Status_t ptx_OSAL_LibClose(ptx_OSAL_t *osalCtx, ptx_OSAL_Lib_t *libH)
         {
             (void)dlclose(lib_h->LibH);
             lib_h->LibH = NULL;
+            lib_h->IsLoaded = 0;
         }
 
         ret = PTX_STATUS_SUCCESS;

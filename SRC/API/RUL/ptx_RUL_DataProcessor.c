@@ -347,6 +347,10 @@ ptx_Status_t ptx_RUL_ProcessErrorNtf (void *ctx, ptx_NSC_Error_Ntf_t *ntf)
                 case NSC_ErrorCode_OutOfMemory:
                     rul->SystemStatus = ptx_RUL_StatusInfoSystem_ErrorOutOfMemory;
                     break;
+                case NSC_ErrorCode_TxOvervoltage:
+                    rul->SystemStatus = ptx_RUL_StatusInfoSystem_TxOvD;
+                    (void) ptx_RUL_ClearCardRegistry(rul);
+                    break;
                 case NSC_ErrorCode_StandbyMode:
                     rul->SystemStatus = ptx_RUL_StatusInfoSystem_ErrorStandby;
                     break;
@@ -492,86 +496,125 @@ static ptx_Status_t ptx_RUL_ReaderProcessRfDiscoverNtf (ptx_RUL_t *rul, ptx_NSC_
 
         status = PTX_STATUS_SUCCESS;
 
-        switch (ntf->RfTech)
+        /* An Emv Collision is detected when Extended Polling mode is enabled */
+        if ((PTX_RUL_EXTENSION_SKIP_EMVCO == rul->SkipEmvcoCollision) && (PTX_RUL_EXTENSION_COLL_PEND_SET == ntf->CollPend))
         {
-            case ptx_NSC_RfTech_Passive_Poll_A:
-                discovered_card.TechType = ptx_RUL_CardRfTechType_A;
+            rul->ExtensionEmvCollisionDetected = PTX_RUL_EXTENSION_EMV_COLL_DETECTED;
 
-                discovered_card.State = (ptx_RUL_CardRfState_t) ntf->RfState;
+            status = ptx_RUL_SetEmvCollision(rul);
 
-                memcpy(discovered_card.TechParam.TypeA.SensRes, &ntf->PollParam.PollA.SensRes, PTX_RUL_SENSRES_LEN);
-
-                discovered_card.TechParam.TypeA.NfcId1Len = ntf->PollParam.PollA.NfcId1Len;
-                memcpy(discovered_card.TechParam.TypeA.NfcId1, &ntf->PollParam.PollA.NfcId1, ntf->PollParam.PollA.NfcId1Len);
-
-                discovered_card.TechParam.TypeA.SelRes = ntf->PollParam.PollA.SelRes;
-
-                break;
-
-            case ptx_NSC_RfTech_Passive_Poll_B:
-                discovered_card.TechType = ptx_RUL_CardRfTechType_B;
-                discovered_card.State = (ptx_RUL_CardRfState_t) ntf->RfState;
-                #if defined(ENABLE_EXTENDED_CARD_REGISTER)
-                ptx_RUL_ParseSensBRes(&discovered_card, ntf->PollParam.PollB.SensBRes);
-                #else  
-                memcpy(discovered_card.TechParam.TypeB.SensBRes, ntf->PollParam.PollB.SensBRes, PTX_NSC_TYPES_SENSBRES_LEN);
-                #endif
-                break;
-
-            case ptx_NSC_RfTech_Passive_Poll_F:
-                discovered_card.TechType = ptx_RUL_CardRfTechType_F;
-                #if defined(ENABLE_EXTENDED_CARD_REGISTER)
-                ptx_RUL_ParseSensFRes(&discovered_card, ntf->PollParam.PollF.SensFRes);
-                #else
-                memcpy(discovered_card.TechParam.TypeF.SensFRes, ntf->PollParam.PollF.SensFRes, PTX_RUL_SENSFRES_LEN);
-                #endif
-                break;
-
-            case ptx_NSC_RfTech_Passive_Poll_V:
-                discovered_card.TechType = ptx_RUL_CardRfTechType_V;
-                #if defined(ENABLE_EXTENDED_CARD_REGISTER)
-                ptx_RUL_ParseInventoryRes(&discovered_card, ntf->PollParam.PollV.InventoryRes); 
-                #else
-                memcpy(discovered_card.TechParam.TypeV.InventoryRes, ntf->PollParam.PollV.InventoryRes, PTX_NSC_TYPES_INVENTORYRES_LEN);
-                #endif
-                break;
-
-            default:
-                /* This path shall only be reached in case of the last discover Ntf. */
-                status = ntf->IsLastNtf ? PTX_STATUS_SUCCESS : PTX_STATUS_E_GEN_INVALID_STATE;
-                break;
+            if (ptx_NSC_State_Discovery == rul->Nsc.State)
+            {
+                (void) ptx_RUL_ClearCardRegistry(rul);
+            }
         }
 
-        if (PTX_STATUS_SUCCESS == status)
+        /* If an EMV collision was detected during Extended polling mode and the current notification is the last, then set Emv collision*/
+        if (PTX_RUL_EXTENSION_EMV_COLL_DETECTED == rul->ExtensionEmvCollisionDetected)
         {
-            if (0 == ntf->IsLastNtf)
+            if (0u != ntf->IsLastNtf)
             {
-                (void) ptx_RUL_DetermineProtocol(rul, &discovered_card);
-
-                status = ptx_RUL_AddToCardRegistry(rul, &discovered_card);
-
-                rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_CardDetectionOngoing;
+                rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_EmvCollision;
+                rul->RfErrorStatus = ptx_RUL_StatusInfoRfError_Collision;
+                rul->ExtensionEmvCollisionDetected = PTX_RUL_EXTENSION_EMV_COLL_NOT_DETECTED;
             }
-            else
+        }
+        else
+        {
+            switch (ntf->RfTech)
             {
-                rul->CardRegistry.ActiveCard = NULL;
+                case ptx_NSC_RfTech_Passive_Poll_A:
+                    discovered_card.TechType = ptx_RUL_CardRfTechType_A;
 
-                /* If only one card was found, but support multiple-protocols - set Multi-Protocol-state, otherwise multiple cards are available. */
-                if (1u == rul->CardRegistry.CardsCnt)
+                    discovered_card.State = (ptx_RUL_CardRfState_t) ntf->RfState;
+
+                    memcpy(discovered_card.TechParam.TypeA.SensRes, &ntf->PollParam.PollA.SensRes, PTX_RUL_SENSRES_LEN);
+
+                    discovered_card.TechParam.TypeA.NfcId1Len = ntf->PollParam.PollA.NfcId1Len;
+                    memcpy(discovered_card.TechParam.TypeA.NfcId1, &ntf->PollParam.PollA.NfcId1, ntf->PollParam.PollA.NfcId1Len);
+
+                    discovered_card.TechParam.TypeA.SelRes = ntf->PollParam.PollA.SelRes;
+
+                    break;
+
+                case ptx_NSC_RfTech_Passive_Poll_B:
+                    discovered_card.TechType = ptx_RUL_CardRfTechType_B;
+                    discovered_card.State = (ptx_RUL_CardRfState_t) ntf->RfState;
+                    #if defined(ENABLE_EXTENDED_CARD_REGISTER)
+                    ptx_RUL_ParseSensBRes(&discovered_card, ntf->PollParam.PollB.SensBRes);
+                    #else  
+                    memcpy(discovered_card.TechParam.TypeB.SensBRes, ntf->PollParam.PollB.SensBRes, PTX_NSC_TYPES_SENSBRES_LEN);
+                    #endif
+                    break;
+
+                case ptx_NSC_RfTech_Passive_Poll_F:
+                    discovered_card.TechType = ptx_RUL_CardRfTechType_F;
+                    #if defined(ENABLE_EXTENDED_CARD_REGISTER)
+                    ptx_RUL_ParseSensFRes(&discovered_card, ntf->PollParam.PollF.SensFRes);
+                    #else
+                    memcpy(discovered_card.TechParam.TypeF.SensFRes, ntf->PollParam.PollF.SensFRes, PTX_RUL_SENSFRES_LEN);
+                    #endif
+                    discovered_card.TechParam.TypeF.BitRate = (1 == rul->DiscoverConfig.PollTypeF424)? ptx_RUL_RfBitRate_424 : ptx_RUL_RfBitRate_212;
+                    break;
+
+                case ptx_NSC_RfTech_Passive_Poll_V:
+                    discovered_card.TechType = ptx_RUL_CardRfTechType_V;
+                    #if defined(ENABLE_EXTENDED_CARD_REGISTER)
+                    ptx_RUL_ParseInventoryRes(&discovered_card, ntf->PollParam.PollV.InventoryRes); 
+                    #else
+                    memcpy(discovered_card.TechParam.TypeV.InventoryRes, ntf->PollParam.PollV.InventoryRes, PTX_NSC_TYPES_INVENTORYRES_LEN);
+                    #endif
+                    break;
+
+                default:
+                    /* This path shall only be reached in case of the last discover Ntf. */
+                    status = ntf->IsLastNtf ? PTX_STATUS_SUCCESS : PTX_STATUS_E_GEN_INVALID_STATE;
+                    break;
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                if (0 == ntf->IsLastNtf)
                 {
-                    rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_MultiProtocol;
+                    (void) ptx_RUL_DetermineProtocol(rul, &discovered_card);
+
+                    status = ptx_RUL_AddToCardRegistry(rul, &discovered_card);
+
+                    rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_CardDetectionOngoing;
+                    
+                    /* A collision pending is detected in RF Discovery notification*/
+                    if (PTX_RUL_EXTENSION_COLL_PEND_SET == ntf->CollPend)
+                    {
+                        rul->CollPendDetected = PTX_RUL_EXTENSION_COLL_PEND_SET;
+                    }
                 }
                 else
                 {
-                    rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_CardsAvailable;
+                    rul->CardRegistry.ActiveCard = NULL;
 
-                    /* Special case for EMV Mode - report any additional cards (also non EMV-compliant cards) as EMV-Collision.
-                    * The status and the error have to be reset here.
-                    */
-                    if (ptx_RUL_PollMode_Emvco == rul->DiscoverConfig.PollMode)
+                    /* If only one card was found, but support multiple-protocols - set Multi-Protocol-state, otherwise multiple cards are available. */
+                    if (1u == rul->CardRegistry.CardsCnt)
                     {
-                        rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_EmvCollision;
+                        rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_MultiProtocol;
                     }
+                    else
+                    {
+                        rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_CardsAvailable;
+                    }
+
+                    /* Report During EMVCo Polling any additional cards, or a pending collision as EMV-Collision. (the last NTF has no COLL_PEND, so CollPendDetected flag is used), */
+                    if ((ptx_RUL_PollMode_Emvco == rul->DiscoverConfig.PollMode) && (PTX_RUL_EXTENSION_NOT_SKIP_EMVCO == rul->SkipEmvcoCollision) &&
+                        ((1u != rul->CardRegistry.CardsCnt) || (PTX_RUL_EXTENSION_COLL_PEND_SET == rul->CollPendDetected)))
+                    {
+                        status = ptx_RUL_ClearCardRegistry(rul);
+
+                        if (PTX_STATUS_SUCCESS == status)
+                        {
+                            rul->DiscoverStatus = ptx_RUL_StatusInfoDiscover_EmvCollision;
+                            rul->RfErrorStatus = ptx_RUL_StatusInfoRfError_Collision;
+                        }
+                    }
+                    rul->CollPendDetected = PTX_RUL_EXTENSION_COLL_PEND_NOT_SET;
                 }
             }
         }
@@ -633,9 +676,8 @@ static ptx_Status_t ptx_RUL_ReaderProcessRfActivateNtf (ptx_RUL_t *rul, ptx_NSC_
                     ptx_RUL_ParseSensFRes(&discovered_card, ntf->RfTechParams.PollF.SensFRes); 
                     #else
                     memcpy(discovered_card.TechParam.TypeF.SensFRes, ntf->RfTechParams.PollF.SensFRes, PTX_NSC_TYPES_SENSFRES_LEN);
-                    /* Default Bitrate - may be overwritten later. */
-                    discovered_card.TechParam.TypeF.BitRate = ptx_RUL_RfBitRate_212;
                     #endif
+                    discovered_card.TechParam.TypeF.BitRate = (1 == rul->DiscoverConfig.PollTypeF424)? ptx_RUL_RfBitRate_424 : ptx_RUL_RfBitRate_212;
                     break;
 
                 case ptx_NSC_RfTech_Passive_Poll_V:
@@ -791,11 +833,23 @@ static ptx_Status_t ptx_RUL_ReaderProcessRfActivateNtf (ptx_RUL_t *rul, ptx_NSC_
                         (void)memcpy(rul->CardRegistry.ActiveProtParam.PollAFACMNfcDep.AtrRes, ntf->RfProtParams.NfcDep.PollAF.AtrRes, PTX_RUL_CARD_RFPROTOCOL_ATR_RES_LEN);
                     }
 #if !defined(PTX_DISABLE_LISTEN_MODE)
-                    else if (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech)
+                    else if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) ||
+                             (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech) || 
+                             (ptx_NSC_RfTech_Active_Listen == ntf->RfTech))  
                     {
-                        rul->CardRegistry.ActiveProtParam.ListenAFNfcDep.Brs = ntf->RfProtParams.NfcDep.ListenAF.Brs;
+                        uint8_t brs;
+                        uint8_t dsi;
+                        uint8_t dri;
+                        brs = ntf->RfProtParams.NfcDep.ListenAF.Brs;
+                        /* Initiator -> Target */
+                        dsi = (brs >> PTX_RUL_PROT_PARAM_AFACM_BITRATE_OFFSET) & PTX_RUL_PROT_PARAM_AFACM_BITRATE_MASK;
+                        /* Target -> Initiator */                       
+                        dri = brs & PTX_RUL_PROT_PARAM_AFACM_BITRATE_MASK;                          
+                        rul->CardRegistry.ActiveProtParam.ListenAFNfcDep.Brs = brs;
                         rul->CardRegistry.ActiveProtParam.ListenAFNfcDep.Lr = ntf->RfProtParams.NfcDep.ListenAF.Lr;
                         (void)memcpy(rul->CardRegistry.ActiveProtParam.ListenAFNfcDep.AtrReq, ntf->RfProtParams.NfcDep.ListenAF.AtrReq, PTX_RUL_CARD_RFPROTOCOL_ATR_REQ_LEN);
+                        rul->CardRegistry.ActiveProtParam.ListenAFNfcDep.RxBitRate = (ptx_RUL_RfBitRate_t)dsi;
+                        rul->CardRegistry.ActiveProtParam.ListenAFNfcDep.TxBitRate = (ptx_RUL_RfBitRate_t)dri;
                     }
 #endif /* PTX_DISABLE_LISTEN_MODE */
                     break;
@@ -1002,9 +1056,6 @@ static ptx_Status_t ptx_RUL_ParseSensFRes (ptx_RUL_CardParams_t *discovered_card
         supportedBrFeature= (ptx_RUL_FBitRateSupported_t) (sensFRes[PTX_RUL_SENSF_RES_RD_OFFSET +1] & PTX_RUL_SENSF_RES_SUPPORTED_BR_MASK);  
         discovered_card->TechParam.TypeF.supportedBrFeature = supportedBrFeature; 
         
-        /* Default Bitrate - may be overwritten later. */
-        discovered_card->TechParam.TypeF.BitRate = ptx_RUL_RfBitRate_212;
-
         status = PTX_STATUS_SUCCESS;
     }
 

@@ -267,6 +267,10 @@ ptx_Status_t ptx_NSC_InitHw(ptx_NSC_t *nsc)
             buffer[idx] = nsc->SysCfg.TxCurlimGain;
             idx++;
 
+            /** TX_OVD_DET_EN: 1By */
+            buffer[idx] = nsc->SysCfg.TxOvDEn;
+            idx++;
+
             status = ptx_NSC_CmdProcessor_DispatchMsg(nsc, PTX_NSC_CMD_PROCESSOR_WRITE_BUFFER_ID_0, buffer, idx);
         }
 

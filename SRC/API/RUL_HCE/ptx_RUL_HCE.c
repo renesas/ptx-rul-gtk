@@ -47,6 +47,7 @@
  */
 
 #include "ptx_NSC_Data.h"
+#include "ptx_NSC_Error_Int.h"
 
 #include "ptx_RUL_HCE.h"
 
@@ -55,8 +56,6 @@
  * DEFINES / TYPES
  * ####################################################################################################################
  */
-
-
 
 /*
  * NSC DEACTIVATE-Reasons.
@@ -83,6 +82,7 @@ static ptx_Status_t ptx_RUL_HCE_ProcessReset(void *ctx);
 static ptx_Status_t ptx_RUL_HCE_ProcessRfActivate(void *ctx, ptx_NSC_RfActivate_Ntf_t *ntf, uint8_t *ntf_used);
 static ptx_Status_t ptx_RUL_HCE_ProcessRfField(void *ctx, uint8_t field, uint8_t *ntf_used);
 static ptx_Status_t ptx_RUL_HCE_ProcessRfDeactivate(void *ctx, ptx_NSC_RfDeactivate_Ntf_t *ntf, uint8_t *ntf_used);
+static ptx_Status_t ptx_RUL_HCE_ProcessRfActivateProtParam(void *ctx, ptx_NSC_RfActivate_Ntf_t *ntf);
 
 /*
  * Read latest event.
@@ -143,7 +143,6 @@ ptx_Status_t ptx_RUL_HCE_Init(ptx_RUL_HCE_t *hce, ptx_RUL_HCE_InitParams_t *init
 
         if (PTX_STATUS_SUCCESS == status)
         {
-
             status = ptx_RUL_HCE_RegisterExtension(hce->Rul, hce);
         }
 
@@ -188,8 +187,8 @@ ptx_Status_t ptx_RUL_HCE_ResetState(ptx_RUL_HCE_t *hce)
         if (PTX_STATUS_SUCCESS == status)
         {
             hce->DiscoverState = RUL_HCE_DiscoverState_No_Card;
-            hce->ActiveProtocol = ptx_NSC_RfProtocol_Undefined;
-            hce->ActiveTech = ptx_NSC_RfTech_RfTech_Undefined;
+            hce->PollerParams.Protocol = ptx_RUL_CardProtocolType_Undefined;
+            hce->PollerParams.TechType = ptx_RUL_CardRfTechType_Max;
 
             memset(hce->AppRxBuffer, 0, hce->AppRxBufferSize);
         }
@@ -207,12 +206,8 @@ ptx_Status_t ptx_RUL_HCE_GetEvent(ptx_RUL_HCE_t *hce, ptx_RUL_HCE_EventRecord_t 
     {
         PTX_LOG_I(hce->Log, "ptx_RUL_HCE_GetEvent");
 
-        ptx_RUL_Status_Params_t status_params;
-        memset(&status_params, 0, sizeof(ptx_RUL_Status_Params_t));
-        status_params.Type = ptx_RUL_StatusType_System;
-
         /* Required for extension callbacks to be executed */
-        status = ptx_RUL_GetStatusInfo(hce->Rul, &status_params);
+        status = ptx_NSC_CmdProcessor_GetPendingMsg(&(hce->Rul->Nsc));
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -400,11 +395,52 @@ static ptx_Status_t ptx_RUL_HCE_ProcessError(void *ctx, ptx_NSC_Error_Ntf_t *ntf
         if (PTX_STATUS_SUCCESS == status)
         {
             record->EventID = RUL_HCE_EventType_Error;
-            record->RxMsgDataShortMsgData[0] = ntf->Error;
+
+            switch (ntf->Error)
+            {
+                case NSC_ErrorCode_RfCollisionError:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_RfCollision;
+                    break;
+                case NSC_ErrorCode_RfTimeoutError:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_RfTimeout;
+                    break;
+                case NSC_ErrorCode_RfTransmissionError:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_RfTransmission;
+                    break;
+                case NSC_ErrorCode_RfProtocolError:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_RfProtocol;
+                    break;
+                case NSC_ErrorCode_OTPConfig:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_SystemOtp;
+                    break;
+                case NSC_ErrorCode_VddTx:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_SystemVddTx;
+                    break;
+                case NSC_ErrorCode_OverCurrent:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_SystemOverCurrent;
+                    break;
+                case NSC_ErrorCode_OverTemperature:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_SystemOverTemperature;
+                    break;
+                case NSC_ErrorCode_OutOfMemory:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_SystemOutOfMemory;
+                    break;
+                case NSC_ErrorCode_TxOvervoltage:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_SystemTxOverVoltage;
+                    break;
+                case NSC_ErrorCode_StandbyMode:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_SystemStandby;
+                    break;
+
+                default:
+                    record->RxMsgDataShortMsgData[0] = RUL_HCE_ErrorType_Max;
+                    break;
+            }
 
             hce->DiscoverState = RUL_HCE_DiscoverState_No_Card;
-            hce->ActiveProtocol = ptx_NSC_RfProtocol_Undefined;
-            hce->ActiveTech = ptx_NSC_RfTech_RfTech_Undefined;
+            hce->PollerParams.Protocol = ptx_RUL_CardProtocolType_Undefined;
+            hce->PollerParams.TechType = ptx_RUL_CardRfTechType_Max;
+
             hce->AppRxBufferIndex = 0;
 
             status = ptx_RUL_HCE_AddNewEventPending(hce, idx);
@@ -427,7 +463,7 @@ static ptx_Status_t ptx_RUL_HCE_ProcessReset(void *ctx)
 
     if (PTX_COMP_CHECK(hce, Comp_HCE))
     {
-        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessError");
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessReset");
 
         ptx_RUL_HCE_EventRecord_t *record;
         uint16_t idx;
@@ -456,33 +492,35 @@ static ptx_Status_t ptx_RUL_HCE_ProcessRfActivate(void *ctx, ptx_NSC_RfActivate_
 
     if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != ntf) && (NULL != ntf_used))
     {
-        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessError");
+        PTX_LOG_V(hce->Log, "ptx_RUL_HCE_ProcessRfActivate");
 
         if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) ||
             (ptx_NSC_RfTech_Passive_Listen_B == ntf->RfTech) ||
             (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech) ||
             (ptx_NSC_RfTech_Active_Listen == ntf->RfTech))
         {
-            ptx_RUL_HCE_EventRecord_t *record;
-            uint16_t idx;
-
-            status = ptx_RUL_HCE_ReserveEventRecord(hce, &record, &idx);
-
+            status = ptx_RUL_HCE_ProcessRfActivateProtParam(hce, ntf);
             if (PTX_STATUS_SUCCESS == status)
             {
-                record->EventID = RUL_HCE_EventType_Activated;
-                record->RxMsgDataShortMsgData[0] = ntf->RfTech;
-                record->RxMsgDataShortMsgData[1] = (uint8_t)ntf->RfProt;
+                ptx_RUL_HCE_EventRecord_t *record;
+                uint16_t idx;
 
-                hce->DiscoverState = RUL_HCE_DiscoverState_Activate;
-                hce->ActiveProtocol = ntf->RfProt;
-                hce->ActiveTech = ntf->RfTech;
-
-                status = ptx_RUL_HCE_AddNewEventPending(hce, idx);
+                status = ptx_RUL_HCE_ReserveEventRecord(hce, &record, &idx);
 
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    *ntf_used = PTX_RUL_EXTENSION_NTF_USED;
+                    record->EventID = RUL_HCE_EventType_Activated;
+                    record->RxMsgDataShortMsgData[0] = ntf->RfTech;
+                    record->RxMsgDataShortMsgData[1] = (uint8_t)ntf->RfProt;
+
+                    hce->DiscoverState = RUL_HCE_DiscoverState_Activate;
+
+                    status = ptx_RUL_HCE_AddNewEventPending(hce, idx);
+
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        *ntf_used = PTX_RUL_EXTENSION_NTF_USED;
+                    }
                 }
             }
         }
@@ -563,8 +601,8 @@ static ptx_Status_t ptx_RUL_HCE_ProcessRfDeactivate(void *ctx, ptx_NSC_RfDeactiv
             record->RxMsgDataShortMsgData[0] = ntf->Reason;
 
             hce->DiscoverState = RUL_HCE_DiscoverState_No_Card;
-            hce->ActiveProtocol = ptx_NSC_RfProtocol_Undefined;
-            hce->ActiveTech = ptx_NSC_RfTech_RfTech_Undefined;
+            hce->PollerParams.Protocol = ptx_RUL_CardProtocolType_Undefined;
+            hce->PollerParams.TechType = ptx_RUL_CardRfTechType_Max;
 
             status = ptx_RUL_HCE_AddNewEventPending(hce, idx);
         }
@@ -779,5 +817,113 @@ static ptx_Status_t ptx_RUL_HCE_InitEventQueue(ptx_RUL_HCE_t *hce)
         status = PTX_STATUS_SUCCESS;
     }
 
+    return status;
+}
+
+static ptx_Status_t ptx_RUL_HCE_ProcessRfActivateProtParam(void *ctx, ptx_NSC_RfActivate_Ntf_t *ntf)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+    ptx_RUL_HCE_t *hce = (ptx_RUL_HCE_t*)(ctx);
+    if (PTX_COMP_CHECK(hce, Comp_HCE) && (NULL != ntf))
+    {
+        status = PTX_STATUS_SUCCESS;
+        switch (ntf->RfProt)
+        {
+            case ptx_NSC_RfProtocol_IsoDep:
+                hce->PollerParams.Protocol = ptx_RUL_CardProtocolType_T4T;
+
+                if (ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech)
+                {
+                    hce->PollerParams.TechType = ptx_RUL_CardRfTechType_A;
+                    hce->PollerParams.ProtocolParam.ListenAIsoDep.Pps1 = ntf->RfProtParams.IsoDep.ListenA.Pps1;
+                    hce->PollerParams.ProtocolParam.ListenAIsoDep.Rats = ntf->RfProtParams.IsoDep.ListenA.Rats;
+                }
+                else if (ptx_NSC_RfTech_Passive_Listen_B == ntf->RfTech)
+                {
+                    hce->PollerParams.TechType = ptx_RUL_CardRfTechType_B;
+                    hce->PollerParams.ProtocolParam.ListenBIsoDep.AttribLen = ntf->RfProtParams.IsoDep.ListenB.AttribLen;
+                    (void)memcpy(hce->PollerParams.ProtocolParam.ListenBIsoDep.Attrib, ntf->RfProtParams.IsoDep.ListenB.Attrib, PTX_RUL_CARD_RFPROTOCOL_ATTRIB_LEN);
+                }
+                else
+                {
+                    /* ISO-DEP is not supported for this listen technology. */
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                }
+                break;
+            case ptx_NSC_RfProtocol_NfcDep:
+                hce->PollerParams.Protocol = ptx_RUL_CardProtocolType_NfcDep;
+
+                if ((ptx_NSC_RfTech_Passive_Listen_A == ntf->RfTech) ||
+                    (ptx_NSC_RfTech_Passive_Listen_F == ntf->RfTech) ||
+                    (ptx_NSC_RfTech_Active_Listen == ntf->RfTech))
+                {
+                    switch (ntf->RfTech)
+                    {
+                    case ptx_NSC_RfTech_Passive_Listen_A:
+                        hce->PollerParams.TechType = ptx_RUL_CardRfTechType_A;
+                        break;
+                    case ptx_NSC_RfTech_Passive_Listen_F:
+                        hce->PollerParams.TechType = ptx_RUL_CardRfTechType_F;
+                        break;
+                    case ptx_NSC_RfTech_Active_Listen:
+                        hce->PollerParams.TechType = ptx_RUL_CardRfTechType_ACM;
+                        break;
+                    
+                    default:
+                        /* Safeguard should not happen */
+                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                        break;
+                    }
+
+                    uint8_t brs = ntf->RfProtParams.NfcDep.ListenAF.Brs;
+                    /* Initiator -> Target */
+                    uint8_t dsi = (brs >> PTX_RUL_PROT_PARAM_AFACM_BITRATE_OFFSET) & PTX_RUL_PROT_PARAM_AFACM_BITRATE_MASK;
+                    /* Target -> Initiator */
+                    uint8_t dri = brs & PTX_RUL_PROT_PARAM_AFACM_BITRATE_MASK;
+                    hce->PollerParams.ProtocolParam.ListenAFNfcDep.Brs = brs;
+                    hce->PollerParams.ProtocolParam.ListenAFNfcDep.Lr = ntf->RfProtParams.NfcDep.ListenAF.Lr;
+                    (void)memcpy(hce->PollerParams.ProtocolParam.ListenAFNfcDep.AtrReq, ntf->RfProtParams.NfcDep.ListenAF.AtrReq, PTX_RUL_CARD_RFPROTOCOL_ATR_REQ_LEN);
+                    if ((dsi <= PTX_RUL_NFCDEP_BRS_MAX_SPEED_ALLOWED) && (dri <= PTX_RUL_NFCDEP_BRS_MAX_SPEED_ALLOWED))
+                    {
+                        /*
+                         * DSI: Initiator -> Target = local Rx bitrate.
+                         * DRI: Target -> Initiator = local Tx bitrate.
+                         */
+                        hce->PollerParams.ProtocolParam.ListenAFNfcDep.RxBitRate = (ptx_RUL_RfBitRate_t)dsi;
+                        hce->PollerParams.ProtocolParam.ListenAFNfcDep.TxBitRate = (ptx_RUL_RfBitRate_t)dri;
+                    }
+                    else
+                    {
+                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    }
+                }
+                else
+                {
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                }
+                break;
+                case ptx_NSC_RfProtocol_T3T:
+                    hce->PollerParams.Protocol = ptx_RUL_CardProtocolType_T3T;
+                    switch (ntf->RfTech)
+                    {
+                        case ptx_NSC_RfTech_Passive_Listen_F:
+                            hce->PollerParams.TechType = ptx_RUL_CardRfTechType_F;
+                            break;
+                        default:
+                            /* Safeguard should not happen */
+                            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                            break;
+                    }
+                break;
+            default:
+                /*
+                 * This helper is only for ISO-DEP/NFC-DEP listener
+                 * protocol activation parameters. Other protocols require no listener
+                 * protocol-specific state here.
+                 */
+                status = PTX_STATUS_SUCCESS;
+                break;
+        }
+    }
     return status;
 }

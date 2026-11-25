@@ -95,7 +95,7 @@ typedef struct ptx_HAL_DRV_Tmr
 {
     ptx_Comps_t                         CompId;             /**< Component id. */
     void                                *Osal;              /**< OSAL context - providing access to underlying system features. */
-    ptx_Timer_t                         Timer;             /**< Timer context - reference to timer abstraction structure instance. */
+    ptx_Timer_t                         Timer;              /**< Timer context - reference to timer abstraction structure instance. */
     uint32_t                            Period;             /**< Period of timer in ms. */
     ptx_HAL_DRV_Tmr_Mode_t              Mode;               /**< Timer mode. */
     volatile uint8_t                    IsElapsed;          /**< Is elapsed flag, set in Internal Timer callback routine. */

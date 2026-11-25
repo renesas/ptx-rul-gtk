@@ -59,8 +59,6 @@
 #include "ptx_Components.h"
 #include "ptx_Status.h"
 #include "ptx_HAL_Ftd2xx.h"
-#include "ptx_HAL_WinUtils.h"
-
 #include "ptx_HAL_DRV_GPIO_Int.h"
 
 #if defined(__cplusplus)
@@ -86,8 +84,9 @@ extern "C" {
 typedef struct ptx_HAL_DRV_GPIO
 {
     ptx_Comps_t                         CompId;         /**< Component ID */
-    ptx_HAL_FTD2XXCtx_t                 *Ftd2xx_ctx;    /**< FTDI context */
+    ptx_HAL_FTD2XXCtx_t                 *Ftd2xxCtx;     /**< FTDI context */
     ptx_Log_t                           *Log;           /**< Pointer to an initialized logger. */
+    ptx_OSAL_t                          *Osal;          /**< Pointer to an initialized OSAL context. */
     uint8_t                             Gpio_only;      /**< Flag to indicate if GPIO interface is used standalone or in combination with communication driver (SPI/ I2C) */
 }ptx_HAL_DRV_GPIO_t;
 
@@ -98,10 +97,11 @@ typedef struct ptx_HAL_DRV_GPIO_InitParams
 {
     ptx_HAL_DRV_GPIO_Cfg_t  *Cfg;           /**< GPIO configuration */
     uint32_t                CfgLen;         /**< GPIO configuration size */
-    ptx_HAL_FTD2XXCtx_t     *Ftd2xx_ctx;    /**< FTDI context */
+    ptx_HAL_FTD2XXCtx_t     *Ftd2xxCtx;     /**< FTDI context */
     ptx_Log_t               *Log;           /**< Pointer to an initialized logger. */
+    void                    *Osal;          /**< Pointer to an initialized OSAL context. */
     uint8_t                 Gpio_only;      /**< Flag to indicate if GPIO interface is used standalone or in combination with communication driver (SPI/ I2C) */
-}ptx_HAL_DRV_GPIO_InitParams_t;
+} ptx_HAL_DRV_GPIO_InitParams_t;
 
 /*
  * ####################################################################################################################

@@ -76,8 +76,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_Init(ptx_HAL_Interface_I2C_t *ctx, ptx_HAL_In
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_I2C_Init");
-
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Interface_I2C_t));
 
         ptx_HAL_DRV_Interface_I2C_InitParams_t drv_init_params;
@@ -90,8 +88,8 @@ ptx_Status_t ptx_HAL_Interface_I2C_Init(ptx_HAL_Interface_I2C_t *ctx, ptx_HAL_In
 
         ctx->Log = initParams->Log;
 
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-        drv_init_params.OS = initParams->OS;
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+        drv_init_params.Osal = initParams->Osal;
 #endif
 
         status = ptx_HAL_DRV_Interface_I2C_Init(&ctx->Drv, &drv_init_params);
@@ -112,8 +110,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_DeInit(ptx_HAL_Interface_I2C_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_I2C_DeInit");
-
         status = ptx_HAL_DRV_Interface_I2C_DeInit(&ctx->Drv);
     }
 
@@ -128,8 +124,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_Open(void *ctx)
 
     if (PTX_COMP_CHECK(i2cInterface, Comp_HAL))
     {
-        PTX_LOG_V(i2cInterface->Log, "ptx_HAL_Interface_I2C_Open");
-
         status = ptx_HAL_DRV_Interface_I2C_Open(&i2cInterface->Drv);
     }
 
@@ -144,8 +138,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_Close(void *ctx)
 
     if (PTX_COMP_CHECK(i2cInterface, Comp_HAL))
     {
-        PTX_LOG_V(i2cInterface->Log, "ptx_HAL_Interface_I2C_Close");
-
         status = ptx_HAL_DRV_Interface_I2C_Close(&i2cInterface->Drv);
     }
 
@@ -161,8 +153,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_TRx(void *ctx, uint8_t *txBuf[], uint32_t txL
 
     if (PTX_COMP_CHECK(i2cInterface, Comp_HAL))
     {
-        PTX_LOG_V(i2cInterface->Log, "ptx_HAL_Interface_I2C_TRx");
-
         status = PTX_STATUS_SUCCESS;
 
         if ((NULL != txBuf) && (NULL != txLen) && (0 != txBufferCnt))
@@ -227,8 +217,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_RxPending(void* ctx, uint8_t *rxPending)
 
     if (PTX_COMP_CHECK(i2cInterface, Comp_HAL) && (NULL != rxPending))
     {
-        PTX_LOG_V(i2cInterface->Log, "ptx_HAL_Interface_I2C_RxPending");
-
         status = ptx_HAL_DRV_Interface_I2C_RxIrqLevel(&i2cInterface->Drv, rxPending);
     }
 
@@ -243,8 +231,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_SetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(i2cInterface, Comp_HAL))
     {
-        PTX_LOG_V(i2cInterface->Log, "ptx_HAL_Interface_I2C_SetParameter");
-
         status = ptx_HAL_DRV_Interface_I2C_SetParameter(&i2cInterface->Drv, parameter);
     }
 
@@ -259,8 +245,6 @@ ptx_Status_t ptx_HAL_Interface_I2C_GetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(i2cInterface, Comp_HAL))
     {
-        PTX_LOG_V(i2cInterface->Log, "ptx_HAL_Interface_I2C_GetParameter");
-
         status = ptx_HAL_DRV_Interface_I2C_GetParameter(&i2cInterface->Drv, parameter);
     }
 

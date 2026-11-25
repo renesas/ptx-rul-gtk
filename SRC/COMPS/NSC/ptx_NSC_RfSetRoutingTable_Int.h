@@ -94,15 +94,7 @@ typedef enum ptx_NSC_RoutingTarget
 {
     Device_Host = 0x10,         /**< Routed to Host */
     Swp1 		= 0x20,         /**< Routed to SWP1 */
-    SWP1_TypeA  = 0x21,         /**< RFU */
-    SWP1_TypeB  = 0x22,         /**< RFU */
-    SWP1_TypeF  = 0x23,         /**< RFU */
-    SWP1_TypeV  = 0x24,         /**< RFU */
     Swp2 		= 0x30,         /**< Routed to SWP2 */
-    SWP2_TypeA  = 0x31,         /**< RFU */
-    SWP2_TypeB  = 0x32,         /**< RFU */
-    SWP2_TypeF  = 0x33,         /**< RFU */
-    SWP2_TypeV  = 0x34,         /**< RFU */
 } ptx_NSC_RoutingTarget_t;
 
 /**

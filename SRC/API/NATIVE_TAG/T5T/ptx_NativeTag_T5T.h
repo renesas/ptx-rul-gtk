@@ -90,7 +90,7 @@ extern "C" {
 typedef struct ptx_NativeTag_T5T
 {
     ptx_Comps_t         CompId;                 /**< Component Id */
-    ptx_RUL_t           *rul;                   /**< RUL provided by upper layer */
+    ptx_RUL_t           *Rul;                   /**< RUL provided by upper layer */
     uint8_t             *TxBuffer;              /**< Internal Tx-Buffer provided by upper layer (may be shared with other components) */
     uint8_t             *UID;                   /**< UID */
     uint32_t            UIDLen;                 /**< UID Length */
@@ -103,7 +103,7 @@ typedef struct ptx_NativeTag_T5T
  */
 typedef struct ptx_NativeTag_T5T_InitParams
 {
-    ptx_RUL_t           *rul;                   /**< RUL provided by upper layer */
+    ptx_RUL_t           *Rul;                   /**< RUL provided by upper layer */
     uint8_t             *TxBuffer;              /**< Internal Tx-Buffer provided by upper layer */
     uint32_t            TxBufferSize;           /**< Size of Internal TX-Buffer */
     uint8_t             *UID;                   /**< UID */

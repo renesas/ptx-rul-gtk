@@ -53,7 +53,7 @@ This document provides a comprehensive list of all dependencies used by the PTX 
 
 ## Proprietary/Renesas Components
 
-### PTX2xxR/W RUL SDK 1.2.1
+### PTX2xxR/W RUL SDK 1.3.0
 - **Source**: Renesas Electronics
 - **License**: BSD-3-Clause
 - **Copyright**: Copyright (c) 2026, Renesas Electronics Corporation and/or its affiliates

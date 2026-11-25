@@ -77,7 +77,7 @@ ptx_Status_t ptx_NFCForumDTA_ProcessMultipleCards(ptx_NFCForumDTA_t *dta, ptx_NF
 
     if (PTX_COMP_CHECK(dta, Comp_NFC_Forum_DTA) && (NULL != testCfg))
     {
-        ptx_RUL_CardRfTechType_t techType = dta->rul->CardRegistry.Cards[0].TechType;
+        ptx_RUL_CardRfTechType_t techType = dta->Rul->CardRegistry.Cards[0].TechType;
 
         switch (techType)
         {
@@ -154,7 +154,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_A_Resolution(ptx_NFCForumDTA_t 
             // T2T Activation
             protocol.Type = ptx_RUL_CardProtocolType_T2T;
 
-            status = ptx_RUL_SelectCard(dta->rul, t2t_platform_index, protocol);
+            status = ptx_RUL_SelectCard(dta->Rul, t2t_platform_index, protocol);
         }
         else if (0xFF != t4t_platform_index)
         {
@@ -170,7 +170,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_A_Resolution(ptx_NFCForumDTA_t 
                     // TODO: Add NFC DEP Select Params once available
                     //protocol.Param->NfcDep.Undefined;
 
-                    status = ptx_RUL_SelectCard(dta->rul, nfc_dep_platform_index, protocol);
+                    status = ptx_RUL_SelectCard(dta->Rul, nfc_dep_platform_index, protocol);
 
                     selected_nfc_dep = 1;
                 }
@@ -184,7 +184,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_A_Resolution(ptx_NFCForumDTA_t 
                 protocol.Param.IsoDep.HbrEnable = 0;
                 protocol.Param.IsoDep.AttribInfLen = 0;
 
-                status = ptx_RUL_SelectCard(dta->rul, t4t_platform_index, protocol);
+                status = ptx_RUL_SelectCard(dta->Rul, t4t_platform_index, protocol);
             }
         }
         else if (0xFF != nfc_dep_platform_index)
@@ -195,7 +195,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_A_Resolution(ptx_NFCForumDTA_t 
             // TODO: Add NFC DEP Select Params once available
             //protocol.Param->NfcDep.Undefined;
 
-            status = ptx_RUL_SelectCard(dta->rul, nfc_dep_platform_index, protocol);
+            status = ptx_RUL_SelectCard(dta->Rul, nfc_dep_platform_index, protocol);
 
         }
         else
@@ -244,7 +244,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_B_Resolution(ptx_NFCForumDTA_t 
 
             //params.IsoDep.Did =
 
-            status = ptx_RUL_SelectCard(dta->rul, t4t_platform_index, protocol);
+            status = ptx_RUL_SelectCard(dta->Rul, t4t_platform_index, protocol);
         }
         else
         {
@@ -294,7 +294,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_F_Resolution(ptx_NFCForumDTA_t 
                     protocol.Param.NfcDep.GeneralBytesLen = 0;
                     protocol.Param.NfcDep.HbrEnable = 0;
 
-                    status = ptx_RUL_SelectCard(dta->rul, nfc_dep_platform_index, protocol);
+                    status = ptx_RUL_SelectCard(dta->Rul, nfc_dep_platform_index, protocol);
 
                     selected_nfc_dep = 1;
                 }
@@ -305,7 +305,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_F_Resolution(ptx_NFCForumDTA_t 
                 // T3T Activation
                 protocol.Type = ptx_RUL_CardProtocolType_T3T;
 
-                status = ptx_RUL_SelectCard(dta->rul, t3t_platform_index, protocol);
+                status = ptx_RUL_SelectCard(dta->Rul, t3t_platform_index, protocol);
             }
 
         }
@@ -317,7 +317,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_F_Resolution(ptx_NFCForumDTA_t 
             // TODO: Add NFC DEP Select Params once available
             //protocol.Param->NfcDep.Undefined;
 
-            status = ptx_RUL_SelectCard(dta->rul, nfc_dep_platform_index, protocol);
+            status = ptx_RUL_SelectCard(dta->Rul, nfc_dep_platform_index, protocol);
 
         }
         else
@@ -372,7 +372,7 @@ static ptx_Status_t ptx_NFCForumDTA_Process_Type_V_Resolution(ptx_NFCForumDTA_t 
 
             protocol.Type = ptx_RUL_CardProtocolType_T5T;
 
-            status = ptx_RUL_SelectCard(dta->rul, t5t_platform_index, protocol);
+            status = ptx_RUL_SelectCard(dta->Rul, t5t_platform_index, protocol);
         }
         else
         {

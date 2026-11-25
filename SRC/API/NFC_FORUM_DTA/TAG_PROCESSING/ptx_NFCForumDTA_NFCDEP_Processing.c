@@ -127,7 +127,7 @@ static ptx_Status_t ptx_NFCForumDTA_NFCDEP_Loopback(ptx_NFCForumDTA_t *dta)
             switch (loopbackState)
             {
                 case ptx_NFCForumDTA_NFCDEP_LB_State_SEND_SOT:
-                    status = ptx_RUL_Exchange(dta->rul, SOT_CMD, SOT_CMD_LEN, rx, &rxLen, PTX_NFCFORUMDTA_NFCDEP_LOOPBACK_TIMEOUT);
+                    status = ptx_RUL_Exchange(dta->Rul, SOT_CMD, SOT_CMD_LEN, rx, &rxLen, PTX_NFCFORUMDTA_NFCDEP_LOOPBACK_TIMEOUT);
                     if (PTX_STATUS_SUCCESS == status)
                     {
                         loopbackState = ptx_NFCForumDTA_NFCDEP_LB_State_CHECK_RX_DATA;
@@ -145,7 +145,7 @@ static ptx_Status_t ptx_NFCForumDTA_NFCDEP_Loopback(ptx_NFCForumDTA_t *dta)
                         uint32_t txLen = rxLen;
 
                         rxLen = dta->NDEFMessageBufferSize;
-                        status = ptx_RUL_Exchange(dta->rul, tx, txLen, rx, &rxLen, PTX_NFCFORUMDTA_NFCDEP_LOOPBACK_TIMEOUT);
+                        status = ptx_RUL_Exchange(dta->Rul, tx, txLen, rx, &rxLen, PTX_NFCFORUMDTA_NFCDEP_LOOPBACK_TIMEOUT);
                         if (PTX_STATUS_SUCCESS == status)
                         {
                             loopbackState = ptx_NFCForumDTA_NFCDEP_LB_State_CHECK_RX_DATA;
@@ -208,17 +208,17 @@ static ptx_Status_t ptx_NFCForumDTA_NFCDEP_Loopback(ptx_NFCForumDTA_t *dta)
 
         if (PTX_STATUS_E_NSC_RFERROR == status)
         {
-            if (dta->rul->CardRegistry.ActiveCard->TechType == ptx_RUL_CardRfTechType_ACM &&
-                dta->rul->NfcMode == ptx_RUL_StatusInfoMode_P2P_Initiator &&
-                dta->rul->RfErrorStatus == ptx_RUL_StatusInfoRfError_Protocol)
+            if (dta->Rul->CardRegistry.ActiveCard->TechType == ptx_RUL_CardRfTechType_ACM &&
+                dta->Rul->NfcMode == ptx_RUL_StatusInfoMode_P2P_Initiator &&
+                dta->Rul->RfErrorStatus == ptx_RUL_StatusInfoRfError_Protocol)
             {
                 /*For ACM Poll, deactivate command need to be sent once RF Protocol error is detected (5 sec is too much to pass compliance tests)*/
-                (void)ptx_RUL_Sleep(dta->rul, 10);
+                (void)ptx_RUL_Sleep(dta->Rul, 10);
 
             }
             else
             {
-                (void)ptx_RUL_Sleep(dta->rul, 5000);
+                (void)ptx_RUL_Sleep(dta->Rul, 5000);
 
             }
         }

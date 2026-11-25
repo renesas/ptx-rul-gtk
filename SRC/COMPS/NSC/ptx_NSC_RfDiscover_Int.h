@@ -93,6 +93,7 @@ extern "C" {
 #define PTX_NSC_RF_DISCOVER_PROTINFO1_OFFSET        (10u)   /**< NSC Type B Protocol Info byte 1 offset within SENSB_RES. */
 #define PTX_NSC_RF_DISCOVER_PROTINFO2_OFFSET        (11u)   /**< NSC Type B Protocol Info byte 2 offset within SENSB_RES. */
 #define PTX_NSC_RF_DISCOVER_PINFO1_FSCI_MASK        (0xF0)  /**< NSC Type B Protocol Info byte 1 FSCI mask. */
+#define PTX_NSC_RF_DISCOVER_PINFO1_FSCI_OFFSET      (4u)    /**< NSC Type B Protocol Info byte 1 FSCI offset */
 #define PTX_NSC_RF_DISCOVER_PINFO2_FWI_MASK         (0xF0)  /**< NSC Type B Protocol Info byte 2 FWI mask. */
 #define PTX_NSC_RF_DISCOVER_RATS_FSDI_MASK          (0xF0)  /**< NSC Type A Protocol RATS byte 1 FSDI mask. */
 #define PTX_NSC_RF_DISCOVER_ATRRIB_FSDI_MASK        (0x0F)  /**< NSC Type B Protocol ATTRIB byte 0 FSDI mask. */
@@ -130,10 +131,10 @@ extern "C" {
 #define PTX_NSC_RF_DISCOVER_ATR_RES_TO_WT_MASK      (0x0F)  /**< NSC Type NfcDep TO Byte ATR_RES Bitmask for WT, as defined in NSC Spec. */
 #define PTX_NSC_RF_DISCOVER_ATR_RES_PP_OFFSET       (3U)    /**< NSC Type NfcDep PP Byte ATR_RES Offset, as defined in NSC Spec. */
 #define PTX_NSC_RF_DISCOVER_ATR_RES_PP_LR_MASK      (0x30)  /**< NSC Type NfcDep PP Byte ATR_RES Bitmask for LR, as defined in NSC Spec. */
+#define PTX_NSC_RF_DISCOVER_ATR_REQ_PP_LR_MASK      (0x30)  /**< NSC Type NfcDep PP Byte ATR_REQ Bitmask for LR, as defined in NSC Spec. */
 #define PTX_NSC_RF_DISCOVER_ATR_RES_PP_GT_MASK      (0x02)  /**< NSC Type NfcDep PP Byte ATR_RES Bitmask for GT, as defined in NSC Spec. */
 #define PTX_NSC_RF_DISCOVER_SENSFRES_MINLEN         (18U)   /**< NSC Type F SENSRES minimum length, including the length byte. */
 #define PTX_NSC_RF_DISCOVER_ATR_REQG_MAXLEN         (15U)   /**< NSC NFC-ACM Poll Mode ATR_REQ G (General bytes) maximum length. */
-#define PTX_NSC_RF_DISCOVER_LISTEN_LR_MASK          (0x30)  /**< NSC Listen Mode NFC-DEP LR value mask */
 
 #define PTX_NSC_RF_DISCOVER_MAX_PARAMCOUNT          (15u)   /**< Maximum number of parameters accepted to build NSC_RF_DISCOVER_CMD message.
                                                              not more than PTX_NSCDISC_MAX_PARAMCOUNT parameters can be put

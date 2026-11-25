@@ -879,7 +879,18 @@ ptx_Status_t ptx_POS_DTE_Loopback(ptx_POS_DTE_t *ctx, ptx_POS_DTE_TargetRFTech_t
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            if (ptx_RUL_StatusInfoSystem_OK != status_params.Info.System)
+            if (ptx_RUL_StatusInfoSystem_TxOvD == status_params.Info.System)
+            {
+                if(ptx_NSC_State_Discovery == ctx->Rul->Nsc.State)
+                {
+                    ctx->LoopbackState = ptx_POS_DTE_State_WaitForActivation;
+                }
+                else 
+                {
+                    ctx->LoopbackState = ptx_POS_DTE_State_StartPolling;
+                }
+            }
+            else if (ptx_RUL_StatusInfoSystem_OK != status_params.Info.System)
             {
                 /* Critical - Overwrite state */
                 ctx->LoopbackState = ptx_POS_DTE_State_SystemError;

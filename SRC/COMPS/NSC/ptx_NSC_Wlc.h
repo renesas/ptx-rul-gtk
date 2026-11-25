@@ -73,7 +73,7 @@ extern "C" {
  *
  * @{
  */
-#define PTX_NSC_WLC_WPT_START_CMD_LEN               (8u)        /**< NSC WPT start command code length */
+#define PTX_NSC_WLC_WPT_START_CMD_LEN               (9u)        /**< NSC WPT start command code length */
 /** @} */
 
 /**

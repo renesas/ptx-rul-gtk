@@ -91,6 +91,84 @@ extern "C" {
 
 #define PTX_NSC_RFACTIVATE_ATRRES_LEN               (65U)       /**< Maximum length of the Response to ATR_REQ command including the length parameter LEN */
 #define PTX_NSC_RFACTIVATE_ATRREQ_LEN               (65U)       /**< Maximum length of the ATR_REQ command including the length parameter LEN */
+
+#define PTX_NSC_RFACTIVATE_LISTEN_LR_INVALID        (0xFF)      /**< Invalid value for LR parameter. */
+#define PTX_NSC_RFACTIVATE_ATR_RES_PP_LR_OFFSET     (4U)        /**< Offset of LR value in PP parameter of ATR_RES. */
+#define PTX_NSC_RFACTIVATE_ATR_REQ_PP_LR_OFFSET     (4U)        /**< Offset of LR value in PP parameter of ATR_REQ. */
+
+/*
+ * FSCI Values
+ */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_0            (0u)        /**< FSCI Value 0 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_1            (1u)        /**< FSCI Value 1 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_2            (2u)        /**< FSCI Value 2 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_3            (3u)        /**< FSCI Value 3 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_4            (4u)        /**< FSCI Value 4 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_5            (5u)        /**< FSCI Value 5 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_6            (6u)        /**< FSCI Value 6 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_7            (7u)        /**< FSCI Value 7 */
+#define PTX_NSC_RFPROT_PARAMS_FSCI_VAL_8            (8u)        /**< FSCI Value 8 */
+
+/*
+ * FSDI Values
+ */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_0            (0u)        /**< FSDI Value 0 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_1            (1u)        /**< FSDI Value 1 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_2            (2u)        /**< FSDI Value 2 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_3            (3u)        /**< FSDI Value 3 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_4            (4u)        /**< FSDI Value 4 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_5            (5u)        /**< FSDI Value 5 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_6            (6u)        /**< FSDI Value 6 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_7            (7u)        /**< FSDI Value 7 */
+#define PTX_NSC_RFPROT_PARAMS_FSDI_VAL_8            (8u)        /**< FSDI Value 8 */
+
+/*
+ * FSCI MTU Size
+ */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_0          (13u)       /**< FSCI 0 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_1          (21u)       /**< FSCI 1 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_2          (29u)       /**< FSCI 2 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_3          (37u)       /**< FSCI 3 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_4          (45u)       /**< FSCI 4 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_5          (61u)       /**< FSCI 5 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_6          (93u)       /**< FSCI 6 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_7          (125u)      /**< FSCI 7 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_8          (253u)      /**< FSCI 8 */
+#define PTX_NSC_RFACTIVATE_FSCI_MTU_SIZE_MAX        (253u)      /**< FSCI MAX */
+
+/*
+ * FSDI MTU Size
+ */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_0          (13u)       /**< FSDI 0 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_1          (21u)       /**< FSDI 1 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_2          (29u)       /**< FSDI 2 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_3          (37u)       /**< FSDI 3 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_4          (45u)       /**< FSDI 4 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_5          (61u)       /**< FSDI 5 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_6          (93u)       /**< FSDI 6 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_7          (125u)      /**< FSDI 7 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_8          (253u)      /**< FSDI 8 */
+#define PTX_NSC_RFACTIVATE_FSDI_MTU_SIZE_MAX        (253u)      /**< FSDI MAX */
+
+/*
+ * LR MTU Size
+ */
+#define PTX_NSC_RFACTIVATE_LR_SIZE_64               (64u)       /**< MTU size of 64 byte for NFC-DEP */
+#define PTX_NSC_RFACTIVATE_LR_SIZE_128              (128u)      /**< MTU size of 128 byte for NFC-DEP */
+#define PTX_NSC_RFACTIVATE_LR_SIZE_192              (192)       /**< MTU size of 192 byte for NFC-DEP */
+#define PTX_NSC_RFACTIVATE_LR_SIZE_MAX              (254u)      /**< Maximum MTU size of 254 byte for NFC-DEP */
+
+/* Calculate the maximum usable payload bytes for NFC-DEP */
+#define PTX_NSC_RFACTIVATE_CALC_MTU_SIZE(x)         (uint8_t)(x-3)  /**< Calculates MTU size */
+
+/*
+ * LR Value
+ */
+#define PTX_NSC_RFACTIVATE_LR_VAL_0                 (0x00)      /**< Possible 2-bit LR values. */
+#define PTX_NSC_RFACTIVATE_LR_VAL_1                 (0x01)      /**< Possible 2-bit LR values. */
+#define PTX_NSC_RFACTIVATE_LR_VAL_2                 (0x02)      /**< Possible 2-bit LR values. */
+#define PTX_NSC_RFACTIVATE_LR_VAL_3                 (0x03)      /**< Possible 2-bit LR values. */
+
 /** @} */
 
 

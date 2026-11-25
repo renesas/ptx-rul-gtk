@@ -115,18 +115,18 @@
 /*
  *  Check the Response of the Select command
  *
- *  ndefT4T               Pointer to component.
+ *  ndefT4t               Pointer to component.
  *  rx                Response Buffer.
  *  rxLen             Length of the Response.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_CheckSelectResponse(ptx_NDEF_T4T_t *ndefT4T, uint8_t *rx, uint32_t *rxLen);
+static ptx_Status_t ptx_NDEF_T4T_CheckSelectResponse(ptx_NDEF_T4T_t *ndefT4t, uint8_t *rx, uint32_t *rxLen);
 
 
 /*
  *  Read from File in App on T4T.
- *  ndefT4T                   Pointer to component.
+ *  ndefT4t                   Pointer to component.
  *  offset                    Offset at which to start reading.
  *  nbrExpectedResponseBytes  Expected Length of Response.
  *  rx                    Response Buffer.
@@ -135,12 +135,12 @@ static ptx_Status_t ptx_NDEF_T4T_CheckSelectResponse(ptx_NDEF_T4T_t *ndefT4T, ui
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_ReadBinary (ptx_NDEF_T4T_t *ndefT4T, uint32_t offset, uint8_t nbrExpectedResponseBytes, uint8_t *rx, uint32_t *rxLen, uint32_t msTimeout);
+static ptx_Status_t ptx_NDEF_T4T_ReadBinary (ptx_NDEF_T4T_t *ndefT4t, uint32_t offset, uint8_t nbrExpectedResponseBytes, uint8_t *rx, uint32_t *rxLen, uint32_t msTimeout);
 
 /*
  *  Write to File in App on T4T.
  *
- *  ndefT4T               Pointer to component.
+ *  ndefT4t               Pointer to component.
  *  offset                Offset at which to start writing.
  *  dataField             Data to be written.
  *  nbrDataBytes          Length of Data.
@@ -150,202 +150,228 @@ static ptx_Status_t ptx_NDEF_T4T_ReadBinary (ptx_NDEF_T4T_t *ndefT4T, uint32_t o
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_UpdateBinary (ptx_NDEF_T4T_t *ndefT4T, uint32_t offset, uint8_t *dataField, uint8_t nbrDataBytes, uint8_t *rx, uint32_t *rxLen, uint32_t msTimeout);
+static ptx_Status_t ptx_NDEF_T4T_UpdateBinary (ptx_NDEF_T4T_t *ndefT4t, uint32_t offset, uint8_t *dataField, uint8_t nbrDataBytes, uint8_t *rx, uint32_t *rxLen, uint32_t msTimeout);
 
 /*
  *  Get CC Information.
  *
- *  ndefT4T               Pointer to component.
+ *  ndefT4t               Pointer to component.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_GetCCInfo (ptx_NDEF_T4T_t *ndefT4T);
+static ptx_Status_t ptx_NDEF_T4T_GetCCInfo (ptx_NDEF_T4T_t *ndefT4t);
 
 /*
  *  Handle CC Information.
  *
- *  ndefT4T               Pointer to component.
+ *  ndefT4t               Pointer to component.
  *  ccInfo                Buffer with CC File data.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_HandleCCInfo (ptx_NDEF_T4T_t *ndefT4T, uint8_t *ccInfo);
+static ptx_Status_t ptx_NDEF_T4T_HandleCCInfo (ptx_NDEF_T4T_t *ndefT4t, uint8_t *ccInfo);
 
 /*
  *  Get Length Information of NDEF File.
  *
- *  ndefT4T               Pointer to component.
+ *  ndefT4t               Pointer to component.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_GetNLEN (ptx_NDEF_T4T_t *ndefT4T);
+static ptx_Status_t ptx_NDEF_T4T_GetNLEN (ptx_NDEF_T4T_t *ndefT4t);
 
 /*
  *  Read NDEF File content.
  *
- *      ndefT4T               Pointer to component.
+ *      ndefT4t               Pointer to component.
  *  msgBuffer             Message Data Buffer.
  *     msgLen                Message Data Length.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_ReadFileContent (ptx_NDEF_T4T_t *ndefT4T, uint8_t *msgBuffer, uint32_t *msgLen);
+static ptx_Status_t ptx_NDEF_T4T_ReadFileContent (ptx_NDEF_T4T_t *ndefT4t, uint8_t *msgBuffer, uint32_t *msgLen);
 
 /*
  *  Update NDEF File Length.
  *
- *  ndefT4T               Pointer to component.
+ *  ndefT4t               Pointer to component.
  *  newLen                New NDEF File Length.
  *
  * returns Status, indicating whether the operation was successful. See \ref ptx_Status_t.
  */
-static ptx_Status_t ptx_NDEF_T4T_UpdateLength (ptx_NDEF_T4T_t *ndefT4T, uint32_t newLen);
+static ptx_Status_t ptx_NDEF_T4T_UpdateLength (ptx_NDEF_T4T_t *ndefT4t, uint32_t newLen);
 /*
  * ####################################################################################################################
  * API FUNCTIONS
  * ####################################################################################################################
  */
-ptx_Status_t ptx_NDEF_T4T_Open (ptx_NDEF_T4T_t *ndefT4T, ptx_NDEF_T4T_InitParams_t *initParams)
+ptx_Status_t ptx_NDEF_T4T_Open (ptx_NDEF_T4T_t *ndefT4t, ptx_NDEF_T4T_InitParams_t *initParams)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if ((NULL != ndefT4T) && (NULL != initParams))
+    if ((NULL != ndefT4t) && (NULL != initParams))
     {
         if ((NULL != initParams->RxBuffer) &&
             (0 != initParams->RxBufferSize))
         {
-            /* clear component */
-            (void)memset(ndefT4T, 0, sizeof(ptx_NDEF_T4T_t));
-
-            ndefT4T->RxBuffer = initParams->RxBuffer;
-            ndefT4T->RxBufferSize = initParams->RxBufferSize;
-            ndefT4T->LifeCycle = TagLC_NoNDEFTag;
-
-            /* initialize lower layer component */
-            ptx_NativeTag_T4T_InitParams_t T4T_init_params;
-            (void)memset(&T4T_init_params, 0, sizeof(ptx_NativeTag_T4T_InitParams_t));
-            T4T_init_params.rul = initParams->rul;
-            T4T_init_params.TxBuffer = initParams->TxBuffer;
-            T4T_init_params.TxBufferSize = initParams->TxBufferSize;
-
-            status = ptx_NativeTag_T4T_Open(&ndefT4T->t4t, &T4T_init_params);
-
-            /* set Component-ID at the end to prevent further calls in case of an error */
-            if (PTX_STATUS_SUCCESS == status)
+            if(ptx_RUL_CardProtocolType_T4T == initParams->Rul->CardRegistry.ActiveProtocol)
             {
-                ndefT4T->CompId = Comp_T4TOP;
-            }
+                /* clear component */
+                (void)memset(ndefT4t, 0, sizeof(ptx_NDEF_T4T_t));
 
+                ndefT4t->RxBuffer = initParams->RxBuffer;
+                ndefT4t->RxBufferSize = initParams->RxBufferSize;
+                ndefT4t->LifeCycle = TagLC_NoNDEFTag;
+
+                /* initialize lower layer component */
+                ptx_NativeTag_T4T_InitParams_t t4t_init_params;
+                (void)memset(&t4t_init_params, 0, sizeof(ptx_NativeTag_T4T_InitParams_t));
+                t4t_init_params.Rul = initParams->Rul;
+                t4t_init_params.TxBuffer = initParams->TxBuffer;
+                t4t_init_params.TxBufferSize = initParams->TxBufferSize;
+
+                status = ptx_NativeTag_T4T_Open(&ndefT4t->T4t, &t4t_init_params);
+
+                /* set Component-ID at the end to prevent further calls in case of an error */
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    ndefT4t->CompId = Comp_T4TOP;
+                }
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+            }
         }
         else
         {
             status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
         }
-
+       
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T4T_FormatTag (ptx_NDEF_T4T_t *ndefT4T)
+ptx_Status_t ptx_NDEF_T4T_FormatTag (ptx_NDEF_T4T_t *ndefT4t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP))
     {
-        status = PTX_STATUS_E_NDEF_UNSUPPORTED;
-    }
-
-    return status;
-}
-
-ptx_Status_t ptx_NDEF_T4T_CheckMessage (ptx_NDEF_T4T_t *ndefT4T)
-{
-    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP))
-    {
-        /* select NDEF application */
-        uint32_t rx_len = ndefT4T->RxBufferSize;
-
-        status = ptx_NativeTag_T4T_Select_NDEF_Application(&ndefT4T->t4t,
-                                                           &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
-
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            status = ptx_NDEF_T4T_CheckSelectResponse(ndefT4T, &ndefT4T->RxBuffer[0], &rx_len);
+            status = PTX_STATUS_E_NDEF_UNSUPPORTED;
         }
-
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            /* get CC info */
-            status = ptx_NDEF_T4T_GetCCInfo(ndefT4T);
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
+    }
+
+    return status;
+}
+
+ptx_Status_t ptx_NDEF_T4T_CheckMessage (ptx_NDEF_T4T_t *ndefT4t)
+{
+    ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP))
+    {
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
+        {
+            /* select NDEF application */
+            uint32_t rx_len = ndefT4t->RxBufferSize;
+
+            status = ptx_NativeTag_T4T_Select_NDEF_Application(&ndefT4t->T4t,
+                                                            &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_NDEF_T4T_GetNLEN(ndefT4T);
+                status = ptx_NDEF_T4T_CheckSelectResponse(ndefT4t, &ndefT4t->RxBuffer[0], &rx_len);
             }
-            else
+
+            if (PTX_STATUS_SUCCESS == status)
             {
-                ndefT4T->LifeCycle = TagLC_NoNDEFTag;
+                /* get CC info */
+                status = ptx_NDEF_T4T_GetCCInfo(ndefT4t);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    status = ptx_NDEF_T4T_GetNLEN(ndefT4t);
+                }
+                else
+                {
+                    ndefT4t->LifeCycle = TagLC_NoNDEFTag;
+                }
             }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T4T_ReadMessage (ptx_NDEF_T4T_t *ndefT4T, uint8_t *msgBuffer, uint32_t *msgLen)
+ptx_Status_t ptx_NDEF_T4T_ReadMessage (ptx_NDEF_T4T_t *ndefT4t, uint8_t *msgBuffer, uint32_t *msgLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     uint32_t msg_buffer_size;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
-        msg_buffer_size = (uint32_t)(*msgLen);
-
-        if (0 != msg_buffer_size)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            /* check tag LC */
-            switch (ndefT4T->LifeCycle)
+            msg_buffer_size = (uint32_t)(*msgLen);
+
+            if (0 != msg_buffer_size)
             {
-                case TagLC_Initialised:
-                case TagLC_ReadWrite:
-                case TagLC_ReadOnly:
-                    /* OK */
-                    status = PTX_STATUS_SUCCESS;
-                    break;
-
-                default:
-                    status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
-                    break;
-            }
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                status = ptx_NDEF_T4T_ReadFileContent(ndefT4T, msgBuffer, &msg_buffer_size);
-
-                if ((PTX_STATUS_SUCCESS != status) || (ndefT4T->NLEN.DigitNLEN != msg_buffer_size))
+                /* check tag LC */
+                switch (ndefT4t->LifeCycle)
                 {
-                    msg_buffer_size = 0;
+                    case TagLC_Initialised:
+                    case TagLC_ReadWrite:
+                    case TagLC_ReadOnly:
+                        /* OK */
+                        status = PTX_STATUS_SUCCESS;
+                        break;
+
+                    default:
+                        status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
+                        break;
                 }
 
-                *msgLen = msg_buffer_size;
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    status = ptx_NDEF_T4T_ReadFileContent(ndefT4t, msgBuffer, &msg_buffer_size);
+
+                    if ((PTX_STATUS_SUCCESS != status) || (ndefT4t->NLEN.DigitNLEN != msg_buffer_size))
+                    {
+                        msg_buffer_size = 0;
+                    }
+
+                    *msgLen = msg_buffer_size;
+                }
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
             }
         }
         else
         {
-            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
-
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T4T_WriteMessage (ptx_NDEF_T4T_t *ndefT4T, uint8_t *msgBuffer, uint32_t msgLen)
+ptx_Status_t ptx_NDEF_T4T_WriteMessage (ptx_NDEF_T4T_t *ndefT4t, uint8_t *msgBuffer, uint32_t msgLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint32_t msg_len;
@@ -359,112 +385,119 @@ ptx_Status_t ptx_NDEF_T4T_WriteMessage (ptx_NDEF_T4T_t *ndefT4T, uint8_t *msgBuf
     uint8_t c_apdu_size;
     uint32_t rx_len;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != msgBuffer))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP) && (NULL != msgBuffer))
     {
-        msg_len = msgLen;
-        msg_buffer = msgBuffer;
-        ndef_file_size = (uint32_t)ndefT4T->CCParams.NDEFFileSize;
-        nbr_nlen_bytes = ndefT4T->NLEN.NbrNLENBytes;
-        c_apdu_size = 5u; /* class, inst, p1, p2, Le */
-
-        /* check tag LC */
-        switch (ndefT4T->LifeCycle)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            case TagLC_Initialised:
-            case TagLC_ReadWrite:
-                /* OK */
-                status = PTX_STATUS_SUCCESS;
-                break;
+            msg_len = msgLen;
+            msg_buffer = msgBuffer;
+            ndef_file_size = (uint32_t)ndefT4t->CCParams.NDEFFileSize;
+            nbr_nlen_bytes = ndefT4t->NLEN.NbrNLENBytes;
+            c_apdu_size = 5u; /* class, inst, p1, p2, Le */
 
-            default:
-                status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
-                break;
-        }
-
-        if (0 != msg_len)
-        {
-            if (PTX_STATUS_SUCCESS == status)
+            /* check tag LC */
+            switch (ndefT4t->LifeCycle)
             {
-                if (ndef_file_size >= msg_len)
-                {
-                    if ((uint16_t)(ndefT4T->CCParams.MLcDigit - c_apdu_size) >= msg_len) /* MLcDigit is by standard 0xFFFF at max */
-                    {
-                        /* reset NLEN before write */
-                        status = ptx_NDEF_T4T_UpdateLength(ndefT4T, 0);
+                case TagLC_Initialised:
+                case TagLC_ReadWrite:
+                    /* OK */
+                    status = PTX_STATUS_SUCCESS;
+                    break;
 
-                        if (PTX_STATUS_SUCCESS == status)
+                default:
+                    status = PTX_STATUS_E_NDEF_INVALID_TAG_STATE;
+                    break;
+            }
+
+            if (0 != msg_len)
+            {
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    if (ndef_file_size >= msg_len)
+                    {
+                        if ((uint16_t)(ndefT4t->CCParams.MLcDigit - c_apdu_size) >= msg_len) /* MLcDigit is by standard 0xFFFF at max */
                         {
-                            /* write message in one go */
-                            status = ptx_NDEF_T4T_UpdateBinary(ndefT4T, (uint32_t)nbr_nlen_bytes, &msg_buffer[0], (uint8_t)msg_len,
-                                                               &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                            /* reset NLEN before write */
+                            status = ptx_NDEF_T4T_UpdateLength(ndefT4t, 0);
 
                             if (PTX_STATUS_SUCCESS == status)
                             {
-                                bytes_written = (uint32_t)(bytes_written + msg_len);
+                                /* write message in one go */
+                                status = ptx_NDEF_T4T_UpdateBinary(ndefT4t, (uint32_t)nbr_nlen_bytes, &msg_buffer[0], (uint8_t)msg_len,
+                                                                &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+
+                                if (PTX_STATUS_SUCCESS == status)
+                                {
+                                    bytes_written = (uint32_t)(bytes_written + msg_len);
+                                }
                             }
+                        }
+                        else
+                        {
+                            /* reset NLEN before write */
+                            status = ptx_NDEF_T4T_UpdateLength(ndefT4t, 0);
+
+                            if (PTX_STATUS_SUCCESS == status)
+                            {
+                                while (msg_len > bytes_written)
+                                {
+                                    if (bytes_written + nbr_nlen_bytes >= PTX_T4T_ODO_THRESHOLD)
+                                    {
+                                        c_apdu_size = PTX_T4T_CAPDU_SIZE_ODO; /* Some available bytes are lost due to ODO C-APDU */
+                                    }
+
+                                    bytes_to_write = ((uint32_t)(msg_len - bytes_written) > (uint32_t)(ndefT4t->CCParams.MLcDigit - c_apdu_size)) ? ((uint8_t)(ndefT4t->CCParams.MLcDigit - c_apdu_size)) : ((uint8_t)(msg_len - bytes_written));
+
+                                    status = ptx_NDEF_T4T_UpdateBinary(ndefT4t, (uint32_t)(nbr_nlen_bytes + bytes_written), &msg_buffer[bytes_written], bytes_to_write,
+                                                                    &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                                    if (PTX_STATUS_SUCCESS == status)
+                                    {
+                                        bytes_written = (uint32_t)(bytes_written + bytes_to_write);
+                                    }
+                                }
+                            }
+                        }
+
+                        /* message written correctly? */
+                        if ((PTX_STATUS_SUCCESS == status) && (msgLen == bytes_written))
+                        {
+                            /* OK, update (E)NLEN */
+                            status = ptx_NDEF_T4T_UpdateLength(ndefT4t, (uint32_t)msg_len);
                         }
                     }
                     else
                     {
-                        /* reset NLEN before write */
-                        status = ptx_NDEF_T4T_UpdateLength(ndefT4T, 0);
-
-                        if (PTX_STATUS_SUCCESS == status)
-                        {
-                            while (msg_len > bytes_written)
-                            {
-                                if (bytes_written + nbr_nlen_bytes >= PTX_T4T_ODO_THRESHOLD)
-                                {
-                                    c_apdu_size = PTX_T4T_CAPDU_SIZE_ODO; /* Some available bytes are lost due to ODO C-APDU */
-                                }
-
-                                bytes_to_write = ((uint32_t)(msg_len - bytes_written) > (uint32_t)(ndefT4T->CCParams.MLcDigit - c_apdu_size)) ? ((uint8_t)(ndefT4T->CCParams.MLcDigit - c_apdu_size)) : ((uint8_t)(msg_len - bytes_written));
-
-                                status = ptx_NDEF_T4T_UpdateBinary(ndefT4T, (uint32_t)(nbr_nlen_bytes + bytes_written), &msg_buffer[bytes_written], bytes_to_write,
-                                                                   &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
-                                if (PTX_STATUS_SUCCESS == status)
-                                {
-                                    bytes_written = (uint32_t)(bytes_written + bytes_to_write);
-                                }
-                            }
-                        }
+                        status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
                     }
 
-                    /* message written correctly? */
-                    if ((PTX_STATUS_SUCCESS == status) && (msgLen == bytes_written))
+                }
+            }
+            else
+            {
+                /* reset NLEN before write */
+                status = ptx_NDEF_T4T_UpdateLength(ndefT4t, 0);
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    /* set empty message */
+                    msg_buffer = &EMPTY_NDEF_MESSAGE[0];
+                    status = ptx_NDEF_T4T_UpdateBinary(ndefT4t, (uint32_t)nbr_nlen_bytes, &msg_buffer[0], empty_record_len,
+                                                    &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                    if (PTX_STATUS_SUCCESS == status)
                     {
                         /* OK, update (E)NLEN */
-                        status = ptx_NDEF_T4T_UpdateLength(ndefT4T, (uint32_t)msg_len);
+                        status = ptx_NDEF_T4T_UpdateLength(ndefT4t, empty_record_len);
+                        if (PTX_STATUS_SUCCESS == status)
+                        {
+                            ndefT4t->LifeCycle = TagLC_Initialised;
+                        }
                     }
                 }
-                else
-                {
-                    status = PTX_STATUS_E_NDEF_INSUFFICIENT_RESOURCES;
-                }
-
             }
         }
         else
         {
-            /* reset NLEN before write */
-            status = ptx_NDEF_T4T_UpdateLength(ndefT4T, 0);
-
-            if (PTX_STATUS_SUCCESS == status)
-            {
-                /* set empty message */
-                msg_buffer = &EMPTY_NDEF_MESSAGE[0];
-                status = ptx_NDEF_T4T_UpdateBinary(ndefT4T, (uint32_t)nbr_nlen_bytes, &msg_buffer[0], empty_record_len,
-                                                   &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    /* OK, update (E)NLEN */
-                    status = ptx_NDEF_T4T_UpdateLength(ndefT4T, empty_record_len);
-                    if (PTX_STATUS_SUCCESS == status)
-                    {
-                        ndefT4T->LifeCycle = TagLC_Initialised;
-                    }
-                }
-            }
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -474,25 +507,39 @@ ptx_Status_t ptx_NDEF_T4T_WriteMessage (ptx_NDEF_T4T_t *ndefT4T, uint8_t *msgBuf
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T4T_LockTag (ptx_NDEF_T4T_t *ndefT4T)
+ptx_Status_t ptx_NDEF_T4T_LockTag (ptx_NDEF_T4T_t *ndefT4t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP))
     {
-        status = PTX_STATUS_SUCCESS; /* there is no procedure to lock the tag via the NDEF API */
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
+        {
+            status = PTX_STATUS_SUCCESS; /* there is no procedure to lock the tag via the NDEF API */
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
 }
 
-ptx_Status_t ptx_NDEF_T4T_Close (ptx_NDEF_T4T_t *ndefT4T)
+ptx_Status_t ptx_NDEF_T4T_Close (ptx_NDEF_T4T_t *ndefT4t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP))
     {
-        status = ptx_NativeTag_T4T_Close(&ndefT4T->t4t);
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
+        {
+            status = ptx_NativeTag_T4T_Close(&ndefT4t->T4t);
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -504,30 +551,37 @@ ptx_Status_t ptx_NDEF_T4T_Close (ptx_NDEF_T4T_t *ndefT4T)
  * ####################################################################################################################
  */
 
-static ptx_Status_t ptx_NDEF_T4T_CheckSelectResponse(ptx_NDEF_T4T_t *ndefT4T, uint8_t *rx, uint32_t *rxLen)
+static ptx_Status_t ptx_NDEF_T4T_CheckSelectResponse(ptx_NDEF_T4T_t *ndefT4t, uint8_t *rx, uint32_t *rxLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != rx) && (NULL != rxLen))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP) && (NULL != rx) && (NULL != rxLen))
     {
-        if (0 != *rxLen)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            if (PTX_T4T_STATUS_WORD_LENGTH <= *rxLen)
+            if (0 != *rxLen)
             {
-                if ((PTX_T4T_SUCCESS_FLAG_SW1 == rx[*rxLen - 2]) && (PTX_T4T_SUCCESS_FLAG_SW2 == rx[*rxLen - 1]))
+                if (PTX_T4T_STATUS_WORD_LENGTH <= *rxLen)
                 {
-                    /* successful select */
-                    *rxLen = *rxLen - PTX_T4T_STATUS_WORD_LENGTH;
-                    status = PTX_STATUS_SUCCESS;
+                    if ((PTX_T4T_SUCCESS_FLAG_SW1 == rx[*rxLen - 2]) && (PTX_T4T_SUCCESS_FLAG_SW2 == rx[*rxLen - 1]))
+                    {
+                        /* successful select */
+                        *rxLen = *rxLen - PTX_T4T_STATUS_WORD_LENGTH;
+                        status = PTX_STATUS_SUCCESS;
+                    }
+                    else
+                    {
+                        status = PTX_STATUS_E_NSC_RFERROR;
+                        if (((PTX_T4T_SW1_ERROR_WRONG_P1P2 == rx[*rxLen - 2]) && (PTX_T4T_SW2_ERROR_FILE_OR_APP_NOT_FOUND == rx[*rxLen - 1])) ||
+                            ((PTX_T4T_READ_FAIL_FLAG_SW1_SIMPLE == rx[*rxLen - 2]) && (PTX_T4T_READ_FAIL_FLAG_SW2_SIMPLE == rx[*rxLen - 1])))
+                        {
+                            status = PTX_STATUS_E_NDEF_NOT_FOUND;
+                        }
+                    }
                 }
                 else
                 {
                     status = PTX_STATUS_E_NSC_RFERROR;
-                    if (((PTX_T4T_SW1_ERROR_WRONG_P1P2 == rx[*rxLen - 2]) && (PTX_T4T_SW2_ERROR_FILE_OR_APP_NOT_FOUND == rx[*rxLen - 1])) ||
-                        ((PTX_T4T_READ_FAIL_FLAG_SW1_SIMPLE == rx[*rxLen - 2]) && (PTX_T4T_READ_FAIL_FLAG_SW2_SIMPLE == rx[*rxLen - 1])))
-                    {
-                        status = PTX_STATUS_E_NDEF_NOT_FOUND;
-                    }
                 }
             }
             else
@@ -537,14 +591,14 @@ static ptx_Status_t ptx_NDEF_T4T_CheckSelectResponse(ptx_NDEF_T4T_t *ndefT4T, ui
         }
         else
         {
-            status = PTX_STATUS_E_NSC_RFERROR;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T4T_ReadBinary (ptx_NDEF_T4T_t *ndefT4T,
+static ptx_Status_t ptx_NDEF_T4T_ReadBinary (ptx_NDEF_T4T_t *ndefT4t,
                                              uint32_t offset,
                                              uint8_t nbrExpectedResponseBytes,
                                              uint8_t *rx,
@@ -554,72 +608,79 @@ static ptx_Status_t ptx_NDEF_T4T_ReadBinary (ptx_NDEF_T4T_t *ndefT4T,
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint8_t cut_idx = 0;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != rx) && (NULL != rxLen))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP) && (NULL != rx) && (NULL != rxLen))
     {
-        *rxLen = (uint32_t)ndefT4T->RxBufferSize;
-
-        switch (ndefT4T->CCParams.MappingMajor)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            case 2:
-                status = ptx_NativeTag_T4T_ReadBinary(&ndefT4T->t4t, (uint16_t)offset, nbrExpectedResponseBytes, rx, rxLen, msTimeout);
-                break;
-            case 3:
-                status = ptx_NativeTag_T4T_ReadBinaryODO(&ndefT4T->t4t, offset, nbrExpectedResponseBytes, rx, rxLen, msTimeout);
-                if (PTX_STATUS_SUCCESS == status)
-                {
-                    cut_idx = (0x81 != rx[1]) ? (2u) : (3u);
+            *rxLen = (uint32_t)ndefT4t->RxBufferSize;
 
-                    *rxLen = *rxLen - cut_idx; /* remove BER-TLV T and L field */
-                    memmove(&rx[0], &rx[cut_idx], *rxLen);
-                }
-                break;
-
-            default:
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                break;
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            if (0 != *rxLen)
+            switch (ndefT4t->CCParams.MappingMajor)
             {
-                if (PTX_T4T_STATUS_WORD_LENGTH <= *rxLen)
-                {
-                    if ((PTX_T4T_SUCCESS_FLAG_SW1 == rx[*rxLen - 2]) && (PTX_T4T_SUCCESS_FLAG_SW2 == rx[*rxLen - 1]))
+                case 2:
+                    status = ptx_NativeTag_T4T_ReadBinary(&ndefT4t->T4t, (uint16_t)offset, nbrExpectedResponseBytes, rx, rxLen, msTimeout);
+                    break;
+                case 3:
+                    status = ptx_NativeTag_T4T_ReadBinaryODO(&ndefT4t->T4t, offset, nbrExpectedResponseBytes, rx, rxLen, msTimeout);
+                    if (PTX_STATUS_SUCCESS == status)
                     {
-                        /* successful read */
-                        *rxLen = *rxLen - PTX_T4T_STATUS_WORD_LENGTH;
+                        cut_idx = (0x81 != rx[1]) ? (2u) : (3u);
+
+                        *rxLen = *rxLen - cut_idx; /* remove BER-TLV T and L field */
+                        memmove(&rx[0], &rx[cut_idx], *rxLen);
+                    }
+                    break;
+
+                default:
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    break;
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                if (0 != *rxLen)
+                {
+                    if (PTX_T4T_STATUS_WORD_LENGTH <= *rxLen)
+                    {
+                        if ((PTX_T4T_SUCCESS_FLAG_SW1 == rx[*rxLen - 2]) && (PTX_T4T_SUCCESS_FLAG_SW2 == rx[*rxLen - 1]))
+                        {
+                            /* successful read */
+                            *rxLen = *rxLen - PTX_T4T_STATUS_WORD_LENGTH;
+                        }
+                        else
+                        {
+                            status = PTX_STATUS_E_NSC_RFERROR;
+                            if ((PTX_T4T_READ_FAIL_FLAG_SW1_SIMPLE == rx[*rxLen - 2]) && (PTX_T4T_READ_FAIL_FLAG_SW2_SIMPLE == rx[*rxLen - 1]))
+                            {
+                                status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* wrong length, no further information */
+                            }
+
+                            if (PTX_T4T_READ_FAIL_FLAG_SW1_EXT == rx[*rxLen - 2])
+                            {
+                                status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* wrong length, ndefT4t->RxBuffer[rxLen-1] has nbr of available data bytes */
+                            }
+                        }
                     }
                     else
                     {
                         status = PTX_STATUS_E_NSC_RFERROR;
-                        if ((PTX_T4T_READ_FAIL_FLAG_SW1_SIMPLE == rx[*rxLen - 2]) && (PTX_T4T_READ_FAIL_FLAG_SW2_SIMPLE == rx[*rxLen - 1]))
-                        {
-                            status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* wrong length, no further information */
-                        }
-
-                        if (PTX_T4T_READ_FAIL_FLAG_SW1_EXT == rx[*rxLen - 2])
-                        {
-                            status = PTX_STATUS_E_GEN_INVALID_PARAMETER; /* wrong length, ndefT4T->RxBuffer[rxLen-1] has nbr of available data bytes */
-                        }
                     }
                 }
-                else
-                {
-                    status = PTX_STATUS_E_NSC_RFERROR;
-                }
+            }
+            else
+            {
+                status = PTX_STATUS_E_NSC_RFERROR;
             }
         }
         else
         {
-            status = PTX_STATUS_E_NSC_RFERROR;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T4T_UpdateBinary (ptx_NDEF_T4T_t *ndefT4T,
+static ptx_Status_t ptx_NDEF_T4T_UpdateBinary (ptx_NDEF_T4T_t *ndefT4t,
                                                uint32_t offset,
                                                uint8_t *dataField,
                                                uint8_t nbrDataBytes,
@@ -629,40 +690,47 @@ static ptx_Status_t ptx_NDEF_T4T_UpdateBinary (ptx_NDEF_T4T_t *ndefT4T,
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != dataField) && (NULL != rx) && (NULL != rxLen))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP) && (NULL != dataField) && (NULL != rx) && (NULL != rxLen))
     {
-        *rxLen = (uint32_t)ndefT4T->RxBufferSize;
-
-        switch (ndefT4T->CCParams.MappingMajor)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            case 2:
-                status = ptx_NativeTag_T4T_UpdateBinary(&ndefT4T->t4t, (uint16_t)offset, dataField, nbrDataBytes, rx, rxLen, msTimeout);
-                break;
-            case 3:
-                if (offset >= 0x7FFF)
-                {
-                    status = ptx_NativeTag_T4T_UpdateBinaryODO(&ndefT4T->t4t, offset, dataField, nbrDataBytes, rx, rxLen, msTimeout);
-                }
-                else
-                {
-                    status = ptx_NativeTag_T4T_UpdateBinary(&ndefT4T->t4t, (uint16_t)offset, dataField, nbrDataBytes, rx, rxLen, msTimeout);
-                }
+            *rxLen = (uint32_t)ndefT4t->RxBufferSize;
 
-                break;
-
-            default:
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                break;
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            if ((0 != *rxLen) && (PTX_T4T_STATUS_WORD_LENGTH <= *rxLen))
+            switch (ndefT4t->CCParams.MappingMajor)
             {
-                if ((PTX_T4T_SUCCESS_FLAG_SW1 == rx[*rxLen - 2]) && (PTX_T4T_SUCCESS_FLAG_SW2 == rx[*rxLen - 1]))
+                case 2:
+                    status = ptx_NativeTag_T4T_UpdateBinary(&ndefT4t->T4t, (uint16_t)offset, dataField, nbrDataBytes, rx, rxLen, msTimeout);
+                    break;
+                case 3:
+                    if (offset >= 0x7FFF)
+                    {
+                        status = ptx_NativeTag_T4T_UpdateBinaryODO(&ndefT4t->T4t, offset, dataField, nbrDataBytes, rx, rxLen, msTimeout);
+                    }
+                    else
+                    {
+                        status = ptx_NativeTag_T4T_UpdateBinary(&ndefT4t->T4t, (uint16_t)offset, dataField, nbrDataBytes, rx, rxLen, msTimeout);
+                    }
+
+                    break;
+
+                default:
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    break;
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                if ((0 != *rxLen) && (PTX_T4T_STATUS_WORD_LENGTH <= *rxLen))
                 {
-                    /* successful update */
-                    *rxLen = *rxLen - PTX_T4T_STATUS_WORD_LENGTH;
+                    if ((PTX_T4T_SUCCESS_FLAG_SW1 == rx[*rxLen - 2]) && (PTX_T4T_SUCCESS_FLAG_SW2 == rx[*rxLen - 1]))
+                    {
+                        /* successful update */
+                        *rxLen = *rxLen - PTX_T4T_STATUS_WORD_LENGTH;
+                    }
+                    else
+                    {
+                        status = PTX_STATUS_E_NSC_RFERROR;
+                    }
                 }
                 else
                 {
@@ -676,14 +744,14 @@ static ptx_Status_t ptx_NDEF_T4T_UpdateBinary (ptx_NDEF_T4T_t *ndefT4T,
         }
         else
         {
-            status = PTX_STATUS_E_NSC_RFERROR;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T4T_GetCCInfo (ptx_NDEF_T4T_t *ndefT4T)
+static ptx_Status_t ptx_NDEF_T4T_GetCCInfo (ptx_NDEF_T4T_t *ndefT4t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -691,188 +759,209 @@ static ptx_Status_t ptx_NDEF_T4T_GetCCInfo (ptx_NDEF_T4T_t *ndefT4T)
     uint8_t cc_index = 0;
     uint8_t data_field[2];
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP))
     {
-        data_field[0] = (uint8_t)((DATA_FIELD_CC_SELECT >> 8u) & 0xFF);
-        data_field[1] = (uint8_t)(DATA_FIELD_CC_SELECT & 0xFF);
-
-        /* select CC file (function is to be called AFTER NDEF application select) */
-        uint32_t rx_len = ndefT4T->RxBufferSize;
-
-        status = ptx_NativeTag_T4T_Select_File(&ndefT4T->t4t, data_field,
-                                               &ndefT4T->RxBuffer[0], &rx_len,
-                                               PTX_T4T_DEFAULT_TIMEOUT_MS);
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            status = ptx_NDEF_T4T_CheckSelectResponse(ndefT4T, &ndefT4T->RxBuffer[0], &rx_len);
-        }
+            data_field[0] = (uint8_t)((DATA_FIELD_CC_SELECT >> 8u) & 0xFF);
+            data_field[1] = (uint8_t)(DATA_FIELD_CC_SELECT & 0xFF);
 
+            /* select CC file (function is to be called AFTER NDEF application select) */
+            uint32_t rx_len = ndefT4t->RxBufferSize;
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            /* read CCLen bytes of CC file */
-            ndefT4T->CCParams.MappingVersion = PTX_T4T_MAPPING_VERSION_2_0; /* preset for CC collection */
-            ndefT4T->CCParams.MappingMajor = 2u;
-            ndefT4T->CCParams.MappingMinor = 0u;
-            status = ptx_NDEF_T4T_ReadBinary(ndefT4T, (uint32_t)cc_index, cc_le_field,
-                                             &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
-            cc_index = (uint8_t)(cc_index + cc_le_field);
+            status = ptx_NativeTag_T4T_Select_File(&ndefT4t->T4t, data_field,
+                                                &ndefT4t->RxBuffer[0], &rx_len,
+                                                PTX_T4T_DEFAULT_TIMEOUT_MS);
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                (void)memcpy(&ndefT4T->CCParams.CCLen[0], &ndefT4T->RxBuffer[0], (uint32_t)2);
+                status = ptx_NDEF_T4T_CheckSelectResponse(ndefT4t, &ndefT4t->RxBuffer[0], &rx_len);
+            }
 
-                /* CCLen <= 0xFF, read in one go (proprietary ignored) */
-                cc_le_field = ndefT4T->CCParams.CCLen[1];
 
-                /* read rest of the CC file */
-                status = ptx_NDEF_T4T_ReadBinary(ndefT4T, (uint32_t)cc_index, (uint8_t)(cc_le_field - cc_index),
-                                                 &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                /* read CCLen bytes of CC file */
+                ndefT4t->CCParams.MappingVersion = PTX_T4T_MAPPING_VERSION_2_0; /* preset for CC collection */
+                ndefT4t->CCParams.MappingMajor = 2u;
+                ndefT4t->CCParams.MappingMinor = 0u;
+                status = ptx_NDEF_T4T_ReadBinary(ndefT4t, (uint32_t)cc_index, cc_le_field,
+                                                &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                cc_index = (uint8_t)(cc_index + cc_le_field);
 
-                if ((PTX_STATUS_SUCCESS == status) && (PTX_T4T_CC_LEN_MIN - 2u <= rx_len))
+                if (PTX_STATUS_SUCCESS == status)
                 {
-                    status = ptx_NDEF_T4T_HandleCCInfo(ndefT4T, &ndefT4T->RxBuffer[0]);
+                    (void)memcpy(&ndefT4t->CCParams.CCLen[0], &ndefT4t->RxBuffer[0], (uint32_t)2);
+
+                    /* CCLen <= 0xFF, read in one go (proprietary ignored) */
+                    cc_le_field = ndefT4t->CCParams.CCLen[1];
+
+                    /* read rest of the CC file */
+                    status = ptx_NDEF_T4T_ReadBinary(ndefT4t, (uint32_t)cc_index, (uint8_t)(cc_le_field - cc_index),
+                                                    &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+
+                    if ((PTX_STATUS_SUCCESS == status) && (PTX_T4T_CC_LEN_MIN - 2u <= rx_len))
+                    {
+                        status = ptx_NDEF_T4T_HandleCCInfo(ndefT4t, &ndefT4t->RxBuffer[0]);
+                    }
                 }
             }
         }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T4T_HandleCCInfo (ptx_NDEF_T4T_t *ndefT4T, uint8_t *ccInfo)
+static ptx_Status_t ptx_NDEF_T4T_HandleCCInfo (ptx_NDEF_T4T_t *ndefT4t, uint8_t *ccInfo)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != ccInfo))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP) && (NULL != ccInfo))
     {
-        uint8_t data_index = 0;
-        ndefT4T->CCParams.MappingVersion = ccInfo[data_index];
-        ndefT4T->CCParams.MappingMajor = (uint8_t)((ndefT4T->CCParams.MappingVersion >> 4u) & 0x0F);
-        ndefT4T->CCParams.MappingMinor = (uint8_t)(ndefT4T->CCParams.MappingVersion & 0x0F);
-        data_index++;
-        ndefT4T->CCParams.MLeDigit = (uint16_t)(((uint16_t)ccInfo[data_index] << 8) | ccInfo[data_index + 1]);
-        data_index = (uint8_t)(data_index + 2);
-        if (PTX_T4T_MAX_BYTES_RECEIVE < ndefT4T->CCParams.MLeDigit)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            ndefT4T->CCParams.MLeDigit = PTX_T4T_MAX_BYTES_RECEIVE;
-        }
-        ndefT4T->CCParams.MLcDigit = (uint16_t)(((uint16_t)ndefT4T->RxBuffer[data_index] << 8) | ccInfo[data_index + 1]);
-        data_index = (uint8_t)(data_index + 2);
-        if (PTX_T4T_MAX_BYTES_SEND < ndefT4T->CCParams.MLcDigit)
-        {
-            ndefT4T->CCParams.MLcDigit = PTX_T4T_MAX_BYTES_SEND;
-        }
-        status = PTX_STATUS_SUCCESS;
-        if ((ndefT4T->CCParams.MLeDigit == 0) || (ndefT4T->CCParams.MLcDigit == 0))
-        {
-            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            switch (ndefT4T->CCParams.MappingMajor)
+            uint8_t data_index = 0;
+            ndefT4t->CCParams.MappingVersion = ccInfo[data_index];
+            ndefT4t->CCParams.MappingMajor = (uint8_t)((ndefT4t->CCParams.MappingVersion >> 4u) & 0x0F);
+            ndefT4t->CCParams.MappingMinor = (uint8_t)(ndefT4t->CCParams.MappingVersion & 0x0F);
+            data_index++;
+            ndefT4t->CCParams.MLeDigit = (uint16_t)(((uint16_t)ccInfo[data_index] << 8) | ccInfo[data_index + 1]);
+            data_index = (uint8_t)(data_index + 2);
+            if (PTX_T4T_MAX_BYTES_RECEIVE < ndefT4t->CCParams.MLeDigit)
             {
-                case 2:
-                    /* NDEF control TLV */
-                    (void)memcpy(&ndefT4T->CCParams.NDEFTLV[0], &ccInfo[data_index], (uint8_t)PTX_T4T_NDEF_LENGTH);
-                    data_index = (uint8_t)(data_index + PTX_T4T_NDEF_LENGTH);
-                    (void)memcpy(&ndefT4T->CCParams.NDEFFileIdentifier[0], &ndefT4T->CCParams.NDEFTLV[2], (uint32_t)2);
-                    ndefT4T->CCParams.NDEFFileSize = (uint32_t)(((uint32_t)ndefT4T->CCParams.NDEFTLV[4] << 8u) | ((uint32_t)ndefT4T->CCParams.NDEFTLV[5]));
-                    ndefT4T->CCParams.NDEFAccessRead = ndefT4T->CCParams.NDEFTLV[6];
-                    ndefT4T->CCParams.NDEFAccessWrite = ndefT4T->CCParams.NDEFTLV[7];
-                    break;
-                case 3:
-                    /* ENDEF control TLV */
-                    (void)memcpy(&ndefT4T->CCParams.NDEFTLV[0], &ccInfo[data_index], (uint8_t)PTX_T4T_ENDEF_LENGTH);
-                    data_index = (uint8_t)(data_index + PTX_T4T_ENDEF_LENGTH);
-                    (void)memcpy(&ndefT4T->CCParams.NDEFFileIdentifier[0], &ndefT4T->CCParams.NDEFTLV[2], (uint32_t)2);
-                    ndefT4T->CCParams.NDEFFileSize = (uint32_t)((ndefT4T->CCParams.NDEFTLV[4] << 24u) | (ndefT4T->CCParams.NDEFTLV[5] << 16u) | (ndefT4T->CCParams.NDEFTLV[6] << 8u) | (ndefT4T->CCParams.NDEFTLV[7]));
-                    ndefT4T->CCParams.NDEFAccessRead = ndefT4T->CCParams.NDEFTLV[8];
-                    ndefT4T->CCParams.NDEFAccessWrite = ndefT4T->CCParams.NDEFTLV[9];
-                    break;
-                default:
-                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                    break;
+                ndefT4t->CCParams.MLeDigit = PTX_T4T_MAX_BYTES_RECEIVE;
             }
+            ndefT4t->CCParams.MLcDigit = (uint16_t)(((uint16_t)ndefT4t->RxBuffer[data_index] << 8) | ccInfo[data_index + 1]);
+            data_index = (uint8_t)(data_index + 2);
+            if (PTX_T4T_MAX_BYTES_SEND < ndefT4t->CCParams.MLcDigit)
+            {
+                ndefT4t->CCParams.MLcDigit = PTX_T4T_MAX_BYTES_SEND;
+            }
+            status = PTX_STATUS_SUCCESS;
+            if ((ndefT4t->CCParams.MLeDigit == 0) || (ndefT4t->CCParams.MLcDigit == 0))
+            {
+                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                switch (ndefT4t->CCParams.MappingMajor)
+                {
+                    case 2:
+                        /* NDEF control TLV */
+                        (void)memcpy(&ndefT4t->CCParams.NDEFTLV[0], &ccInfo[data_index], (uint8_t)PTX_T4T_NDEF_LENGTH);
+                        data_index = (uint8_t)(data_index + PTX_T4T_NDEF_LENGTH);
+                        (void)memcpy(&ndefT4t->CCParams.NDEFFileIdentifier[0], &ndefT4t->CCParams.NDEFTLV[2], (uint32_t)2);
+                        ndefT4t->CCParams.NDEFFileSize = (uint32_t)(((uint32_t)ndefT4t->CCParams.NDEFTLV[4] << 8u) | ((uint32_t)ndefT4t->CCParams.NDEFTLV[5]));
+                        ndefT4t->CCParams.NDEFAccessRead = ndefT4t->CCParams.NDEFTLV[6];
+                        ndefT4t->CCParams.NDEFAccessWrite = ndefT4t->CCParams.NDEFTLV[7];
+                        break;
+                    case 3:
+                        /* ENDEF control TLV */
+                        (void)memcpy(&ndefT4t->CCParams.NDEFTLV[0], &ccInfo[data_index], (uint8_t)PTX_T4T_ENDEF_LENGTH);
+                        data_index = (uint8_t)(data_index + PTX_T4T_ENDEF_LENGTH);
+                        (void)memcpy(&ndefT4t->CCParams.NDEFFileIdentifier[0], &ndefT4t->CCParams.NDEFTLV[2], (uint32_t)2);
+                        ndefT4t->CCParams.NDEFFileSize = (uint32_t)((ndefT4t->CCParams.NDEFTLV[4] << 24u) | (ndefT4t->CCParams.NDEFTLV[5] << 16u) | (ndefT4t->CCParams.NDEFTLV[6] << 8u) | (ndefT4t->CCParams.NDEFTLV[7]));
+                        ndefT4t->CCParams.NDEFAccessRead = ndefT4t->CCParams.NDEFTLV[8];
+                        ndefT4t->CCParams.NDEFAccessWrite = ndefT4t->CCParams.NDEFTLV[9];
+                        break;
+                    default:
+                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                        break;
+                }
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T4T_GetNLEN (ptx_NDEF_T4T_t *ndefT4T)
+static ptx_Status_t ptx_NDEF_T4T_GetNLEN (ptx_NDEF_T4T_t *ndefT4t)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
     uint8_t nbr_nlen_bytes;
     uint32_t nlen_offset = 0x00;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP))
     {
-        ndefT4T->LifeCycle = TagLC_Initialised;
-        /* select NDEF file */
-        uint32_t rx_len = ndefT4T->RxBufferSize;
-
-        status = ptx_NativeTag_T4T_Select_File(&ndefT4T->t4t, &ndefT4T->CCParams.NDEFFileIdentifier[0],
-                                               &ndefT4T->RxBuffer[0], &rx_len,
-                                               PTX_T4T_DEFAULT_TIMEOUT_MS);
-
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            status = ptx_NDEF_T4T_CheckSelectResponse(ndefT4T, &ndefT4T->RxBuffer[0], &rx_len);
-        }
+            ndefT4t->LifeCycle = TagLC_Initialised;
+            /* select NDEF file */
+            uint32_t rx_len = ndefT4t->RxBufferSize;
 
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            nbr_nlen_bytes = (PTX_T4T_MAPPING_VERSION_MAJOR_2 != ndefT4T->CCParams.MappingMajor) ? (4u) : (2u);
-            ndefT4T->NLEN.NbrNLENBytes = nbr_nlen_bytes;
-            status = ptx_NDEF_T4T_ReadBinary(ndefT4T, nlen_offset, nbr_nlen_bytes,
-                                             &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+            status = ptx_NativeTag_T4T_Select_File(&ndefT4t->T4t, &ndefT4t->CCParams.NDEFFileIdentifier[0],
+                                                &ndefT4t->RxBuffer[0], &rx_len,
+                                                PTX_T4T_DEFAULT_TIMEOUT_MS);
 
-            if ((PTX_STATUS_SUCCESS == status) && (nbr_nlen_bytes == rx_len))
+            if (PTX_STATUS_SUCCESS == status)
             {
-                (void)memcpy(&ndefT4T->NLEN.NLEN[0], &ndefT4T->RxBuffer[0], (uint32_t)nbr_nlen_bytes);
-                ndefT4T->NLEN.NbrNLENBytes = nbr_nlen_bytes;
+                status = ptx_NDEF_T4T_CheckSelectResponse(ndefT4t, &ndefT4t->RxBuffer[0], &rx_len);
             }
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                switch (ndefT4T->CCParams.MappingMajor)
-                {
-                    case PTX_T4T_MAPPING_VERSION_MAJOR_2:
-                        ndefT4T->NLEN.DigitNLEN = (uint16_t)(ndefT4T->NLEN.NLEN[1] | (ndefT4T->NLEN.NLEN[0] << 8u));
-                        break;
-                    case PTX_T4T_MAPPING_VERSION_MAJOR_3:
-                        ndefT4T->NLEN.DigitNLEN = (uint32_t)(ndefT4T->NLEN.NLEN[3] | (ndefT4T->NLEN.NLEN[2] << 8u) | (ndefT4T->NLEN.NLEN[1]) << 16u | (ndefT4T->NLEN.NLEN[0]) << 24u);
-                        break;
-                    default:
-                        ndefT4T->LifeCycle = TagLC_NoNDEFTag;
-                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                        break;
-                }
-                if ((0 != ndefT4T->NLEN.DigitNLEN) && (PTX_STATUS_SUCCESS == status))
-                {
-                    switch (ndefT4T->CCParams.NDEFAccessWrite)
-                    {
-                        case PTX_T4T_ACCESS_RW:
-                            ndefT4T->LifeCycle = TagLC_ReadWrite;
-                            break;
+                nbr_nlen_bytes = (PTX_T4T_MAPPING_VERSION_MAJOR_2 != ndefT4t->CCParams.MappingMajor) ? (4u) : (2u);
+                ndefT4t->NLEN.NbrNLENBytes = nbr_nlen_bytes;
+                status = ptx_NDEF_T4T_ReadBinary(ndefT4t, nlen_offset, nbr_nlen_bytes,
+                                                &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
 
-                        default:
-                            ndefT4T->LifeCycle = TagLC_ReadOnly;
+                if ((PTX_STATUS_SUCCESS == status) && (nbr_nlen_bytes == rx_len))
+                {
+                    (void)memcpy(&ndefT4t->NLEN.NLEN[0], &ndefT4t->RxBuffer[0], (uint32_t)nbr_nlen_bytes);
+                    ndefT4t->NLEN.NbrNLENBytes = nbr_nlen_bytes;
+                }
+
+                if (PTX_STATUS_SUCCESS == status)
+                {
+                    switch (ndefT4t->CCParams.MappingMajor)
+                    {
+                        case PTX_T4T_MAPPING_VERSION_MAJOR_2:
+                            ndefT4t->NLEN.DigitNLEN = (uint16_t)(ndefT4t->NLEN.NLEN[1] | (ndefT4t->NLEN.NLEN[0] << 8u));
                             break;
+                        case PTX_T4T_MAPPING_VERSION_MAJOR_3:
+                            ndefT4t->NLEN.DigitNLEN = (uint32_t)(ndefT4t->NLEN.NLEN[3] | (ndefT4t->NLEN.NLEN[2] << 8u) | (ndefT4t->NLEN.NLEN[1]) << 16u | (ndefT4t->NLEN.NLEN[0]) << 24u);
+                            break;
+                        default:
+                            ndefT4t->LifeCycle = TagLC_NoNDEFTag;
+                            status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                            break;
+                    }
+                    if ((0 != ndefT4t->NLEN.DigitNLEN) && (PTX_STATUS_SUCCESS == status))
+                    {
+                        switch (ndefT4t->CCParams.NDEFAccessWrite)
+                        {
+                            case PTX_T4T_ACCESS_RW:
+                                ndefT4t->LifeCycle = TagLC_ReadWrite;
+                                break;
+
+                            default:
+                                ndefT4t->LifeCycle = TagLC_ReadOnly;
+                                break;
+                        }
                     }
                 }
             }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T4T_ReadFileContent (ptx_NDEF_T4T_t *ndefT4T, uint8_t *msgBuffer, uint32_t *msgLen)
+static ptx_Status_t ptx_NDEF_T4T_ReadFileContent (ptx_NDEF_T4T_t *ndefT4t, uint8_t *msgBuffer, uint32_t *msgLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
 
@@ -881,50 +970,28 @@ static ptx_Status_t ptx_NDEF_T4T_ReadFileContent (ptx_NDEF_T4T_t *ndefT4T, uint8
     uint32_t bytes_read = 0;
     uint32_t msg_len = 0;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP) && (NULL != msgBuffer) && (NULL != msgLen) && (0 != *msgLen))
     {
-        msg_len = *msgLen;
-
-        /* read NDEF file after (E)NLEN bytes, SELECT was done in check */
-        if (((uint32_t)(ndefT4T->CCParams.MLeDigit - PTX_T4T_STATUS_WORD_LENGTH) > ndefT4T->NLEN.DigitNLEN)
-            && (PTX_T4T_MAX_READ_LEN > ndefT4T->NLEN.DigitNLEN))
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            /* read message in one go */
+            msg_len = *msgLen;
 
-            status = ptx_NDEF_T4T_ReadBinary(ndefT4T, (uint32_t)ndefT4T->NLEN.NbrNLENBytes,
-                                             (uint8_t)ndefT4T->NLEN.DigitNLEN,
-                                             &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
-            bytes_read = (uint32_t)(bytes_read + rx_len);
-
-            if (PTX_STATUS_SUCCESS == status)
+            /* read NDEF file after (E)NLEN bytes, SELECT was done in check */
+            if (((uint32_t)(ndefT4t->CCParams.MLeDigit - PTX_T4T_STATUS_WORD_LENGTH) > ndefT4t->NLEN.DigitNLEN)
+                && (PTX_T4T_MAX_READ_LEN > ndefT4t->NLEN.DigitNLEN))
             {
-                if (msg_len >= bytes_read)
-                {
-                    (void) memcpy(&msgBuffer[0], &ndefT4T->RxBuffer[0], bytes_read);
-                }
-                else
-                {
-                    status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
-                }
-            }
-        }
-        else
-        {
-            status = PTX_STATUS_SUCCESS;
+                /* read message in one go */
 
-            while ((ndefT4T->NLEN.DigitNLEN > bytes_read) && (PTX_STATUS_SUCCESS == status))
-            {
-                bytes_to_read = ((uint32_t)(ndefT4T->NLEN.DigitNLEN - bytes_read) > (uint32_t)(ndefT4T->CCParams.MLeDigit)) ? ((uint16_t)(ndefT4T->CCParams.MLeDigit)) : ((uint16_t)(ndefT4T->NLEN.DigitNLEN - bytes_read));
+                status = ptx_NDEF_T4T_ReadBinary(ndefT4t, (uint32_t)ndefT4t->NLEN.NbrNLENBytes,
+                                                (uint8_t)ndefT4t->NLEN.DigitNLEN,
+                                                &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                bytes_read = (uint32_t)(bytes_read + rx_len);
 
-                status = ptx_NDEF_T4T_ReadBinary(ndefT4T, (uint32_t)(ndefT4T->NLEN.NbrNLENBytes + bytes_read),
-                                                 (uint8_t)bytes_to_read,
-                                                 &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
                 if (PTX_STATUS_SUCCESS == status)
                 {
-                    if (msg_len >= (bytes_read + bytes_to_read))
+                    if (msg_len >= bytes_read)
                     {
-                        (void) memcpy(&msgBuffer[bytes_read], &ndefT4T->RxBuffer[0], bytes_to_read);
-                        bytes_read = (uint32_t)(bytes_read + rx_len);
+                        (void) memcpy(&msgBuffer[0], &ndefT4t->RxBuffer[0], bytes_read);
                     }
                     else
                     {
@@ -932,18 +999,47 @@ static ptx_Status_t ptx_NDEF_T4T_ReadFileContent (ptx_NDEF_T4T_t *ndefT4T, uint8
                     }
                 }
             }
-        }
+            else
+            {
+                status = PTX_STATUS_SUCCESS;
 
-        if (PTX_STATUS_SUCCESS == status)
+                while ((ndefT4t->NLEN.DigitNLEN > bytes_read) && (PTX_STATUS_SUCCESS == status))
+                {
+                    bytes_to_read = ((uint32_t)(ndefT4t->NLEN.DigitNLEN - bytes_read) > (uint32_t)(ndefT4t->CCParams.MLeDigit)) ? ((uint16_t)(ndefT4t->CCParams.MLeDigit)) : ((uint16_t)(ndefT4t->NLEN.DigitNLEN - bytes_read));
+
+                    status = ptx_NDEF_T4T_ReadBinary(ndefT4t, (uint32_t)(ndefT4t->NLEN.NbrNLENBytes + bytes_read),
+                                                    (uint8_t)bytes_to_read,
+                                                    &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                    if (PTX_STATUS_SUCCESS == status)
+                    {
+                        if (msg_len >= (bytes_read + bytes_to_read))
+                        {
+                            (void) memcpy(&msgBuffer[bytes_read], &ndefT4t->RxBuffer[0], bytes_to_read);
+                            bytes_read = (uint32_t)(bytes_read + rx_len);
+                        }
+                        else
+                        {
+                            status = PTX_STATUS_E_GEN_INSUFFICIENT_RESOURCES;
+                        }
+                    }
+                }
+            }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                *msgLen = bytes_read;
+            }
+        }
+        else
         {
-            *msgLen = bytes_read;
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
     return status;
 }
 
-static ptx_Status_t ptx_NDEF_T4T_UpdateLength (ptx_NDEF_T4T_t *ndefT4T, uint32_t newLen)
+static ptx_Status_t ptx_NDEF_T4T_UpdateLength (ptx_NDEF_T4T_t *ndefT4t, uint32_t newLen)
 {
     ptx_Status_t status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
     uint8_t lc_field;
@@ -951,61 +1047,68 @@ static ptx_Status_t ptx_NDEF_T4T_UpdateLength (ptx_NDEF_T4T_t *ndefT4T, uint32_t
     uint8_t nlen_offset = 0;
     uint32_t rx_len;
 
-    if (PTX_COMP_CHECK(ndefT4T, Comp_T4TOP))
+    if (PTX_COMP_CHECK(ndefT4t, Comp_T4TOP))
     {
-        switch (ndefT4T->CCParams.MappingMajor)
+        if(ptx_RUL_CardProtocolType_T4T == ndefT4t->T4t.Rul->CardRegistry.ActiveProtocol)
         {
-            case PTX_T4T_MAPPING_VERSION_MAJOR_2:
-                if (PTX_T4T_MAX_NLEN < newLen)
-                {
+            switch (ndefT4t->CCParams.MappingMajor)
+            {
+                case PTX_T4T_MAPPING_VERSION_MAJOR_2:
+                    if (PTX_T4T_MAX_NLEN < newLen)
+                    {
+                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        length_data_field[0] = (uint8_t)(((uint16_t)newLen & 0xFF00) >> 8u);
+                        length_data_field[1] = (uint8_t)((uint16_t)newLen & 0x00FF);
+
+                        lc_field = 2u;
+
+                        status = ptx_NDEF_T4T_UpdateBinary(ndefT4t, nlen_offset, length_data_field, lc_field, &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                    }
+                    break;
+                case PTX_T4T_MAPPING_VERSION_MAJOR_3:
+                    if (PTX_T4T_MAX_ENLEN < newLen)
+                    {
+                        status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    }
+                    else
+                    {
+                        length_data_field[3] = (uint8_t)(newLen & 0x000000FF);
+                        length_data_field[2] = (uint8_t)((newLen & 0x0000FF00) >> 8u);
+                        length_data_field[1] = (uint8_t)((newLen & 0x00FF0000) >> 16u);
+                        length_data_field[0] = (uint8_t)((newLen & 0xFF000000) >> 24u);
+
+                        lc_field = 4;
+
+                        status = ptx_NDEF_T4T_UpdateBinary(ndefT4t, nlen_offset, length_data_field, lc_field, &ndefT4t->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                    }
+                    break;
+
+                default:
                     status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                    break;
+            }
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                ndefT4t->NLEN.DigitNLEN = newLen;
+                ndefT4t->NLEN.NbrNLENBytes = lc_field;
+                (void)memcpy(&ndefT4t->NLEN.NLEN[0], &length_data_field[0], (uint32_t)lc_field);
+
+                if (newLen != 0)
+                {
+                    ndefT4t->LifeCycle = TagLC_ReadWrite;
                 }
                 else
                 {
-                    length_data_field[0] = (uint8_t)(((uint16_t)newLen & 0xFF00) >> 8u);
-                    length_data_field[1] = (uint8_t)((uint16_t)newLen & 0x00FF);
-
-                    lc_field = 2u;
-
-                    status = ptx_NDEF_T4T_UpdateBinary(ndefT4T, nlen_offset, length_data_field, lc_field, &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
+                    ndefT4t->LifeCycle = TagLC_Initialised;
                 }
-                break;
-            case PTX_T4T_MAPPING_VERSION_MAJOR_3:
-                if (PTX_T4T_MAX_ENLEN < newLen)
-                {
-                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                }
-                else
-                {
-                    length_data_field[3] = (uint8_t)(newLen & 0x000000FF);
-                    length_data_field[2] = (uint8_t)((newLen & 0x0000FF00) >> 8u);
-                    length_data_field[1] = (uint8_t)((newLen & 0x00FF0000) >> 16u);
-                    length_data_field[0] = (uint8_t)((newLen & 0xFF000000) >> 24u);
-
-                    lc_field = 4;
-
-                    status = ptx_NDEF_T4T_UpdateBinary(ndefT4T, nlen_offset, length_data_field, lc_field, &ndefT4T->RxBuffer[0], &rx_len, PTX_T4T_DEFAULT_TIMEOUT_MS);
-                }
-                break;
-
-            default:
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-                break;
+            }
         }
-        if (PTX_STATUS_SUCCESS == status)
+        else
         {
-            ndefT4T->NLEN.DigitNLEN = newLen;
-            ndefT4T->NLEN.NbrNLENBytes = lc_field;
-            (void)memcpy(&ndefT4T->NLEN.NLEN[0], &length_data_field[0], (uint32_t)lc_field);
-
-            if (newLen != 0)
-            {
-                ndefT4T->LifeCycle = TagLC_ReadWrite;
-            }
-            else
-            {
-                ndefT4T->LifeCycle = TagLC_Initialised;
-            }
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 

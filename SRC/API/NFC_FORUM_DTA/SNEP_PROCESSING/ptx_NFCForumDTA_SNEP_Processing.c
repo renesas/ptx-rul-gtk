@@ -158,7 +158,7 @@ ptx_Status_t ptx_NFCForumDTA_RunSnepServerOperation(ptx_NFCForumDTA_t *dta)
     ptx_RUL_DeactivateParams_t deactivate_params;
     deactivate_params.Type = ptx_RUL_DeactivateType_Generic;
     deactivate_params.State = ptx_RUL_DeactivateState_Idle;
-    status = ptx_RUL_Deactivate(dta->rul, &deactivate_params);
+    status = ptx_RUL_Deactivate(dta->Rul, &deactivate_params);
 
     /* We deinitialize the component in any case! */
     (void) ptx_RUL_SnepServer_DeInit(&dta->snepServer);
@@ -209,7 +209,7 @@ ptx_Status_t ptx_NFCForumDTA_RunSnepClientOperation(ptx_NFCForumDTA_t *dta, ptx_
     ptx_RUL_DeactivateParams_t deactivate_params;
     deactivate_params.Type = ptx_RUL_DeactivateType_Generic;
     deactivate_params.State = ptx_RUL_DeactivateState_Idle;
-    status = ptx_RUL_Deactivate(dta->rul, &deactivate_params);
+    status = ptx_RUL_Deactivate(dta->Rul, &deactivate_params);
 
     /* We deinitialize the component in any case! */
     (void) ptx_RUL_SnepClient_DeInit(&dta->snepClient);

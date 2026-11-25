@@ -89,6 +89,8 @@ ptx_Status_t ptx_RUL_InitiateDiscovery(ptx_RUL_t *rul, ptx_RUL_DiscoverConfig_t 
     if (PTX_COMP_CHECK(rul, Comp_RUL))
     {
         PTX_LOG_I(&rul->Log, "ptx_RUL_InitiateDiscovery");
+        rul->ExtensionEmvCollisionDetected = PTX_RUL_EXTENSION_EMV_COLL_NOT_DETECTED;
+        rul->CollPendDetected = PTX_RUL_EXTENSION_COLL_PEND_NOT_SET;
         if (NULL != cfg)
         {
             ptx_NSC_RfDiscovery_Cfg_t nsc_cfg;
@@ -399,7 +401,10 @@ static void ptx_RUL_CopyDiscoverParameter(ptx_RUL_DiscoverConfig_t *src, ptx_NSC
 
         dest->ListenTypeF212 = src->ListenTypeF212;
         dest->ListenTypeF424 = src->ListenTypeF424;
-
+        
+        dest->ListenTypeFSenRqHandler = src->ListenTypeFSenRqHandler;
+        dest->ListenTypeFIncludeRD = src->ListenTypeFIncludeRD;
+        
         memcpy(dest->ListenTypeFNfcId, src->ListenTypeFNfcId, PTX_RUL_NFCID2_LEN);
         dest->ListenTypeFNfcIdLen = src->ListenTypeFNfcIdLen;
         memcpy(dest->ListenTypeFRequestData, src->ListenTypeFRequestData, PTX_RUL_RD_LEN);

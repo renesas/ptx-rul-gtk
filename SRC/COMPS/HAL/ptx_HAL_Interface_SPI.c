@@ -82,8 +82,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_Init (ptx_HAL_Interface_SPI_t *ctx, ptx_HAL_I
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_SPI_Init");
-
         memset(&ctx->Drv, 0, sizeof(ptx_HAL_DRV_Interface_SPI_t));
 
         /* Initialize the driver. */
@@ -96,8 +94,8 @@ ptx_Status_t ptx_HAL_Interface_SPI_Init (ptx_HAL_Interface_SPI_t *ctx, ptx_HAL_I
         drv_init_params.Gpio = initParams->Gpio;
         ctx->Log = initParams->Log;
 
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-        drv_init_params.OS = initParams->OS;
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+        drv_init_params.Osal = initParams->Osal;
 #endif
 
         status = ptx_HAL_DRV_Interface_SPI_Init(&ctx->Drv, &drv_init_params);
@@ -117,8 +115,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_DeInit (ptx_HAL_Interface_SPI_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_SPI_DeInit");
-
         status = ptx_HAL_DRV_Interface_SPI_DeInit(&ctx->Drv);
     }
 
@@ -133,8 +129,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_Open (void *ctx)
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
-        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_Open");
-
         status = ptx_HAL_DRV_Interface_SPI_Open(&spiInterface->Drv);
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -153,8 +147,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_Close (void *ctx)
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
-        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_Close");
-
         status = ptx_HAL_DRV_Interface_SPI_Close(&spiInterface->Drv);
     }
 
@@ -171,8 +163,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_TRx (void *ctx, uint8_t *txBuf[], uint32_t tx
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
         status = ptx_HAL_DRV_Interface_SPI_SetNss(&spiInterface->Drv);
-
-        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_TRx");
 
         if (PTX_STATUS_SUCCESS == status)
         {
@@ -241,8 +231,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_RxPending(void *ctx, uint8_t *rxPending)
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
-        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_RxPending");
-
         status = ptx_HAL_DRV_Interface_SPI_RxIrqLevel(&spiInterface->Drv, rxPending);
     }
 
@@ -257,8 +245,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_SetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
-        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_SetParameter");
-
         status = ptx_HAL_DRV_Interface_SPI_SetParameter(&spiInterface->Drv, parameter);
     }
 
@@ -273,8 +259,6 @@ ptx_Status_t ptx_HAL_Interface_SPI_GetParameter(void *ctx, ptx_HAL_DRV_Interface
 
     if (PTX_COMP_CHECK(spiInterface, Comp_HAL))
     {
-        PTX_LOG_V(spiInterface->Log, "ptx_HAL_Interface_SPI_GetParameter");
-
         status = ptx_HAL_DRV_Interface_SPI_GetParameter(&spiInterface->Drv, parameter);
     }
 

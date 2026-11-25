@@ -220,6 +220,7 @@ typedef uint16_t    ptx_Status_t;
 #define PTX_STATUS_E_MFCC_NACK                      ((ptx_Status_t) 0x0901)     /**< NACK received. */
 #define PTX_STATUS_E_MFCC_PROTOCOL_ERROR            ((ptx_Status_t) 0x0902)     /**< Indicate that something is out of order in MFCC Operations. */
 #define PTX_STATUS_E_MFCC_INSUFFICIENT_RESOURCES    ((ptx_Status_t) 0x0903)     /**< Not enough memory space. */
+#define PTX_STATUS_E_MFCC_NOT_SUPPORTED             ((ptx_Status_t) 0x0904)     /**< Indicate that something is not supported for MFCC cards */
 
 /**
  * \brief ERROR CODES RELATED TO FELICA

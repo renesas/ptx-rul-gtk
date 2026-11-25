@@ -41,8 +41,8 @@
 */ 
 /**
     BUILD-META-DATA
-    Config Tool version : 1.7.2
-    Date/Time           : 2026-09-15 10:14:51
+    Config Tool version : 1.8.0
+    Date/Time           : 2026-11-11 13:05:05
     Input file          : .renrul
 *//*
  * File Auto-Generated (not modified)

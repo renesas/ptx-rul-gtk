@@ -99,6 +99,17 @@ extern "C" {
 #define PTX_WLC_PERCENT_FRACTION                    (100u)  /**< Percent fraction. */
 /** @} */
 
+#define PTX_CORP_MANUFACTURER_CODE                  (0x80)  /**< PTX Manufacturer code (= first byte of UID) */
+#define DEVICE_ID_PTX31W_B0                         (0x00)  /**< Device ID in byte 0 of the T2T memory for PTX30W. */
+#define DEVICE_ID_PTX31W_B1                         (0x00)  /**< Device ID in byte 1 of the T2T memory for PTX30W. */
+#define DEVICE_ID_RRQ36031_B0                       (0x27)  /**< Device ID in byte 0 of the T2T memory for RRQ36031. */
+#define DEVICE_ID_RRQ36031_B1                       (0x33)  /**< Device ID in byte 1 of the T2T memory for RRQ36031. */
+
+/**
+ * \brief Macro to check if RUL WLC Listener Type support proprietary features
+ */
+#define IS_PROPRIETARY_WLC_LISTENER(ptx_rul_wlc_listener_type) \
+    ((ListenerType_RRQ36031==ptx_rul_wlc_listener_type)||(ListenerType_PTX30W==ptx_rul_wlc_listener_type))
 
 /*
  * ####################################################################################################################
@@ -112,7 +123,8 @@ extern "C" {
 typedef enum ptx_RUL_WLC_ListenerType
 {
     ListenerType_Generic,       /**< Generic Listener Device, which is only compatible to NFC Forum WLC compliant functionality. */
-    ListenerType_Proprietary    /**< Proprietary Renesas Listener Device, which is compatible to all NFC Forum WLC compliant and proprietary Renesas functionality. */
+    ListenerType_RRQ36031,      /**< Proprietary Renesas Listener Device, which is compatible to all NFC Forum WLC compliant and proprietary Renesas functionality. */
+    ListenerType_PTX30W         /**< Proprietary PTX Listener Device, which is compatible to all NFC Forum WLC compliant and proprietary Renesas functionality. */
 } ptx_RUL_WLC_ListenerType_t;
 
 /**
@@ -237,6 +249,7 @@ typedef struct ptx_RUL_WLC_InitParams
                                                                                  In case Option_B is selected, the Poller will always default to WptPostPwrLevel.
                                                                                  */
     uint8_t                                 WptPostSettleTime;              /**< Additional delay time after a successful WPT cycle in ms. (Min = 300us). */
+    uint8_t                                 WptRffSyncTime;                 /**< Duration of the RFF sync pulse in the middle of the WPT (only for PTX30W). */
 
     /** WLC Sleep Parameters. */
     uint32_t                                SleepInterval;                  /**< Interval, after which the Poller runs the presence check during sleep state. */

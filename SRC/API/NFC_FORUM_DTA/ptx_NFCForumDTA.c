@@ -143,18 +143,18 @@ ptx_Status_t ptx_NFCForumDTA_Init(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_InitPa
     {
         memset(dta, 0, sizeof(ptx_NFCForumDTA_t));
 
-        if (PTX_COMP_CHECK(initParams->rul, Comp_RUL))
+        if (PTX_COMP_CHECK(initParams->Rul, Comp_RUL))
         {
-            dta->rul = initParams->rul;
+            dta->Rul = initParams->Rul;
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)
             ptx_RUL_HCE_InitParams_t hce_init_params;
             memset(&hce_init_params, 0, sizeof(ptx_RUL_HCE_InitParams_t));
 
-            hce_init_params.Rul = dta->rul;
+            hce_init_params.Rul = dta->Rul;
             hce_init_params.AppRxBuffer = initParams->HCEMessageBuffer;
             hce_init_params.AppRxBufferSize = initParams->HCEMessageBufferSize;
-            hce_init_params.Log = &initParams->rul->Log;
+            hce_init_params.Log = &initParams->Rul->Log;
             status = ptx_RUL_HCE_Init(&dta->hce, &hce_init_params);
 #else // PTX_DISABLE_LISTEN_MODE
             status = PTX_STATUS_SUCCESS;
@@ -163,7 +163,7 @@ ptx_Status_t ptx_NFCForumDTA_Init(ptx_NFCForumDTA_t *dta, ptx_NFCForumDTA_InitPa
 
         if (PTX_STATUS_SUCCESS == status)
         {
-            dta->cardRegistry = &dta->rul->CardRegistry;
+            dta->cardRegistry = &dta->Rul->CardRegistry;
             dta->NDEFMessageBuffer = initParams->NDEFMessageBuffer;
             dta->NDEFMessageBufferSize = initParams->NDEFMessageBufferSize;
             dta->NDEFMessageBufferLen = initParams->NDEFMessageBufferLen;
@@ -651,7 +651,7 @@ static ptx_Status_t ptx_NFCForumDTA_InitLlcp(ptx_NFCForumDTA_t *dta)
 
     ptx_RUL_LLCP_InitParameters_t llcp_init_params;
     memset(&llcp_init_params, 0, sizeof(ptx_RUL_LLCP_InitParameters_t));
-    llcp_init_params.Rul = dta->rul;
+    llcp_init_params.Rul = dta->Rul;
 
     memset(&dta->llcp, 0, sizeof(ptx_RUL_LLCP_t));
     status = ptx_RUL_LLCP_Init(&dta->llcp, &llcp_init_params);
@@ -783,11 +783,11 @@ static ptx_Status_t ptx_NFCForumDTA_RestartSystem(ptx_NFCForumDTA_t *dta)
         do
         {
             /* Wait for 1s to give the chip time to cool down, after that time try to initialize the system again */
-            status = ptx_RUL_Sleep(dta->rul, 1000u);
+            status = ptx_RUL_Sleep(dta->Rul, 1000u);
 
             if (PTX_STATUS_SUCCESS == status)
             {
-                status = ptx_RUL_InitHardware(dta->rul);
+                status = ptx_RUL_InitHardware(dta->Rul);
             }
 
             ++retries;

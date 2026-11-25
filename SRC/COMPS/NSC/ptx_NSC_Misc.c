@@ -376,9 +376,10 @@ ptx_Status_t ptx_NSC_GetStatus(ptx_NSC_t *nsc, ptx_NSC_ParamStatus_t *paramStatu
                    Listen Mode configuration parameters which is not yet supported
                    (FW v0.47)
                 */
-                paramStatus->RfFieldStrength = 
-                        ((uint16_t)rsp_buffer[idx] << 8) |
-                        ((uint16_t)rsp_buffer[idx + 1]);
+                paramStatus->RfFieldStrength = (uint16_t)(
+                    ((uint16_t)((uint16_t)rsp_buffer[idx] << 8U) & 0xFF00U) |
+                    ((uint16_t)           rsp_buffer[idx + 1U]   & 0x00FFU)
+                );
             }
         }
     }

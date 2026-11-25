@@ -73,8 +73,6 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_Interface_Init");
-
 #if defined(PTX_ENABLE_SPI)
 
         if (HAL_Interface_Type_SPI == initParams->Type)
@@ -90,8 +88,8 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
             interface_init_params.Gpio = initParams->Gpio;
             ctx->Log = initParams->Log;
 
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-            interface_init_params.OS = initParams->Osal;
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+            interface_init_params.Osal = initParams->Osal;
 #endif
 
             status = ptx_HAL_Interface_SPI_Init(&ctx->SpiInterface, &interface_init_params);
@@ -126,15 +124,13 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
 
             ptx_HAL_Interface_UART_InitParams_t interface_init_params;
             memset(&interface_init_params, 0, sizeof(ptx_HAL_Interface_UART_InitParams_t));
-            interface_init_params.InterfaceName = initParams->Name;
-            interface_init_params.InterfaceNameLen = initParams->NameLen;
             interface_init_params.PortType = initParams->PortType;
             interface_init_params.PortID = initParams->PortID;
             interface_init_params.Log = initParams->Log;
             interface_init_params.Gpio = initParams->Gpio;
             interface_init_params.Speed = initParams->Speed;
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-            interface_init_params.OS = initParams->Osal;
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+            interface_init_params.Osal = initParams->Osal;
 #endif
             status = ptx_HAL_Interface_UART_Init(&ctx->UartInterface, &interface_init_params);
 
@@ -167,8 +163,8 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
             interface_init_params.Log = initParams->Log;
             interface_init_params.Gpio = initParams->Gpio;
             interface_init_params.Speed = initParams->Speed;
-#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID)
-            interface_init_params.OS = initParams->Osal;
+#if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX) || defined(PTX_APP_DIVERSITY_ANDROID) || defined(PTX_APP_DIVERSITY_ANDROID_APP)
+            interface_init_params.Osal = initParams->Osal;
 #endif
 
             status = ptx_HAL_Interface_I2C_Init(&ctx->I2cInterface, &interface_init_params);
@@ -201,7 +197,7 @@ ptx_Status_t ptx_HAL_Interface_Init(ptx_HAL_Interface_t *ctx, ptx_HAL_Interface_
             interface_init_params.Gpio = initParams->Gpio;
             interface_init_params.Speed = initParams->Speed;
 #if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
-            interface_init_params.OS = initParams->Osal;
+            interface_init_params.Osal = initParams->Osal;
 #endif
 
             status = ptx_HAL_Interface_I3C_Init(&ctx->I3cInterface, &interface_init_params);
@@ -237,7 +233,6 @@ ptx_Status_t ptx_HAL_Interface_DeInit (ptx_HAL_Interface_t *ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_Interface_DeInit");
 #if defined(PTX_ENABLE_SPI)
         if (HAL_Interface_Type_SPI == ctx->Type)
         {

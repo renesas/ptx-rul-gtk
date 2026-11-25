@@ -71,8 +71,8 @@ static ptx_HAL_DRV_Interface_SPI_PortConfig_t gDrvSPIPortConfigs[PTX_HAL_DRV_INT
     {
         .Type               = HAL_DRV_Interface_Port_Type_Default,
         .ID                 = 0,
-        .IRQPin_Low         = FT_IRQ_LINE_GPIO_BIT_LO,  /* SPI Default IRQ pin low byte, Pin D4 */
-        .IRQPin_High        = FT_IRQ_LINE_GPIO_BIT,      /* SPI Default IRQ pin high byte, Pin C0 */
+        .IRQPin_Low         = (ptx_HAL_FTD2XX_GPIO_t)FT_IRQ_LINE_GPIO_BIT_LO,  /* SPI Default IRQ pin low byte, Pin D4 */
+        .IRQPin_High        = (ptx_HAL_FTD2XX_GPIO_t)FT_IRQ_LINE_GPIO_BIT,      /* SPI Default IRQ pin high byte, Pin C0 */
         .ModuleDescriptor   = MODULE_DESCRIPTOR
     }
 };
@@ -91,24 +91,24 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Init (ptx_HAL_DRV_Interface_SPI_t *ctx, p
 
     if ((NULL != ctx) && (NULL != initParams) && (NULL != initParams->Log))
     {
-        PTX_LOG_V(initParams->Log, "ptx_HAL_DRV_Interface_SPI_Init");
-
         memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_SPI_t));
 
         for (uint8_t config = 0; (PTX_HAL_DRV_INTERFACE_SPI_NUMBER_PORTS > config) && (PTX_STATUS_SUCCESS != status); ++config)
         {
             if ((gDrvSPIPortConfigs[config].Type == initParams->PortType) && (gDrvSPIPortConfigs[config].ID == initParams->PortID))
             {
-                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xx_ctx, gDrvSPIPortConfigs[config].ModuleDescriptor, NULL, initParams->Log);
+                ptx_HAL_FTD2XX_InitParams_t initParamsFTD2XX = {0};
+                initParamsFTD2XX.Log = initParams->Log;
+                initParamsFTD2XX.Osal = initParams->Osal;
+                initParamsFTD2XX.IRQPin_Low = gDrvSPIPortConfigs[config].IRQPin_Low;
+                initParamsFTD2XX.IRQPin_High = gDrvSPIPortConfigs[config].IRQPin_High;
+                status = ptx_HAL_FTD2XX_LibOpen((void**)&ctx->Ftd2xxCtx, gDrvSPIPortConfigs[config].ModuleDescriptor, NULL, &initParamsFTD2XX);
                 if (PTX_STATUS_SUCCESS == status)
                 {
                     ctx->Port = &gDrvSPIPortConfigs[config];
                     ctx->Speed = (0 == initParams->Speed) ? PTX_HAL_DRV_INTERFACE_SPI_DEFAULT_SPEED : initParams->Speed;
                     ctx->Log = initParams->Log;
-                    ctx->OS = (ptx_OSAL_t*)initParams->OS;
-                    ctx->Ftd2xx_ctx->IRQPin_Low = ctx->Port->IRQPin_Low;
-                    ctx->Ftd2xx_ctx->IRQPin_High = ctx->Port->IRQPin_High;
-                    ctx->Ftd2xx_ctx->Log = initParams->Log;
+                    ctx->Osal = (ptx_OSAL_t*)initParams->Osal;
                     ctx->CompId = Comp_HAL;
                 }
 
@@ -125,12 +125,10 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_DeInit (ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_DeInit");
-
-        status = ptx_HAL_FTD2XX_LibClose(ctx->Ftd2xx_ctx);
+        status = ptx_HAL_FTD2XX_LibClose(ctx->Ftd2xxCtx);
         if (PTX_STATUS_SUCCESS == status)
         {
-            ctx->Ftd2xx_ctx = NULL;
+            ctx->Ftd2xxCtx = NULL;
             memset(ctx, 0, sizeof(ptx_HAL_DRV_Interface_SPI_t));
             ctx->CompId = Comp_None;
         }
@@ -145,9 +143,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Open(ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Open");
-
-        status = ptx_HAL_FTD2XX_SPI_Open(ctx->Ftd2xx_ctx, ctx->Speed);
+        status = ptx_HAL_FTD2XX_SPI_Open(ctx->Ftd2xxCtx, ctx->Speed);
 
     }
 
@@ -160,9 +156,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Close(ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Close");
-
-        status = ptx_HAL_FTD2XX_SPI_Close(ctx->Ftd2xx_ctx);
+        status = ptx_HAL_FTD2XX_SPI_Close(ctx->Ftd2xxCtx);
 
     }
 
@@ -175,9 +169,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Tx(ptx_HAL_DRV_Interface_SPI_t* ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Tx");
-
-        status = ptx_HAL_FTD2XX_SPI_TRx(ctx->Ftd2xx_ctx, txBuf, &txLen, NULL, 0);
+        status = ptx_HAL_FTD2XX_SPI_TRx(ctx->Ftd2xxCtx, txBuf, &txLen, NULL, 0);
 
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
@@ -196,9 +188,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_Rx(ptx_HAL_DRV_Interface_SPI_t* ctx, uint
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_Rx");
-
-        status = ptx_HAL_FTD2XX_SPI_TRx(ctx->Ftd2xx_ctx, 0, NULL, rxBuf, &rxLen);
+        status = ptx_HAL_FTD2XX_SPI_TRx(ctx->Ftd2xxCtx, 0, NULL, rxBuf, &rxLen);
         
 #if !defined(PTX_ENABLE_TFCI)
         if (PTX_STATUS_SUCCESS == status)
@@ -218,9 +208,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetNss(ptx_HAL_DRV_Interface_SPI_t* ctx)
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetNss");
-
-        status = ptx_HAL_FTD2XX_SPICSEnable(ctx->Ftd2xx_ctx);
+        status = ptx_HAL_FTD2XX_SPICSEnable(ctx->Ftd2xxCtx);
     }
 
     return status;
@@ -232,9 +220,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_ResetNss(ptx_HAL_DRV_Interface_SPI_t* ctx
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_ResetNss");
-
-        status = ptx_HAL_FTD2XX_SPICSDisable(ctx->Ftd2xx_ctx);
+        status = ptx_HAL_FTD2XX_SPICSDisable(ctx->Ftd2xxCtx);
     }
     return status;
 }
@@ -246,9 +232,7 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_RxIrqLevel(ptx_HAL_DRV_Interface_SPI_t* c
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_RxIrqLevel");
-
-        status = ptx_HAL_FTD2XX_GetIRQLine(ctx->Ftd2xx_ctx, &level_16);
+        status = ptx_HAL_FTD2XX_GetIRQLine(ctx->Ftd2xxCtx, &level_16);
         *level = (0 == level_16) ? 0 : 1;
     }
 
@@ -261,8 +245,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetParameter(ptx_HAL_DRV_Interface_SPI_t*
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -288,8 +270,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_GetParameter(ptx_HAL_DRV_Interface_SPI_t*
 
     if (PTX_COMP_CHECK(ctx, Comp_HAL) && (NULL != parameter))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_GetParameter");
-
         switch (parameter->type)
         {
             case HAL_DRV_Interface_Parameter_Type_Transmission_Speed:
@@ -319,8 +299,6 @@ ptx_Status_t ptx_HAL_DRV_Interface_SPI_SetTransmissionSpeed(ptx_HAL_DRV_Interfac
 
     if ((NULL != ctx) && (0 != speed))
     {
-        PTX_LOG_V(ctx->Log, "ptx_HAL_DRV_Interface_SPI_SetTransmissionSpeed");
-
         uint32_t oldSpeed = ctx->Speed;
         ctx->Speed = speed;
 

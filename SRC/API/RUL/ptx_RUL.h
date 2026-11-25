@@ -122,50 +122,54 @@ extern "C" {
  * \name RUL and protocol specific offset definitions.
  * @{
  */
-#define PTX_RUL_SENSF_RES_NFCID2_OFFSET                  (2u)                   /**<  Offset for SENSF_RES NFCID2 */
-#define PTX_RUL_SENSF_RES_PD2_OFFSET                     (19u)                  /**<  Offset for SENSF_RES PD offset, second byte */
-#define PTX_RUL_SENSF_RES_PD2_BR_MASK                    (3u)                   /**<  Mask for SENSF_RES PD bit rate */
 
 //Type B 
-#define PTX_RUL_SENSB_RES_NFCID0_OFFSET                  (1u)                   /**<  Offset for SENSB_RES NFCID0 */
-#define PTX_RUL_SENSB_RES_AFI_OFFSET                     (5u)                   /**<  Offset for SENSB_RES AFI */
-#define PTX_RUL_SENSB_RES_NUMBER_APPLICATIONS_OFFSET     (8u)                   /**<  Offset for SENSB_RES Number of applications */
-#define PTX_RUL_SENSB_RES_CRC_B_OFFSET                   (6u)                   /**<  Offset for SENSB_RES CRC_B(AID) */
-#define PTX_RUL_CRC_B_AID_LEN                            (2u)                   /**<  CRC_B(AID) in SENSB_RES */
-#define PTX_RUL_SENSB_BIT_RATE_CAPABILITY_OFFSET         (9u)                   /**<  Offset for SENSB_RES Bit Rate Capability */
-#define PTX_RUL_SENSB_FSCI_PROTOCOL_TYPE_OFFSET          (10u)                  /**<  Offset for SENSB_RES FSCI and Protocol Type */
-#define PTX_RUL_SENSB_FSCI_MASK                          (0xF0u)                /**<  Mask for SENSB_RES FSCI */
-#define PTX_RUL_SENSB_PROTOCOL_TYPE_MASK                 (0x0Fu)                /**<  Mask for SENSB_RES Protocol Type */
-#define PTX_RUL_SENSB_FWI_ADC_FO_OFFSET                  (11u)                  /**<  Offset for SENSB_RES FWI ADC and FO */
-#define PTX_RUL_SENSB_FWI_MASK                           (0xF0u)                /**<  Mask for SENSB_RES FWI */
-#define PTX_RUL_SENSB_ADC_FO_MASK                        (0x0Fu)                /**<  Mask for SENSB_RES FO and ADC*/
-#define PTX_RUL_SENSB_SFGI_OFFSET                        (12u)                  /**<  Offset for SENSB_RES SFGI */
+#define PTX_RUL_SENSB_RES_NFCID0_OFFSET                  (1u)                   /**< Offset for SENSB_RES NFCID0 */
+#define PTX_RUL_SENSB_RES_AFI_OFFSET                     (5u)                   /**< Offset for SENSB_RES AFI */
+#define PTX_RUL_SENSB_RES_NUMBER_APPLICATIONS_OFFSET     (8u)                   /**< Offset for SENSB_RES Number of applications */
+#define PTX_RUL_SENSB_RES_CRC_B_OFFSET                   (6u)                   /**< Offset for SENSB_RES CRC_B(AID) */
+#define PTX_RUL_CRC_B_AID_LEN                            (2u)                   /**< CRC_B(AID) in SENSB_RES */
+#define PTX_RUL_SENSB_BIT_RATE_CAPABILITY_OFFSET         (9u)                   /**< Offset for SENSB_RES Bit Rate Capability */
+#define PTX_RUL_SENSB_FSCI_PROTOCOL_TYPE_OFFSET          (10u)                  /**< Offset for SENSB_RES FSCI and Protocol Type */
+#define PTX_RUL_SENSB_FSCI_MASK                          (0xF0u)                /**< Mask for SENSB_RES FSCI */
+#define PTX_RUL_SENSB_PROTOCOL_TYPE_MASK                 (0x0Fu)                /**< Mask for SENSB_RES Protocol Type */
+#define PTX_RUL_SENSB_FWI_ADC_FO_OFFSET                  (11u)                  /**< Offset for SENSB_RES FWI ADC and FO */
+#define PTX_RUL_SENSB_FWI_MASK                           (0xF0u)                /**< Mask for SENSB_RES FWI */
+#define PTX_RUL_SENSB_ADC_FO_MASK                        (0x0Fu)                /**< Mask for SENSB_RES FO and ADC*/
+#define PTX_RUL_SENSB_SFGI_OFFSET                        (12u)                  /**< Offset for SENSB_RES SFGI */
 //Type F
-#define PTX_RUL_SENSF_RES_PAD0_OFFSET                    (10u)                  /**<  offset of PAD0 in SENSF_RES */
-#define PTX_RUL_SENSF_RES_PAD1_OFFSET                    (12u)                  /**<  offset of PAD1 in SENSF_RES */
-#define PTX_RUL_SENSF_RES_MRTI_CHECK_OFFSET              (15u)                  /**<  offset of MRTI CHECK in SENSF_RES */
-#define PTX_RUL_SENSF_RES_MRTI_UPDATE_OFFSET             (16u)                  /**<  offset of MRTI UPDATE in SENSF_RES */
-#define PTX_RUL_SENSF_RES_PAD2_OFFSET                    (17u)                  /**<  offset of PAD2 in SENSF_RES */
-#define PTX_RUL_SENSF_RES_RD_OFFSET                      (18u)                  /**<  offset of PAD2 in SENSF_RES */
-#define PTX_RUL_SENSF_RES_AUTO_BR_SELECT_MASK            (0x80)                 /**<  Mask for automatic bit rate selection feature in SENSF_RES */
-#define PTX_RUL_SENSF_RES_SUPPORTED_BR_MASK              (0x0F)                 /**<  Mask for Supported bit rate feature in RD of SENSF_RES */
-#define PTX_RUL_SENSF_PAD0_LEN                           (2u)                   /**<  SENSF_REQ System Code Length */
-#define PTX_RUL_SENSF_PAD1_LEN                           (3u)                   /**<  SENSF_REQ System Code Length */
+#define PTX_RUL_SENSF_RES_NFCID2_OFFSET                  (2u)                   /**< Offset for SENSF_RES NFCID2 */
+#define PTX_RUL_SENSF_RES_PD2_OFFSET                     (19u)                  /**< Offset for SENSF_RES PD offset, second byte */
+#define PTX_RUL_SENSF_RES_PD2_BR_MASK                    (3u)                   /**< Mask for SENSF_RES PD bit rate */
+#define PTX_RUL_SENSF_RES_PAD0_OFFSET                    (10u)                  /**< offset of PAD0 in SENSF_RES */
+#define PTX_RUL_SENSF_RES_PAD1_OFFSET                    (12u)                  /**< offset of PAD1 in SENSF_RES */
+#define PTX_RUL_SENSF_RES_MRTI_CHECK_OFFSET              (15u)                  /**< offset of MRTI CHECK in SENSF_RES */
+#define PTX_RUL_SENSF_RES_MRTI_UPDATE_OFFSET             (16u)                  /**< offset of MRTI UPDATE in SENSF_RES */
+#define PTX_RUL_SENSF_RES_PAD2_OFFSET                    (17u)                  /**< offset of PAD2 in SENSF_RES */
+#define PTX_RUL_SENSF_RES_RD_OFFSET                      (18u)                  /**< offset of PAD2 in SENSF_RES */
+#define PTX_RUL_SENSF_RES_AUTO_BR_SELECT_MASK            (0x80)                 /**< Mask for automatic bit rate selection feature in SENSF_RES */
+#define PTX_RUL_SENSF_RES_SUPPORTED_BR_MASK              (0x0F)                 /**< Mask for Supported bit rate feature in RD of SENSF_RES */
+#define PTX_RUL_SENSF_PAD0_LEN                           (2u)                   /**< SENSF_REQ System Code Length */
+#define PTX_RUL_SENSF_PAD1_LEN                           (3u)                   /**< SENSF_REQ System Code Length */
 //Type V
 #define PTX_RUL_INVENTORYRES_REDFLAG_OFFSET              (0u)                   /**< RED_FLAG offset in the INVENTORY_RES */
 #define PTX_RUL_INVENTORYRES_DSFID_OFFSET                (1u)                   /**< DSFID offset in the INVENTORY_RES */
 #define PTX_RUL_INVENTORYRES_UID_OFFSET                  (2u)                   /**< UID offset in the INVENTORY_RES */
 #define PTX_RUL_INVENTORYRES_UID_LEN                     (8u)                   /**< UID length in the INVENTORY_RES */
 //Type P2P-ACM
-#define PTX_RUL_ATR_RES_NFCID3_OFFSET                    (3u)                   /**<  Offset for ATR_RES NFCID3 */
-#define PTX_RUL_ATR_RES_DID_OFFSET                       (13u)                  /**<  Offset of ATR_RES DID */
-#define PTX_RUL_ATR_RES_BS_OFFSET                        (14u)                  /**<  Offset of ATR_RES BS */
-#define PTX_RUL_ATR_RES_BR_OFFSET                        (15u)                  /**<  Offset of ATR_RES BR */
-#define PTX_RUL_ATR_RES_TO_OFFSET                        (16u)                  /**<  Offset of ATR_RES TO */
-#define PTX_RUL_ATR_RES_PP_OFFSET                        (17u)                  /**<  Offset of ATR_RES PP */
-#define PTX_RUL_ATR_RES_GB_OFFSET                        (18u)                  /**<  Offset General bytes in ATR_RES */
-#define PTX_RUL_ATR_RES_WT_MASK                          (0x0F)                 /**<  Mask for WT in PP field of ATR_RES*/
-#define PTX_RUL_ATR_RES_NFCID3_LEN                       (10u)                  /**<  Length of ATR_RES NFCID3 */ 
+#define PTX_RUL_ATR_RES_NFCID3_OFFSET                    (3u)                   /**< Offset for ATR_RES NFCID3 */
+#define PTX_RUL_ATR_RES_DID_OFFSET                       (13u)                  /**< Offset of ATR_RES DID */
+#define PTX_RUL_ATR_RES_BS_OFFSET                        (14u)                  /**< Offset of ATR_RES BS */
+#define PTX_RUL_ATR_RES_BR_OFFSET                        (15u)                  /**< Offset of ATR_RES BR */
+#define PTX_RUL_ATR_RES_TO_OFFSET                        (16u)                  /**< Offset of ATR_RES TO */
+#define PTX_RUL_ATR_RES_PP_OFFSET                        (17u)                  /**< Offset of ATR_RES PP */
+#define PTX_RUL_ATR_RES_GB_OFFSET                        (18u)                  /**< Offset General bytes in ATR_RES */
+#define PTX_RUL_ATR_RES_WT_MASK                          (0x0F)                 /**< Mask for WT in PP field of ATR_RES*/
+#define PTX_RUL_ATR_RES_NFCID3_LEN                       (10u)                  /**< Length of ATR_RES NFCID3 */ 
+#define PTX_RUL_PROT_PARAM_AFACM_BITRATE_MASK            (0x07)                 /**< MASK for parsing Dsi and Dri from Brs parameter */
+#define PTX_RUL_PROT_PARAM_AFACM_BITRATE_OFFSET          (0x03)                 /**< Offset for parsing Dsi and Dri from Brs parameter */
+//Type MFCC
+#define PTX_RUL_MFCC_SAK_RESP_MASK                       (0x18)                 /**< Byte Mask for SAK response / SEL_RES to identify MFCC */
 /** @} */
 
 /**
@@ -233,15 +237,23 @@ extern "C" {
 #define PTX_RUL_EXTENSION_INDEX_WLC    (1u)        /**< Position of the WLC extension endpoint. */
 #define PTX_RUL_EXTENSION_INDEX_HCE    (2u)        /**< Position of the HCE extension endpoint. */
 
-#define PTX_RUL_EXTENSION_NTF_UNUSED    (0x00u)     /**< NTF was not used by the extension endpoint */
-#define PTX_RUL_EXTENSION_NTF_USED      (0x01u)     /**< NTF was used and processed by the extension endpoint */
+#define PTX_RUL_EXTENSION_NTF_UNUSED            (0x00u)   /**< NTF was not used by the extension endpoint */
+#define PTX_RUL_EXTENSION_NTF_USED              (0x01u)   /**< NTF was used and processed by the extension endpoint */
+#define PTX_RUL_EXTENSION_SKIP_EMVCO            (0x01u)   /**< Skip EMVCo collision status for an extended polling mode. */
+#define PTX_RUL_EXTENSION_NOT_SKIP_EMVCO        (0x00u)   /**< Do not skip EMVCo collision status for an extended polling mode. */
+#define PTX_RUL_EXTENSION_EMV_COLL_NOT_DETECTED (0x00u)   /**< EMVCo collision not detected for an extended polling mode. */
+#define PTX_RUL_EXTENSION_EMV_COLL_DETECTED     (0x01u)   /**< EMVCo collision detected for an extended polling mode. */
+#define PTX_RUL_EXTENSION_COLL_PEND_NOT_SET     (0x00u)   /**< COLL_PEND not set in RF Discovery Notification. */
+#define PTX_RUL_EXTENSION_COLL_PEND_SET         (0x01u)   /**< COLL_PEND is set in RF Discovery Notification. */
 /** @} */
 
 /**
- * \name RUL Tx ESD prevention related defines
+ * \name RUL TX Pin Overvoltage Detection prevention related defines
+ * 
+ * \deprecated
  * @{
  */
-#define PTX_RUL_TX_ESD_PREVENTION_THRESHOLD_MAX             (253u)  /**< Maximum possible measured threshold during ESD prevention calibration routine. */
+#define PTX_RUL_TX_TXOV_PREVENTION_THRESHOLD_MAX             (253u)  /**< Maximum possible measured threshold during TX Pin Overvoltage prevention calibration routine. */
 /** @} */
 
 
@@ -409,6 +421,7 @@ typedef enum ptx_RUL_StatusInfoSystem
     ptx_RUL_StatusInfoSystem_ErrorOTP,          /**< System Error OTP configuration. */
     ptx_RUL_StatusInfoSystem_ErrorStandby,      /**< System Error Standby. System exited Standby mode, Discovery is not active. */
     ptx_RUL_StatusInfoSystem_ErrorOutOfMemory,  /**< System Error Out of memory. */
+    ptx_RUL_StatusInfoSystem_TxOvD,             /**< System Error TX Pin Overvoltage Event Detected. */
     ptx_RUL_StatusInfoSystem_Max                /**< Safeguard. */
 } ptx_RUL_StatusInfoSystem_t;
 
@@ -985,6 +998,8 @@ typedef struct ptx_RUL_CardRfProtocolParamsListenAFNfcDep
     uint8_t     AtrReq[PTX_RUL_CARD_RFPROTOCOL_ATR_REQ_LEN];        /**< Received ATR_REQ. */
     uint8_t     Brs;                                                /**< BRS containing activated Bitrate information. */
     uint8_t     Lr;                                                 /**< LR containing length reduction information. */
+    uint8_t     RxBitRate;                                          /**< Initiator to Target bitrate */
+    uint8_t     TxBitRate;                                          /**< Target to Initiator bitrate */
 } ptx_RUL_CardRfProtocolParamListenAFNfcDep_t;
 
 /**
@@ -1333,8 +1348,6 @@ typedef struct ptx_RUL_EmvCollisionFilter
  */
 typedef struct ptx_RUL_InterfaceInitParams
 {
-    uint8_t                             *InterfaceName;         /**< Device name. E.g. COM port used on OS-based platform for UART interface. */
-    uint16_t                            InterfaceNameLen;       /**< Device name string length. */
     ptx_HAL_Interface_Type_t            InterfaceType;          /**< Type of the hardware interface. */
     ptx_HAL_DRV_Interface_Port_Type_t   InterfacePortType;      /**< Implementation Type of the hardware interface port. */
     uint8_t                             InterfacePortID;        /**< ID of the port for the hardware interface. */
@@ -1348,7 +1361,6 @@ typedef struct ptx_RUL_InitParams
 {
     uint8_t                                 EmvCollisionLimit;     /**< EMV collision limit (Required for EMVCO/POS)*/
     ptx_RUL_InterfaceInitParams_t           InterfaceInitParams;   /**< Communication hardware interface parameters. */
-    ptx_Log_t                               Log;                   /**< LOG context. */
 
 } ptx_RUL_InitParams_t;
 
@@ -1709,6 +1721,20 @@ typedef struct ptx_RUL_DiscoverConfig
      * 1 ... Activate.
      */
     uint8_t     ListenTypeF424;
+    
+    /**
+     * Set NFC-F SENSF_REQ handler:
+     * 0 ... Handled by Host.
+     * 1 ... Handled internally (by Device in Listen-Mode).
+     */
+    uint8_t     ListenTypeFSenRqHandler;
+
+    /**
+     * NFC-F SENSF_RES RD bytes inclusion:
+     * 0 ... Device shall not include RD bytes in SENSF_RES.
+     * 1 ... Device shall include RD bytes in SENSF_RES.
+     */
+    uint8_t     ListenTypeFIncludeRD;
 
     /**
      * NFCID Length for Listen NFC-F.
@@ -1928,7 +1954,9 @@ typedef struct ptx_RUL
     ptx_RUL_Extension_Endpoints_t  *ActiveExtensionEndpoint;                        /**< Pointer to active extension endpoint. */
 
     uint8_t                         GpioCfg[PTX_RUL_USER_GPIOS];    /**< GPIO Config Array. */
-
+    uint8_t                         SkipEmvcoCollision;             /**< Skip EMVCo collision status for an extended polling mode. */
+    uint8_t                         ExtensionEmvCollisionDetected;  /**< EMV collision is detected in extended polling mode. */
+    uint8_t                         CollPendDetected;               /**< COLL_PEND seen in a RF Discovery Notification. */
 #if defined(PTX_APP_DIVERSITY_WINDOWS) || defined(PTX_APP_DIVERSITY_LINUX)
     ptx_OSAL_t                      Osal;                           /**< OSAL context used by HAL on WIN/LIN platforms. */   
 #endif
@@ -2428,12 +2456,14 @@ ptx_Status_t ptx_RUL_GetRSSIValue(ptx_RUL_t *rul, uint8_t cwPowerLevel, ptx_RUL_
 ptx_Status_t ptx_RUL_RfFieldMeasurement(ptx_RUL_t *rul, uint32_t targetFrequency, ptx_RUL_AdcAveraging_t averaging, uint32_t *rfAmp);
 
 /**
- * \brief Performs calibration routine to measure the Tx ESD prevention threshold through RSSI measurements. 
+ * \brief Performs calibration routine to measure the TX Pin Overvoltage prevention threshold through RSSI measurements. 
  * This calibration needs to be done during design-in phase to determine the threshold at which the output 
- * power must be limited in order to prevent ESD clamping during operation.  
+ * power must be limited in order to prevent TX Pin Overvoltage clamping during operation.  
  *
  * \note The results are applicable to all devices using the same antenna system configuration and it is therefore
  * not required to perform per-device calibration.
+ * 
+ * \deprecated
  *
  * \param[in]       rul             Pointer to RUL component.
  * \param[out]      results         Pointer to an array, which stores all measurements of the calibration routine.
@@ -2446,7 +2476,7 @@ ptx_Status_t ptx_RUL_RfFieldMeasurement(ptx_RUL_t *rul, uint32_t targetFrequency
  * \return Others                                Operation failed (typically in a sub-component API) with an error value other than the values described above.
  *                                               for further information see \ref ptx_Status_t.
  */
-ptx_Status_t ptx_RUL_CalibrateTxEsdPreventionThreshold(ptx_RUL_t *rul, uint8_t *results, uint8_t resultsLength);
+ptx_Status_t ptx_RUL_CalibrateTxOVPThreshold(ptx_RUL_t *rul, uint8_t *results, uint8_t resultsLength);
 
 #if !defined(PTX_DISABLE_LISTEN_MODE)
 /**

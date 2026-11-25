@@ -103,18 +103,25 @@ ptx_Status_t ptx_NativeTag_T2T_Open (ptx_NativeTag_T2T_t *t2t, ptx_NativeTag_T2T
 
     if ((NULL != t2t) && (NULL != initParams))
     {
-        if ((NULL != initParams->rul) && (NULL != initParams->TxBuffer) && (PTX_T2T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
+        if ((NULL != initParams->Rul) && (NULL != initParams->TxBuffer) && (PTX_T2T_MIN_TX_BUFFER_SIZE <= initParams->TxBufferSize))
         {
-            /* clear component */
-            (void)memset(t2t, 0, sizeof(ptx_NativeTag_T2T_t));
+            if(ptx_RUL_CardProtocolType_T2T == initParams->Rul->CardRegistry.ActiveProtocol)
+            {
+                /* clear component */
+                (void)memset(t2t, 0, sizeof(ptx_NativeTag_T2T_t));
 
-            /* set members */
-            t2t->CompId = Comp_NativeTag_T2T;
-            t2t->rul = initParams->rul;
-            t2t->TxBuffer = initParams->TxBuffer;
+                /* set members */
+                t2t->CompId = Comp_NativeTag_T2T;
+                t2t->Rul = initParams->Rul;
+                t2t->TxBuffer = initParams->TxBuffer;
 
-            /* Communicate success to upper layers. */
-            status = PTX_STATUS_SUCCESS;
+                /* Communicate success to upper layers. */
+                status = PTX_STATUS_SUCCESS;
+            }
+            else
+            {
+                status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+            }
         }
         else
         {
@@ -136,12 +143,19 @@ ptx_Status_t ptx_NativeTag_T2T_Read (ptx_NativeTag_T2T_t *t2t,
 
     if (PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T2T command header */
-        status = ptx_NativeTag_T2T_SetCommandHeader(t2t, PTX_T2TOP_READ_CODE, blockNr, &tx_index);
-        /* everything ok so far ? - send data*/
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T2T == t2t->Rul->CardRegistry.ActiveProtocol)
         {
-            status = ptx_NativeTag_T2T_Transceive(t2t, tx_index, rx, rxLen, msTimeout);
+            /* set T2T command header */
+            status = ptx_NativeTag_T2T_SetCommandHeader(t2t, PTX_T2TOP_READ_CODE, blockNr, &tx_index);
+            /* everything ok so far ? - send data*/
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T2T_Transceive(t2t, tx_index, rx, rxLen, msTimeout);
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -161,26 +175,33 @@ ptx_Status_t ptx_NativeTag_T2T_Write (ptx_NativeTag_T2T_t *t2t,
 
     if (PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T) && (NULL != blockData) && (NULL != rx) && (NULL != rxLen))
     {
-        /* set T2T command header */
-        status = ptx_NativeTag_T2T_SetCommandHeader(t2t, PTX_T2TOP_WRITE_CODE, blockNr, &tx_index);
-        /* everything ok so far ? - send data*/
-        if (PTX_STATUS_SUCCESS == status)
+        if(ptx_RUL_CardProtocolType_T2T == t2t->Rul->CardRegistry.ActiveProtocol)
         {
-            (void)memcpy(&t2t->TxBuffer[tx_index], blockData, blockDataLen);
-            tx_index = (uint32_t)(tx_index + blockDataLen);
-        }
-
-        if (PTX_STATUS_SUCCESS == status)
-        {
-            status = ptx_NativeTag_T2T_Transceive(t2t, tx_index, rx, rxLen, msTimeout);
-
-            /* If residual bits have been received, which is required when writing to the T2T
-             * (receives a 4 bit long ACK/NACK response), set the status to success.
-             */
-            if (PTX_STATUS_E_NSC_RESIDUAL_BITS == status)
+            /* set T2T command header */
+            status = ptx_NativeTag_T2T_SetCommandHeader(t2t, PTX_T2TOP_WRITE_CODE, blockNr, &tx_index);
+            /* everything ok so far ? - send data*/
+            if (PTX_STATUS_SUCCESS == status)
             {
-                status = PTX_STATUS_SUCCESS;
+                (void)memcpy(&t2t->TxBuffer[tx_index], blockData, blockDataLen);
+                tx_index = (uint32_t)(tx_index + blockDataLen);
             }
+
+            if (PTX_STATUS_SUCCESS == status)
+            {
+                status = ptx_NativeTag_T2T_Transceive(t2t, tx_index, rx, rxLen, msTimeout);
+
+                /* If residual bits have been received, which is required when writing to the T2T
+                * (receives a 4 bit long ACK/NACK response), set the status to success.
+                */
+                if (PTX_STATUS_E_NSC_RESIDUAL_BITS == status)
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -199,46 +220,53 @@ ptx_Status_t ptx_NativeTag_T2T_SectorSelect (ptx_NativeTag_T2T_t *t2t,
 
     if (PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T) && (NULL != rx) && (NULL != rxLen) && (0xFF > secNr))
     {
-        /* sector select does not utilize command header since it does not use a block number */
-        /* prepare first packet */
-        t2t->TxBuffer[tx_index] = PTX_T2TOP_SECTOR_SELECT_CODE;
-        tx_index++;
-        t2t->TxBuffer[tx_index] = 0xFF;
-        tx_index++;
-
-        /* everything ok so far ? - send first packet*/
-        status = ptx_NativeTag_T2T_Transceive(t2t, tx_index, rx, rxLen, msTimeout);
-
-        if (((PTX_STATUS_SUCCESS == status) || (PTX_STATUS_E_NSC_RESIDUAL_BITS == status)) && (rx[0] == PTX_T2TOP_ACK_CODE))
+        if(ptx_RUL_CardProtocolType_T2T == t2t->Rul->CardRegistry.ActiveProtocol)
         {
-            tx_index = 0;
-
-            /* clear the buffer for second packet */
-            toClear = sizeof(t2t->TxBuffer);
-            (void)memset(t2t->TxBuffer, 0, toClear);
-
-            /* prepare second packet */
-            t2t->TxBuffer[tx_index] = secNr;
+            /* sector select does not utilize command header since it does not use a block number */
+            /* prepare first packet */
+            t2t->TxBuffer[tx_index] = PTX_T2TOP_SECTOR_SELECT_CODE;
             tx_index++;
-            t2t->TxBuffer[tx_index] = 0x00; // 2nd byte is RFU
-            tx_index++;
-            t2t->TxBuffer[tx_index] = 0x00; // 3rd byte is RFU
-            tx_index++;
-            t2t->TxBuffer[tx_index] = 0x00; // 4th byte is RFU
+            t2t->TxBuffer[tx_index] = 0xFF;
             tx_index++;
 
-            /* send second packet */
+            /* everything ok so far ? - send first packet*/
             status = ptx_NativeTag_T2T_Transceive(t2t, tx_index, rx, rxLen, msTimeout);
 
-            /* check PAT */
-            if (((PTX_STATUS_E_NSC_RFERROR == status) || (PTX_STATUS_E_GEN_TIMEOUT == status)) && (*rxLen == 0))
+            if (((PTX_STATUS_SUCCESS == status) || (PTX_STATUS_E_NSC_RESIDUAL_BITS == status)) && (rx[0] == PTX_T2TOP_ACK_CODE))
             {
-                status = PTX_STATUS_SUCCESS;
+                tx_index = 0;
+
+                /* clear the buffer for second packet */
+                toClear = sizeof(t2t->TxBuffer);
+                (void)memset(t2t->TxBuffer, 0, toClear);
+
+                /* prepare second packet */
+                t2t->TxBuffer[tx_index] = secNr;
+                tx_index++;
+                t2t->TxBuffer[tx_index] = 0x00; // 2nd byte is RFU
+                tx_index++;
+                t2t->TxBuffer[tx_index] = 0x00; // 3rd byte is RFU
+                tx_index++;
+                t2t->TxBuffer[tx_index] = 0x00; // 4th byte is RFU
+                tx_index++;
+
+                /* send second packet */
+                status = ptx_NativeTag_T2T_Transceive(t2t, tx_index, rx, rxLen, msTimeout);
+
+                /* check PAT */
+                if (((PTX_STATUS_E_NSC_RFERROR == status) || (PTX_STATUS_E_GEN_TIMEOUT == status)) && (*rxLen == 0))
+                {
+                    status = PTX_STATUS_SUCCESS;
+                }
+                else
+                {
+                    status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
+                }
             }
-            else
-            {
-                status = PTX_STATUS_E_GEN_INVALID_PARAMETER;
-            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 
@@ -251,9 +279,16 @@ ptx_Status_t ptx_NativeTag_T2T_Close (ptx_NativeTag_T2T_t *t2t)
 
     if (PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T))
     {
-        memset(t2t, 0, sizeof(ptx_NativeTag_T2T_t));
-        t2t->CompId = Comp_None;
-        status = PTX_STATUS_SUCCESS;
+        if(ptx_RUL_CardProtocolType_T2T == t2t->Rul->CardRegistry.ActiveProtocol)
+        {
+            memset(t2t, 0, sizeof(ptx_NativeTag_T2T_t));
+            t2t->CompId = Comp_None;
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -270,18 +305,25 @@ static ptx_Status_t ptx_NativeTag_T2T_SetCommandHeader(ptx_NativeTag_T2T_t *t2t,
     uint32_t index = 0;
 
     if (PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T) && (NULL != bytesWritten))
-    {
-        /* set command code */
-        t2t->TxBuffer[index] = commandCode;
-        index++;
+    {   
+        if(ptx_RUL_CardProtocolType_T2T == t2t->Rul->CardRegistry.ActiveProtocol)
+        {
+            /* set command code */
+            t2t->TxBuffer[index] = commandCode;
+            index++;
 
-        /* set block number */
-        t2t->TxBuffer[index] = blockNr;
-        index++;
+            /* set block number */
+            t2t->TxBuffer[index] = blockNr;
+            index++;
 
-        *bytesWritten = index;
+            *bytesWritten = index;
 
-        status = PTX_STATUS_SUCCESS;
+            status = PTX_STATUS_SUCCESS;
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
+        }
     }
 
     return status;
@@ -294,16 +336,23 @@ static ptx_Status_t ptx_NativeTag_T2T_Transceive(ptx_NativeTag_T2T_t *t2t, uint3
     /* Aside from actual Tag-component, remaining parameters are checked within Data-Exchange function */
     if (PTX_COMP_CHECK(t2t, Comp_NativeTag_T2T) && (NULL != rx) && (NULL != rxLen))
     {
-        /* send command */
-        status = ptx_RUL_Exchange (t2t->rul, &t2t->TxBuffer[0], txLen, rx, rxLen, timeout_value);
-
-        /* Accept the received data as valid if the status is success or
-         * if residual bits have been received, which is required when writing to the T2T
-         * and receiving a 4 bit long ACK/NACK response.
-         */
-        if ((PTX_STATUS_SUCCESS != status) && (PTX_STATUS_E_NSC_RESIDUAL_BITS != status))
+        if(ptx_RUL_CardProtocolType_T2T == t2t->Rul->CardRegistry.ActiveProtocol)
         {
-            *rxLen = 0;
+            /* send command */
+            status = ptx_RUL_Exchange (t2t->Rul, &t2t->TxBuffer[0], txLen, rx, rxLen, timeout_value);
+
+            /* Accept the received data as valid if the status is success or
+            * if residual bits have been received, which is required when writing to the T2T
+            * and receiving a 4 bit long ACK/NACK response.
+            */
+            if ((PTX_STATUS_SUCCESS != status) && (PTX_STATUS_E_NSC_RESIDUAL_BITS != status))
+            {
+                *rxLen = 0;
+            }
+        }
+        else
+        {
+            status = PTX_STATUS_E_GEN_NOT_PERMITTED;
         }
     }
 

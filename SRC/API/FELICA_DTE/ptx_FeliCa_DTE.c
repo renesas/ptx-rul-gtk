@@ -839,21 +839,13 @@ static ptx_Status_t ptx_FeliCaDTE_StoreTestSequences(ptx_FeliCaDTE_TempTestData_
     {
         uint32_t index = (uint32_t)(tempTestData->TestParams->Params.RWDigProtTest.ResultBufferSize);
 
-        tempTestData->TestParams->Params.RWDigProtTest.ResultBuffer[index] = (uint8_t)(tempTestData->TxLen + 1);
-        index++;
-
         (void)memcpy(&tempTestData->TestParams->Params.RWDigProtTest.ResultBuffer[index], &tempTestData->Tx[0], tempTestData->TxLen);
         index = (uint32_t)(index + tempTestData->TxLen);
 
         if ((0 != tempTestData->RxLen) && (PTX_STATUS_SUCCESS == tempTestData->TestStatus))
         {
-            uint32_t rx_len = (uint32_t)(tempTestData->RxLen - 1U);
-
-            tempTestData->TestParams->Params.RWDigProtTest.ResultBuffer[index] = (uint8_t)(rx_len + 1U);
-            index++;
-
-            (void)memcpy(&tempTestData->TestParams->Params.RWDigProtTest.ResultBuffer[index], &tempTestData->Rx[0], rx_len);
-            index = (uint32_t)(index + rx_len);
+            (void)memcpy(&tempTestData->TestParams->Params.RWDigProtTest.ResultBuffer[index], &tempTestData->Rx[0], tempTestData->RxLen);
+            index = (uint32_t)(index + tempTestData->RxLen);
 
             status = PTX_STATUS_SUCCESS;
         }
