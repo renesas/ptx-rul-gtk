@@ -5,7 +5,7 @@ GTK4 application (NFC discovery, NDEF read/write and card emulation) using the P
 ## Hardware requirements
 Raspberry Pi 5 with SPI enabled.
 
-On the PTX205R board solder the jumpers for:
+On the [PTX205R Evaluation Board](https://www.renesas.com/en/design-resources/boards-kits/ptx205rioteb) solder the jumpers for:
 - MCU OFF
 - PMOD_VDD TO VDD_IO
 
