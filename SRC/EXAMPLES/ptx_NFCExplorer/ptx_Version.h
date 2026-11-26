@@ -54,8 +54,8 @@ extern "C" {
  * Update these values to change the application version.
  */
 #define PTX_VERSION_MAJOR 1
-#define PTX_VERSION_MINOR 0
-#define PTX_VERSION_PATCH 1
+#define PTX_VERSION_MINOR 1
+#define PTX_VERSION_PATCH 0
 
 /* Helper macros to stringify version components */
 #define PTX_STRINGIFY(x) #x
