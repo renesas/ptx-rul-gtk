@@ -10,7 +10,7 @@
 
 Polls for RF-technologies A, B, F, V.
 
-Polling tab: the discovery settings - idle time, low power card detection (LPCD) and, per RF-technology, enable, poll frequency, max. number of devices and the Type-F bit rate (212 or 424 kbit/s). Settings are used the next time discovery is started and are not stored.
+Polling tab: the discovery settings - idle time, low power card detection (LPCD), digital dynamic power control (DDPC) and, per RF-technology, enable, poll frequency, max. number of devices and the Type-F bit rate (212 or 424 kbit/s). Settings are used the next time discovery is started and are not stored.
 
 Discovery tab: all cards in the field (up to 5 per RF-technology, 20 in total per discovery cycle) are displayed in a table, with RF-technology, protocol, nominal bit rate, ID, the number of detections and technology-specific details. Detected cards stay in the list until discovery is restarted (STOP and START, or RESET). Discovery is started and stopped with START/STOP, RESET clears the list and restarts discovery.
 
