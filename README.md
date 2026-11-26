@@ -101,7 +101,7 @@ Notes:
 - The settings are stored with the GSettings keyfile backend in `~/.config/glib-2.0/settings/keyfile`.
 - The AppImage uses GTK's built-in default theme (light or dark according to the setting).
 - `LogOutput.txt` is written to the current working directory.
-- The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files are in `usr/share/doc/ptx205r-nfc-explorer`.
+- The bundled GTK4 libraries are LGPL; they can be replaced by extracting the AppImage with `--appimage-extract`. The license files of the application are in `usr/share/doc/ptx205r-nfc-explorer`, those of all bundled libraries (about 80 packages, including two GPL ones, see `DEPENDENCIES.md`) in `usr/share/doc/<package>/copyright`.
 
 ## Usage
 
@@ -289,7 +289,7 @@ The application is based on the `NFC_FORUM_BASIC_DISCOVERY` example of the RUL S
 The PTX NFC Explorer is licensed under the **BSD-3-Clause License**.
 
 ### Third-Party Dependencies
-This application links against **GTK4** and related libraries (**GLib**, **Gio**), which are licensed under the **LGPL v2.1 or later**.
+This application links against **GTK4** and related libraries (**GLib**, **Gio**), which are licensed under the **LGPL v2.1 or later**. GTK4 in turn depends on many other libraries (Pango, Cairo, ... see `DEPENDENCIES.md`), which are bundled in the AppImage under their own licenses.
 The NDEF reading and writing features do not introduce additional third-party dependencies.
 
 ### License Files

@@ -27,6 +27,11 @@ This document provides a comprehensive list of all dependencies used by the PTX 
 - **Modifications**: None (unmodified dependency)
 - **Link Type**: Dynamic linking (libgio-2.0.so)
 
+### Other libraries pulled in by GTK4 (bundled in the AppImage)
+GTK4 depends on further shared libraries, e.g. Pango, Cairo, HarfBuzz, FriBidi, gdk-pixbuf, librsvg, libpng, libtiff, libjpeg, libwebp, GnuTLS, Kerberos, CUPS, Avahi, Wayland/X11/xcb libraries and others (about 80 Debian packages in the AppImage). They are used unmodified and dynamically linked, the license of each one (mostly LGPL, MIT/X11, BSD, zlib) is in the `usr/share/doc/<package>/copyright` file of the AppImage, or in `/usr/share/doc/<package>/copyright` on a regular installation.
+
+Two of them are GPL-2+ licensed: **liblzo2** (needed by `libcairo-script-interpreter`) and **libjbig0** (needed by libtiff). Both are dependencies of Debian's `libgtk-4` package, they are not used directly by the application and are only dynamically linked and replaceable. Their source is available from the Debian source packages `lzo2` and `jbigkit` (https://sources.debian.org).
+
 ## Build-Time Dependencies
 
 ### CMake
@@ -118,6 +123,7 @@ When distributing this application, ensure you include:
 - [ ] `LGPL_COMPLIANCE.md` file (compliance statement)
 - [ ] `README.md` (build and source information)
 - [ ] `Renesas_Open_License_v1.txt` (proprietary firmware license)
+- [ ] AppImage: the `usr/share/doc/<package>/copyright` files of the bundled libraries (created by the build, do not remove)
 - [ ] Application executable and required runtime dependencies
 
 ## Questions or Licensing Inquiries

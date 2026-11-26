@@ -21,6 +21,12 @@ Image RUL SDK
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 zf_log 0.4.0            https://opensource.org/licenses/MIT                          The MIT License                Copyright 2017 wonder-mice 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Libraries used by GTK4  usr/share/doc/<package>/copyright (AppImage / Debian)        LGPL, MIT/X11, BSD, zlib,      various                              Pango, Cairo, HarfBuzz, gdk-pixbuf, librsvg, libpng, libtiff, ...
+(bundled in AppImage)                                                                 and others; see DEPENDENCIES.md                                     Dynamically linked, unmodified
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+liblzo2, libjbig0       usr/share/doc/<package>/copyright (AppImage / Debian)        GPL v2 or later                Markus Oberhumer / Joergen Ibsen     Needed by Debian's libgtk-4 (not used directly), dynamically linked
+(bundled in AppImage)   https://sources.debian.org (lzo2, jbigkit)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
