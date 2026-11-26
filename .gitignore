@@ -79,6 +79,7 @@ CMakeUserPresets.json
 tools/appimage/.cache/
 tools/appimage/build/
 *.AppImage
+*.AppImage.sha256
 LogOutput.txt
 
 # local environment / tool files

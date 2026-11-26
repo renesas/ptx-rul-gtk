@@ -242,12 +242,13 @@ The *Polling* tab exposes the RF-discovery settings (`ptx_RUL_DiscoverConfig_t`)
 | ------- | ----- | ------- |
 | Idle time between polling cycles | 0 - 10000 ms (default 100) | `IdleTime`, the system idles after every full polling-loop cycle |
 | Low power card detection (LPCD) | Disable, Use in every polling cycle, Use in every n-th cycle (n = 2 - 255) | `EnableLPCD`: 0, 1 or n - with n, regular polling is used in every n-th cycle and LPCD in the other cycles |
+| Digital dynamic power control (DDPC) | on / off (default off) | `EnableDDPC`: 0 or 1 |
 | Enabled (per technology) | on / off | Poll for Type-A, -B, -F, -V (`PollTypeA`, `PollTypeB`, `PollTypeF212`/`PollTypeF424`, `PollTypeV`) |
 | Poll every n-th cycle (per technology) | 1 - 10 (default 1) | `PollType*PollFrequency`, 1 = poll in every cycle |
 | Max. devices (per technology) | 1 - 5 (default 5) | `PollType*DeviceLimit`, max. number of cards resolved per cycle, up to `PTX_DEMO_APP_DEVICE_LIMIT_PER_TECH` |
 | Bit rate (Type-F) | 212 or 424 kbit/s (default 212) | `PollTypeF212` or `PollTypeF424`, mutually exclusive |
 
-By default, all technologies are polled in every cycle with up to 5 devices each, and LPCD is disabled.
+By default, all technologies are polled in every cycle with up to 5 devices each, and LPCD and DDPC are disabled.
 The poll mode is always NFC Forum (`ptx_RUL_PollMode_NfcForum`), polling is always enabled and Listen-mode (card emulation) is always disabled, these settings are not shown.
 At least one technology has to stay enabled, and LPCD requires an idle time of at least 1 ms (the SDK rejects LPCD without idle time).
 RESTORE DEFAULTS resets all settings.

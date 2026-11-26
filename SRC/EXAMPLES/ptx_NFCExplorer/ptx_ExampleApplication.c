@@ -49,7 +49,7 @@
                   Smart Poster, Phone, Email, SMS, Geo location, vCard, MIME, Wi-Fi, Android app) - see
                   ptx_ExampleNdefRecords.c. The WRITE button starts discovery for max. 10 polling cycles,
                   writes the message to the first activated card, then stops discovery.
-                  On the Polling tab, the discovery settings (idle time, LPCD, per-technology
+                  On the Polling tab, the discovery settings (idle time, LPCD, DDPC, per-technology
                   enable / poll frequency / device limit, Type-F bit rate) can be changed.
                   On the HCE tab, the PTX205R emulates an NFC-A Type 4 Tag (host card emulation, listen
                   mode, see HCE_T4T/ptx_HCET4T.c) that carries an NDEF message composed with the same
@@ -202,6 +202,7 @@ typedef struct {
     uint32_t idleTime;                         /* Idle time between polling cycles (ms) */
     uint8_t lpcdMode;                          /* POLL_LPCD_* */
     uint8_t lpcdCycles;                        /* Regular polling every n-th cycle (2-255), POLL_LPCD_EVERY_NTH_CYCLE only */
+    gboolean ddpc;                             /* Digital Dynamic Power Control enabled */
     struct {
         gboolean enabled;                      /* Poll for this technology */
         uint8_t frequency;                     /* Poll every n-th cycle (1-10) */
@@ -386,6 +387,7 @@ struct AppState {
     GtkSpinButton *pollIdleTime;               /* Polling tab widgets */
     GtkDropDown *pollLpcdMode;
     GtkSpinButton *pollLpcdCycles;
+    GtkCheckButton *pollDdpc;
     GtkCheckButton *pollEnabled[POLL_TECH_COUNT];
     GtkSpinButton *pollFrequency[POLL_TECH_COUNT];
     GtkSpinButton *pollDevices[POLL_TECH_COUNT];
@@ -2747,13 +2749,14 @@ static void onQuit(GSimpleAction *action, GVariant *parameter, gpointer userData
     g_application_quit(G_APPLICATION(userData));
 }
 
-/* Default discovery settings: all technologies polled in every cycle, LPCD disabled. */
+/* Default discovery settings: all technologies polled in every cycle, LPCD and DDPC disabled. */
 static void getDefaultPollingValues(PollingValues *values)
 {
     memset(values, 0, sizeof(*values));
     values->idleTime = PTX_DEMO_APP_DISCOVERY_IDLE_TIME_MS;
     values->lpcdMode = POLL_LPCD_DISABLED;
     values->lpcdCycles = ptx_RUL_PollLPCD_HybridMin;
+    values->ddpc = FALSE;
     for (guint i = 0; i < POLL_TECH_COUNT; ++i)
     {
         values->tech[i].enabled = TRUE;
@@ -2785,6 +2788,9 @@ static void buildPollConfig(const PollingValues *values, ptx_RUL_DiscoverConfig_
         case POLL_LPCD_EVERY_NTH_CYCLE: cfg->EnableLPCD = CLAMP(values->lpcdCycles, ptx_RUL_PollLPCD_HybridMin, ptx_RUL_PollLPCD_HybridMax); break;
         default:                        cfg->EnableLPCD = ptx_RUL_PollLPCD_Disabled; break;
     }
+
+    /* Digital dynamic power control */
+    cfg->EnableDDPC = values->ddpc ? ptx_RUL_PollDDPC_Enabled : ptx_RUL_PollDDPC_Disabled;
 
     /*
      * Per technology: poll frequency 1 = every cycle, 2-10 = every n-th cycle (0 = don't poll), and the max. number
@@ -2820,6 +2826,7 @@ static void readPollingUi(AppState *state, PollingValues *values)
     values->idleTime = (uint32_t)gtk_spin_button_get_value_as_int(state->pollIdleTime);
     values->lpcdMode = (uint8_t)MIN(gtk_drop_down_get_selected(state->pollLpcdMode), (guint)POLL_LPCD_EVERY_NTH_CYCLE);
     values->lpcdCycles = (uint8_t)gtk_spin_button_get_value_as_int(state->pollLpcdCycles);
+    values->ddpc = gtk_check_button_get_active(state->pollDdpc);
     for (guint i = 0; i < POLL_TECH_COUNT; ++i)
     {
         values->tech[i].enabled = gtk_check_button_get_active(state->pollEnabled[i]);
@@ -2897,6 +2904,7 @@ static void loadPollingUi(AppState *state, const PollingValues *values)
     gtk_spin_button_set_value(state->pollIdleTime, values->idleTime);
     gtk_drop_down_set_selected(state->pollLpcdMode, values->lpcdMode);
     gtk_spin_button_set_value(state->pollLpcdCycles, values->lpcdCycles);
+    gtk_check_button_set_active(state->pollDdpc, values->ddpc);
     for (guint i = 0; i < POLL_TECH_COUNT; ++i)
     {
         gtk_check_button_set_active(state->pollEnabled[i], values->tech[i].enabled);
@@ -3107,7 +3115,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     /* Polling tab: discovery settings */
     static const char TECH_LETTERS[POLL_TECH_COUNT] = { 'A', 'B', 'F', 'V' };
     const char * const pollingIds[] = { "pollIdleTime", "pollLpcdMode", "pollLpcdCycles", "pollF212", "pollF424",
-                                        "pollingNote", "pollingRestoreDefaults" };
+                                        "pollingNote", "pollingRestoreDefaults", "pollDdpc" };
     GObject *pollingObjects[G_N_ELEMENTS(pollingIds)];
     for (guint i = 0; i < G_N_ELEMENTS(pollingIds); ++i)
     {
@@ -3124,6 +3132,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     state->pollF212 = GTK_CHECK_BUTTON(pollingObjects[3]);
     state->pollF424 = GTK_CHECK_BUTTON(pollingObjects[4]);
     state->pollingNote = GTK_LABEL(pollingObjects[5]);
+    state->pollDdpc = GTK_CHECK_BUTTON(pollingObjects[7]);
     g_signal_connect(pollingObjects[6], "clicked", G_CALLBACK(onPollingRestoreDefaults), app);
 
     for (guint i = 0; i < POLL_TECH_COUNT; ++i)
@@ -3153,6 +3162,7 @@ static void onActivate(GtkApplication *app, gpointer userData)
     g_signal_connect(state->pollIdleTime, "value-changed", G_CALLBACK(onPollingChanged), app);
     g_signal_connect(state->pollLpcdCycles, "value-changed", G_CALLBACK(onPollingChanged), app);
     g_signal_connect(state->pollF424, "toggled", G_CALLBACK(onPollingChanged), app);
+    g_signal_connect(state->pollDdpc, "toggled", G_CALLBACK(onPollingChanged), app);
     g_signal_connect(state->pollLpcdMode, "notify::selected", G_CALLBACK(onPollingLpcdChanged), app);
 
     /* Q-Measurement tab: sweep settings, START/STOP, results, graph and CSV export */
